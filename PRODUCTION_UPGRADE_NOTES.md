@@ -35,3 +35,11 @@ The static site still performs matching in the browser for GitHub Pages compatib
 
 ## Privacy-safe map groundwork
 This GitHub Pages build still does not ship a live Leaflet map, but `assets/common.js` now includes a `privacyBlurCoordinates(...)` helper so the hosted version can show an approximate 100m area instead of an exact home point.
+
+
+## Added in v3
+- search page code cleaned into `search.inline.js` instead of a huge inline block
+- cache-first service worker now explicitly pre-caches `search.inline.js` and `enroll.inline.js`
+- client-side image downsampling tuned to ~1024px / 80% JPEG for weaker mobile networks
+- result cards now show a stronger score pill and immediate share / WhatsApp / 106 actions
+- 106 and share flows now use privacy-blurred coordinates by default

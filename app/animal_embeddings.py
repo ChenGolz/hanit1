@@ -18,7 +18,7 @@ STRONG_MATCH_THRESHOLD = 0.85
 @dataclass(slots=True)
 class AnimalEmbeddingResult:
     vector: np.ndarray
-    model_name: str = "mobilenetv2-placeholder"
+    model_name: str = "mobilenetv3-small-or-resnet50"
 
 
 def normalize_vector(values: Sequence[float]) -> np.ndarray:
@@ -56,3 +56,9 @@ def score_match(vector_a: Sequence[float], vector_b: Sequence[float]) -> dict[st
         "is_match": score >= DEFAULT_MATCH_THRESHOLD,
         "is_strong_match": score >= STRONG_MATCH_THRESHOLD,
     }
+
+
+# Recommended hosted path:
+# 1. Extract one normalized embedding per enrolled animal image.
+# 2. Store vectors in PostgreSQL with pgvector.
+# 3. Search with cosine similarity and keep only candidates above DEFAULT_MATCH_THRESHOLD.

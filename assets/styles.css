@@ -429,3 +429,16 @@ canvas.preview {
     display: none;
   }
 }
+
+.score-pill {
+  font-variant-numeric: tabular-nums;
+  padding: 0.38rem 0.72rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+.score-pill.high { background: rgba(34,197,94,0.18); color: #bbf7d0; }
+.score-pill.medium { background: rgba(245,158,11,0.18); color: #fde68a; }
+.score-pill.low { background: rgba(239,68,68,0.18); color: #fecaca; }
+.disabled-link { opacity: 0.55; pointer-events: none; }
+.privacy-note { border-top: 1px dashed var(--line); padding-top: 10px; }

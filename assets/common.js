@@ -134,10 +134,10 @@ function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.9) {
 
 async function fileToPreparedImage(file, options = {}) {
   const {
-    maxWidth = 960,
-    maxHeight = 960,
+    maxWidth = 1024,
+    maxHeight = 1024,
     type = 'image/jpeg',
-    quality = 0.88,
+    quality = 0.80,
   } = options;
 
   const initial = await fileToImage(file);
@@ -703,6 +703,7 @@ function formatCoordinates(lat, lng) {
 
 function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
   const cleanCity = String(city || '').trim();
+  const blurred = privacyBlurCoordinates(lat, lng, 100);
   const subjectCity = cleanCity || 'עיר לא צוינה';
   const lines = [
     'שלום,',
@@ -714,9 +715,9 @@ function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch
     if (bestMatch.animalType) lines.push(`סוג בעל החיים: ${bestMatch.animalType}.`);
     if (bestMatch.colors || bestMatch.colorName) lines.push(`צבעים דומיננטיים: ${bestMatch.colors || bestMatch.colorName}.`);
   }
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    lines.push(`מיקום: ${formatCoordinates(lat, lng)}`);
-    lines.push(`מפת גוגל: https://www.google.com/maps?q=${lat},${lng}`);
+  if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) {
+    lines.push(`מיקום משוער: ${formatCoordinates(blurred.lat, blurred.lng)} (רדיוס פרטי של כ-${blurred.radiusMeters} מטר)`);
+    lines.push(`מפת גוגל: https://www.google.com/maps?q=${blurred.lat},${blurred.lng}`);
   }
   lines.push(`עמוד החיפוש: ${pageUrl}`);
   lines.push('הערה: התמונה עצמה נבדקה מקומית בדפדפן ולכן אינה מצורפת אוטומטית.');
@@ -729,6 +730,7 @@ function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch
 
 
 function buildWhatsAppHref({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+  const blurred = privacyBlurCoordinates(lat, lng, 100);
   const parts = ['שלום, מצאתי בעל חיים ואני בודק התאמה דרך פאטקונקט.'];
   if (bestMatch) {
     parts.push(`נראית התאמה אפשרית ל-${bestMatch.label} (${formatPct(bestMatch.score || bestMatch.colorScore || 0)}).`);
@@ -737,12 +739,13 @@ function buildWhatsAppHref({ city = '', lat = null, lng = null, bestMatch = null
     if (bestMatch.href && bestMatch.href !== '#') parts.push(`פרופיל: ${new URL(bestMatch.href, pageUrl).href}`);
   }
   if (city) parts.push(`עיר: ${city}.`);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) parts.push(`מיקום: ${formatCoordinates(lat, lng)}.`);
+  if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) parts.push(`אזור משוער: ${formatCoordinates(blurred.lat, blurred.lng)}.`);
   parts.push(`עמוד החיפוש: ${pageUrl}`);
   return `https://wa.me/?text=${encodeURIComponent(parts.join('\n'))}`;
 }
 
 async function shareResult({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+  const blurred = privacyBlurCoordinates(lat, lng, 100);
   const shareUrl = bestMatch?.href && bestMatch.href !== '#'
     ? new URL(bestMatch.href, pageUrl).href
     : pageUrl;
@@ -752,7 +755,7 @@ async function shareResult({ city = '', lat = null, lng = null, bestMatch = null
     if (bestMatch.animalType) lines.push(`סוג: ${bestMatch.animalType}`);
   }
   if (city) lines.push(`עיר: ${city}`);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) lines.push(`מיקום: ${formatCoordinates(lat, lng)}`);
+  if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) lines.push(`אזור משוער: ${formatCoordinates(blurred.lat, blurred.lng)}`);
   const text = lines.join(' · ');
   if (navigator.share) {
     try {

@@ -116,7 +116,7 @@
             setStatus(statusEl, `מעבד ${files.length} תמונות…`, { busy: true });
 
             for (const file of files) {
-              const prepared = await fileToPreparedImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.88 });
+              const prepared = await fileToPreparedImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.80 });
               try {
                 if (prepared.wasResized) resizedCount += 1;
                 const features = await extractAnimalFeaturesForEnrollment(prepared.img);
@@ -135,7 +135,7 @@
             }
 
             prepNoteEl.textContent = resizedCount
-              ? `${resizedCount} תמונות כבדות נדחסו מקומית כדי לקצר את זמן העיבוד.`
+              ? `${resizedCount} תמונות כבדות נדחסו מקומית ל-1024px כדי לקצר את זמן העיבוד וההעלאה.`
               : 'לא נדרשה דחיסה מקומית לתמונות שבחרת.';
 
             if (!descriptors.length) {

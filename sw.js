@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v9';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v9';
+const STATIC_CACHE = 'petconnect-animal-static-v10';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v10';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -12,6 +12,8 @@ const ASSETS_TO_CACHE = [
   './assets/styles.css',
   './assets/common.js',
   './assets/i18n.js',
+  './search.inline.js',
+  './enroll.inline.js',
   './data/library.json',
 ];
 const RUNTIME_HOSTS = new Set([
@@ -62,17 +64,15 @@ function isStaticAssetRequest(request) {
   const url = new URL(request.url);
   if (RUNTIME_HOSTS.has(url.host)) return true;
   if (url.origin !== self.location.origin) return false;
-  return /\.(?:css|js|png|svg|ico|webmanifest|woff2?)$/i.test(url.pathname) || url.pathname.includes('/assets/');
+  if (request.mode === 'navigate') return false;
+  return /\.(?:css|js|png|svg|ico|webmanifest|woff2?|json)$/i.test(url.pathname) || url.pathname.includes('/assets/');
 }
 
 async function cacheFirst(request) {
   const cacheName = request.url.startsWith(self.location.origin) ? STATIC_CACHE : RUNTIME_CACHE;
   const cache = await caches.open(cacheName);
   const cached = await matchWithFallback(cache, request);
-  if (cached) {
-    fetch(request).then((response) => putResponseInCache(cache, request, response)).catch(() => {});
-    return cached;
-  }
+  if (cached) return cached;
   const response = await fetch(request);
   await putResponseInCache(cache, request, response);
   return response;
@@ -89,7 +89,7 @@ async function networkFirst(request) {
     const cached = await matchWithFallback(cache, request);
     if (cached) return cached;
     if (request.mode === 'navigate') {
-      return (await caches.match('./index.html', { ignoreSearch: true })) || (await caches.match('./search.html', { ignoreSearch: true }));
+      return (await caches.match('./search.html', { ignoreSearch: true })) || (await caches.match('./index.html', { ignoreSearch: true }));
     }
     throw error;
   }
@@ -103,7 +103,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   const url = new URL(request.url);
-  if (url.origin === self.location.origin || RUNTIME_HOSTS.has(url.host)) {
+  if (request.mode === 'navigate' || url.origin === self.location.origin || RUNTIME_HOSTS.has(url.host)) {
     event.respondWith(networkFirst(request));
   }
 });
