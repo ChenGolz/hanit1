@@ -18,3 +18,12 @@
 3. ייצאי `library.json`.
 4. החליפי את `data/library.json` בריפו.
 5. בצעי commit + push ורענני את האתר.
+
+
+## UX upgrades added
+
+- Immediate result gallery with high-confidence summary banner
+- Local image resizing before processing
+- Optional city + location capture for quick 106 email reports
+- Service Worker with network-first / cache-fallback
+- Hebrew font stack and polished RTL UI

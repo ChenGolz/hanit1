@@ -100,43 +100,121 @@ function isSafeProfileHref(value) {
   return /^(https?:\/\/|\.\/?|\.\.\/|\/|#)/i.test(href);
 }
 
+function setStatus(element, text, options = {}) {
+  if (!element) return;
+  const { tone = 'default', busy = false } = options;
+  element.textContent = text;
+  element.classList.remove('warn', 'success', 'busy');
+  if (tone === 'warn') element.classList.add('warn');
+  if (tone === 'success') element.classList.add('success');
+  if (busy) element.classList.add('busy');
+}
+
 async function loadModels(statusEl) {
   if (!window.faceapi) {
     throw new Error('הספרייה face-api.js לא נטענה. בדקי את חיבור האינטרנט או חסימת ה-CDN.');
   }
   if (window.__petconnectModelsReady) {
-    if (statusEl) statusEl.textContent = 'המודלים מוכנים.';
+    setStatus(statusEl, 'המודלים מוכנים.');
     return;
   }
-  if (statusEl) statusEl.textContent = 'טוען מודלי זיהוי פנים… בטעינה הראשונה זה עשוי לקחת רגע.';
+  setStatus(statusEl, 'טוען מודלי זיהוי פנים… בטעינה הראשונה זה עשוי לקחת רגע.', { busy: true });
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URIS.tiny),
     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URIS.landmarks),
     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URIS.recognition),
   ]);
   window.__petconnectModelsReady = true;
-  if (statusEl) statusEl.textContent = 'המודלים מוכנים.';
+  setStatus(statusEl, 'המודלים מוכנים.', { tone: 'success' });
 }
 
 async function ensureSsdModel(statusEl) {
   if (window.__petconnectSsdReady) return;
-  if (statusEl) statusEl.textContent = 'מנסה גלאי פנים חזק יותר לתמונות קשות…';
+  setStatus(statusEl, 'מנסה גלאי פנים חזק יותר לתמונות קשות…', { busy: true });
   await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URIS.ssd);
   window.__petconnectSsdReady = true;
 }
 
-async function fileToImage(file) {
-  const url = URL.createObjectURL(file);
+async function blobToImage(blob) {
+  const url = URL.createObjectURL(blob);
   try {
     const img = await new Promise((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error(`לא ניתן היה לטעון את התמונה ${file.name}`));
+      el.onerror = () => reject(new Error('לא ניתן היה להכין את התמונה.'));
       el.src = url;
     });
     return { img, url };
   } catch (error) {
     URL.revokeObjectURL(url);
+    throw error;
+  }
+}
+
+async function fileToImage(file) {
+  return blobToImage(file);
+}
+
+function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.9) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('לא ניתן היה לדחוס את התמונה.'));
+    }, type, quality);
+  });
+}
+
+async function fileToPreparedImage(file, options = {}) {
+  const {
+    maxWidth = 960,
+    maxHeight = 960,
+    type = 'image/jpeg',
+    quality = 0.88,
+  } = options;
+
+  const initial = await fileToImage(file);
+  const cleanupInitial = () => URL.revokeObjectURL(initial.url);
+  try {
+    const { img } = initial;
+    const width = img.naturalWidth || img.width;
+    const height = img.naturalHeight || img.height;
+    const scale = Math.min(1, maxWidth / width, maxHeight / height);
+    if (scale >= 0.999) {
+      return {
+        img,
+        url: initial.url,
+        cleanup: cleanupInitial,
+        originalWidth: width,
+        originalHeight: height,
+        width,
+        height,
+        wasResized: false,
+      };
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await canvasToBlob(canvas, type, quality);
+    const prepared = await blobToImage(blob);
+
+    return {
+      img: prepared.img,
+      url: prepared.url,
+      cleanup: () => {
+        URL.revokeObjectURL(prepared.url);
+        cleanupInitial();
+      },
+      originalWidth: width,
+      originalHeight: height,
+      width: canvas.width,
+      height: canvas.height,
+      wasResized: true,
+    };
+  } catch (error) {
+    cleanupInitial();
     throw error;
   }
 }
@@ -376,7 +454,6 @@ function exportJson(filename, data) {
   URL.revokeObjectURL(url);
 }
 
-
 function formatEntryCount(count) {
   return `ספריית החיפוש נטענה: ${count} ${count === 1 ? 'רשומה' : 'רשומות'}.`;
 }
@@ -396,4 +473,44 @@ function sourceLabel(source) {
     imported: 'מיובא',
   };
   return map[source] || source || 'לא ידוע';
+}
+
+function formatCoordinates(lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
+  return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+}
+
+function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+  const cleanCity = String(city || '').trim();
+  const subjectCity = cleanCity || 'עיר לא צוינה';
+  const lines = [
+    `שלום,`,
+    '',
+    `ברצוני לדווח על חיה/אדם שאותרו ונבדקו מול המאגר באתר.`,
+  ];
+  if (bestMatch) {
+    lines.push(`התאמה מובילה במאגר: ${bestMatch.label} (${formatPct(bestMatch.score)}).`);
+  }
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    lines.push(`מיקום: ${formatCoordinates(lat, lng)}`);
+    lines.push(`מפת גוגל: https://www.google.com/maps?q=${lat},${lng}`);
+  }
+  lines.push(`עמוד החיפוש: ${pageUrl}`);
+  lines.push('הערה: התמונה עצמה נבדקה מקומית בדפדפן ולכן אינה מצורפת אוטומטית.');
+  const params = new URLSearchParams({
+    subject: `דיווח למוקד 106 - ${subjectCity}`,
+    body: lines.join('\n'),
+  });
+  return `mailto:?${params.toString()}`;
+}
+
+function registerServiceWorker() {
+  if (window.__petconnectSwRegistered) return;
+  if (!('serviceWorker' in navigator)) return;
+  window.__petconnectSwRegistered = true;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((error) => {
+      console.warn('רישום Service Worker נכשל:', error);
+    });
+  });
 }

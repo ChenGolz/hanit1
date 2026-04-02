@@ -5,6 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
     <link rel="stylesheet" href="./assets/styles.css">
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('./sw.js').catch((error) => console.warn('רישום Service Worker נכשל:', error));
+        });
+      }
+    </script>
   </head>
   <body>
     <main class="page">
@@ -20,30 +27,34 @@
       <section class="hero stack">
         <div class="chip">מוכן ל-GitHub Pages</div>
         <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.4rem);">חיפוש פנים באתר סטטי, בלי שרת.</h1>
-        <p class="meta" style="font-size:1.08rem; max-width: 760px;">בגרסה הזאת החיפוש מתבצע ישירות בדפדפן. אפשר להעלות תמונה, להשוות אותה למאגר שפרסמת, ולקבל התאמות בלי שרת פייתון.</p>
+        <p class="meta" style="font-size:1.08rem; max-width: 760px;">בגרסה הזאת החיפוש מתבצע ישירות בדפדפן. אפשר להעלות תמונה, להשוות אותה למאגר שפרסמת, ולקבל התאמות מיידיות בלי שרת פייתון.</p>
         <div class="row">
-          <a href="./search.html"><button>פתיחת חיפוש</button></a>
-          <a href="./enroll.html"><button class="secondary">בניית המאגר שלך</button></a>
+          <a class="button-link" href="./search.html">פתיחת חיפוש</a>
+          <a class="button-link secondary" href="./enroll.html">בניית המאגר שלך</a>
         </div>
         <div class="notice warn">
-          GitHub Pages יכול לארח את האתר עצמו, אבל הוא לא מפעיל את ה-Backend של FastAPI ולא שומר העלאות ציבוריות משותפות. למאגר חי ומשותף עדיין תצטרכי אחסון אמיתי בהמשך.
+          GitHub Pages יכול לארח את האתר עצמו, אבל הוא לא מפעיל Backend של FastAPI ולא שומר העלאות ציבוריות משותפות. למאגר חי ומשותף עדיין תצטרכי אחסון אמיתי בהמשך.
         </div>
       </section>
 
-      <section class="grid grid-2" style="margin-top:16px;">
+      <section class="grid grid-3" style="margin-top:16px;">
         <article class="card stack">
-          <h2 class="section-title">מה עובד כבר עכשיו</h2>
-          <div class="small">• מבקרים יכולים להעלות תמונה אחת ולחפש במאגר שפרסמת ישירות מהדפדפן.</div>
-          <div class="small">• אפשר לבנות רשומות בדיקה מקומית דרך עמוד <strong>בניית מאגר</strong>.</div>
-          <div class="small">• אפשר לייצא JSON ולפרסם אותו בתוך <code>data/library.json</code> כדי שכולם ישתמשו בו.</div>
-          <div class="small">• אין עלות Backend בשביל הדמו הסטטי.</div>
+          <h2 class="section-title">מה שודרג כאן</h2>
+          <div class="small">• התאמות מיידיות עם כרטיסי תוצאות ברורים והדגשה להתאמה חזקה.</div>
+          <div class="small">• דחיסת תמונות מקומית לפני עיבוד כדי להאיץ תמונות כבדות מהטלפון.</div>
+          <div class="small">• Service Worker עם טעינת רשת תחילה ונפילה למטמון.</div>
         </article>
         <article class="card stack">
-          <h2 class="section-title">מה עדיין יצריך אחסון אמיתי</h2>
-          <div class="small">• העלאות משותפות למאגר מרכזי אחד</div>
-          <div class="small">• חשבונות ניהול פרטיים</div>
-          <div class="small">• אחסון קבוע לתמונות שנשלחו</div>
-          <div class="small">• עיבוד כבד ברקע לסרטונים או ייבוא בכמות גדולה</div>
+          <h2 class="section-title">כלי שטח</h2>
+          <div class="small">• אפשרות לשמור מיקום נוכחי.</div>
+          <div class="small">• כפתור הכנה מהיר לדיווח למוקד 106 דרך אפליקציית המייל.</div>
+          <div class="small">• ממשק RTL מלא עם גופנים עבריים נוחים יותר.</div>
+        </article>
+        <article class="card stack">
+          <h2 class="section-title">מה לא היה בקוד הזה</h2>
+          <div class="small">• מפה עם Leaflet ונעיצת סמן ידנית.</div>
+          <div class="small">• API של דיווחי "נמצא"/"אבד" וטלפונים.</div>
+          <div class="small">• Backend להשוואות שרת או שמירת קבצים משותפת.</div>
         </article>
       </section>
 
@@ -71,6 +82,7 @@
 ├─ index.html
 ├─ search.html
 ├─ enroll.html
+├─ sw.js
 ├─ assets/
 │  ├─ styles.css
 │  └─ common.js

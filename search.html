@@ -9,6 +9,8 @@
     <script defer src="./assets/common.js"></script>
     <script defer>
       async function runSearchPage() {
+        registerServiceWorker();
+
         const statusEl = document.getElementById('status');
         const searchForm = document.getElementById('search-form');
         const fileInput = document.getElementById('query-file');
@@ -17,11 +19,24 @@
         const cropImg = document.getElementById('query-crop');
         const showBoxInput = document.getElementById('show-box');
         const resultsEl = document.getElementById('results');
+        const summaryEl = document.getElementById('summary');
         const libraryStatsEl = document.getElementById('library-stats');
         const importInput = document.getElementById('import-json');
         const clearImportedBtn = document.getElementById('clear-imported');
+        const minScoreInput = document.getElementById('min-score');
+        const minScoreOutput = document.getElementById('min-score-value');
+        const prepNoteEl = document.getElementById('prep-note');
+        const cityInput = document.getElementById('city-name');
+        const locateBtn = document.getElementById('locate-btn');
+        const locationStatusEl = document.getElementById('location-status');
+        const resultsSection = document.getElementById('results-section');
 
         clearValidityOnInput(fileInput);
+        clearValidityOnInput(cityInput);
+        minScoreOutput.textContent = `${minScoreInput.value}%`;
+        minScoreInput.addEventListener('input', () => {
+          minScoreOutput.textContent = `${minScoreInput.value}%`;
+        });
 
         await loadModels(statusEl);
         const mergedLibrary = await getMergedLibrary();
@@ -29,6 +44,7 @@
 
         let currentPreviewImage = null;
         let currentPreviewDetection = null;
+        let geoState = { lat: null, lng: null };
 
         function redrawPreview() {
           if (!currentPreviewImage) {
@@ -39,7 +55,118 @@
           drawDetection(canvas, currentPreviewImage, currentPreviewDetection, { showBox: showBoxInput.checked });
         }
 
+        function renderResults(matches) {
+          if (!matches.length) {
+            resultsEl.innerHTML = '<div class="empty">לא נמצאו התאמות מעל סף ההתאמה שבחרת. נסי להוריד מעט את הסף או להעלות תמונה ברורה יותר.</div>';
+            return;
+          }
+
+          const cards = matches.map((match) => {
+            const target = match.href && match.href !== '#' ? match.href : '';
+            const safeLabel = escapeHtml(match.label);
+            const safeNotes = escapeHtml(match.notes);
+            const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
+            const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
+            const reportHref = buildMunicipalReportHref({
+              city: cityInput.value,
+              lat: geoState.lat,
+              lng: geoState.lng,
+              bestMatch: match,
+            });
+            const profileButton = target
+              ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>`
+              : '<span class="badge">אין קישור פרופיל</span>';
+            return `
+              <article class="result-card">
+                ${thumb}
+                <div class="body">
+                  <div class="space-between">
+                    <strong>${safeLabel}</strong>
+                    <span class="score ${match.confidence}">${formatPct(match.score)}</span>
+                  </div>
+                  <div class="small">מרחק וקטורי: ${match.bestDistance.toFixed(3)}</div>
+                  <div class="row">
+                    <span class="badge">${sourceLabel(match.source)}</span>
+                    <span class="badge">${formatSampleCount(match.descriptors.length)}</span>
+                  </div>
+                  ${notes}
+                  <div class="card-actions">
+                    ${profileButton}
+                    <a class="button-link secondary small" href="${reportHref}">דיווח למוקד 106</a>
+                  </div>
+                </div>
+              </article>
+            `;
+          }).join('');
+
+          resultsEl.innerHTML = `<div class="result-grid">${cards}</div>`;
+        }
+
+        function renderSummary(matches) {
+          if (!matches.length) {
+            summaryEl.innerHTML = '';
+            summaryEl.classList.add('hidden');
+            return;
+          }
+
+          const top = matches[0];
+          let tone = 'low';
+          let title = 'נמצאו התאמות אפשריות';
+          let body = 'אפשר לעבור על הכרטיסים למטה ולפתוח את הרשומה המתאימה ביותר.';
+          if (top.score >= 0.85) {
+            tone = 'high';
+            title = `האם זו ${escapeHtml(top.label)}?`;
+            body = `נמצאה התאמה חזקה מאוד של ${formatPct(top.score)}. זה הרגע שכדאי לבדוק מיד את הכרטיס הראשון.`;
+          } else if (top.score >= 0.7) {
+            tone = 'medium';
+            title = `יש מועמדת מובילה: ${escapeHtml(top.label)}`;
+            body = `ההתאמה הגבוהה ביותר כרגע היא ${formatPct(top.score)}. מומלץ לבדוק את הכרטיסים הראשונים.`;
+          }
+
+          const reportHref = buildMunicipalReportHref({
+            city: cityInput.value,
+            lat: geoState.lat,
+            lng: geoState.lng,
+            bestMatch: top,
+          });
+          const profileAction = top.href && top.href !== '#'
+            ? `<a class="button-link small" href="${escapeHtml(top.href)}">פתיחת הפרופיל של ${escapeHtml(top.label)}</a>`
+            : '';
+
+          summaryEl.className = `summary-banner ${tone}`;
+          summaryEl.innerHTML = `
+            <div class="chip">נמצאו ${matches.length} התאמות מעל הסף</div>
+            <h3 style="margin:0;">${title}</h3>
+            <div class="small">${body}</div>
+            <div class="summary-actions">
+              ${profileAction}
+              <a class="button-link secondary small" href="${reportHref}">דיווח למוקד 106</a>
+            </div>
+          `;
+          summaryEl.classList.remove('hidden');
+        }
+
         showBoxInput.addEventListener('change', redrawPreview);
+
+        locateBtn.addEventListener('click', async () => {
+          if (!navigator.geolocation) {
+            locationStatusEl.textContent = 'הדפדפן הזה לא תומך בגישה למיקום.';
+            return;
+          }
+          locateBtn.disabled = true;
+          locationStatusEl.textContent = 'מבקש הרשאה למיקום…';
+          navigator.geolocation.getCurrentPosition((position) => {
+            geoState = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            };
+            locationStatusEl.textContent = `המיקום נשמר: ${formatCoordinates(geoState.lat, geoState.lng)}`;
+            locateBtn.disabled = false;
+          }, (error) => {
+            locationStatusEl.textContent = `לא ניתן היה לקבל מיקום: ${error.message}`;
+            locateBtn.disabled = false;
+          }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
+        });
 
         importInput.addEventListener('change', async () => {
           const file = importInput.files?.[0];
@@ -47,66 +174,78 @@
           const text = await file.text();
           const parsed = safeJsonParse(text, null);
           if (!parsed || !Array.isArray(parsed.entries)) {
-            statusEl.textContent = 'קובץ ה-JSON הזה לא נראה כמו ייצוא תקין של המאגר.';
+            setStatus(statusEl, 'קובץ ה-JSON הזה לא נראה כמו ייצוא תקין של המאגר.', { tone: 'warn' });
             return;
           }
           const sanitizedEntries = parsed.entries.map((entry) => normalizeEntry({ ...entry, source: 'imported' })).filter((entry) => entry.descriptors.length);
           if (!sanitizedEntries.length) {
-            statusEl.textContent = 'בקובץ המאגר הזה עדיין אין רשומות פנים תקינות לשימוש.';
+            setStatus(statusEl, 'בקובץ המאגר הזה עדיין אין רשומות פנים תקינות לשימוש.', { tone: 'warn' });
             return;
           }
           saveImportedLibrary(sanitizedEntries);
           const updated = await getMergedLibrary();
           libraryStatsEl.textContent = formatEntryCount(updated.length);
-          statusEl.textContent = 'המאגר המיובא נוסף לדפדפן עבור הסשן הנוכחי.';
+          setStatus(statusEl, 'המאגר המיובא נוסף לדפדפן עבור הסשן הנוכחי.', { tone: 'success' });
         });
 
         clearImportedBtn.addEventListener('click', async () => {
           saveImportedLibrary([]);
           const updated = await getMergedLibrary();
           libraryStatsEl.textContent = formatEntryCount(updated.length);
-          statusEl.textContent = 'המאגר המיובא של הסשן נוקה.';
+          setStatus(statusEl, 'המאגר המיובא של הסשן נוקה.', { tone: 'success' });
         });
 
         searchForm.addEventListener('submit', async (event) => {
           event.preventDefault();
           if (!setRequiredValidity(fileInput, 'נא לבחור תמונה לחיפוש.')) {
-            statusEl.textContent = 'בחרי תמונה כדי להתחיל.';
+            setStatus(statusEl, 'בחרי תמונה כדי להתחיל.', { tone: 'warn' });
             return;
           }
 
           const file = fileInput.files?.[0];
           const library = await getMergedLibrary();
           if (!library.length) {
-            statusEl.textContent = 'המאגר שלך ריק. פרסמי רשומות בתוך data/library.json או הוסיפי רשומות מקומיות דרך עמוד בניית המאגר.';
+            setStatus(statusEl, 'המאגר שלך ריק. פרסמי רשומות בתוך data/library.json או הוסיפי רשומות מקומיות דרך עמוד בניית המאגר.', { tone: 'warn' });
             return;
           }
 
           searchBtn.disabled = true;
           resultsEl.innerHTML = '';
+          summaryEl.innerHTML = '';
+          summaryEl.classList.add('hidden');
           try {
             currentPreviewImage = null;
             currentPreviewDetection = null;
             redrawPreview();
-            statusEl.textContent = 'קורא את התמונה ומאתר פנים…';
-            const { img, url } = await fileToImage(file);
+            cropImg.classList.add('hidden');
+            prepNoteEl.textContent = '';
+
+            setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
+            const prepared = await fileToPreparedImage(file, { maxWidth: 960, maxHeight: 960, quality: 0.88 });
             try {
-              const detections = await detectFaces(img, statusEl);
+              if (prepared.wasResized) {
+                prepNoteEl.textContent = `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height} כדי לזרז את הסריקה.`;
+              } else {
+                prepNoteEl.textContent = 'התמונה עובדה בגודל המקורי שלה.';
+              }
+
+              setStatus(statusEl, 'סורק פנים ומתאים למאגר…', { busy: true });
+              const detections = await detectFaces(prepared.img, statusEl);
               const best = pickBestDetection(detections);
-              currentPreviewImage = img;
+              currentPreviewImage = prepared.img;
               currentPreviewDetection = best;
               redrawPreview();
+
               if (!best) {
-                cropImg.classList.add('hidden');
-                statusEl.textContent = 'לא נמצאו פנים ברורות בתמונה הזאת. נסי תמונה קרובה יותר, עם פנים גדולות יותר בפריים ואם אפשר עם עיניים גלויות.';
+                setStatus(statusEl, 'לא נמצאו פנים ברורות בתמונה הזאת. נסי תמונה קרובה יותר, עם פנים גדולות יותר בפריים ואם אפשר עם עיניים גלויות.', { tone: 'warn' });
                 return;
               }
 
-              cropImg.src = cropFaceDataUrl(img, best);
+              cropImg.src = cropFaceDataUrl(prepared.img, best);
               cropImg.classList.remove('hidden');
               const queryDescriptor = Array.from(best.descriptor);
 
-              statusEl.textContent = `נמצאו ${detections.length} פנים שימושיות. מדרג התאמות…`;
+              const minScore = Math.max(0, Math.min(100, Number(minScoreInput.value || 55))) / 100;
               const matches = library
                 .map((entry) => {
                   const bestDistance = Math.min(...entry.descriptors.map((d) => descriptorDistance(queryDescriptor, d)));
@@ -118,50 +257,20 @@
                     confidence: scoreLabel(bestDistance),
                   };
                 })
+                .filter((entry) => entry.score >= minScore)
                 .sort((a, b) => a.bestDistance - b.bestDistance)
                 .slice(0, 18);
 
-              if (!matches.length) {
-                resultsEl.innerHTML = '<div class="empty">לא נמצאו התאמות.</div>';
-                statusEl.textContent = 'החיפוש הסתיים.';
-                return;
-              }
-
-              const cards = matches.map((match) => {
-                const target = match.href && match.href !== '#' ? match.href : '#';
-                const safeLabel = escapeHtml(match.label);
-                const safeNotes = escapeHtml(match.notes);
-                const safeTarget = escapeHtml(target);
-                const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
-                const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
-                return `
-                  <article class="result-card">
-                    ${thumb}
-                    <div class="body">
-                      <div class="space-between">
-                        <strong>${safeLabel}</strong>
-                        <span class="score ${match.confidence}">${formatPct(match.score)}</span>
-                      </div>
-                      <div class="small">מרחק: ${match.bestDistance.toFixed(3)}</div>
-                      <div class="row">
-                        <span class="badge">${sourceLabel(match.source)}</span>
-                        <span class="badge">${formatSampleCount(match.descriptors.length)}</span>
-                      </div>
-                      ${notes}
-                      <a href="${safeTarget}">פתיחת פרופיל</a>
-                    </div>
-                  </article>
-                `;
-              }).join('');
-
-              resultsEl.innerHTML = `<div class="result-grid">${cards}</div>`;
-              statusEl.textContent = 'החיפוש הסתיים.';
+              renderSummary(matches);
+              renderResults(matches);
+              setStatus(statusEl, matches.length ? 'הסריקה הסתיימה. התוצאות מוכנות מתחת.' : 'הסריקה הסתיימה, אך לא נמצאו התאמות מעל הסף שבחרת.', { tone: matches.length ? 'success' : 'warn' });
+              resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } finally {
-              URL.revokeObjectURL(url);
+              prepared.cleanup();
             }
           } catch (error) {
             console.error(error);
-            statusEl.textContent = `החיפוש נכשל: ${error.message}`;
+            setStatus(statusEl, `החיפוש נכשל: ${error.message}`, { tone: 'warn' });
           } finally {
             searchBtn.disabled = false;
           }
@@ -170,7 +279,7 @@
       window.addEventListener('DOMContentLoaded', () => { runSearchPage().catch((error) => {
         console.error(error);
         const statusEl = document.getElementById('status');
-        statusEl.textContent = `הטעינה נכשלה: ${error.message}`;
+        setStatus(statusEl, `הטעינה נכשלה: ${error.message}`, { tone: 'warn' });
       });});
     </script>
   </head>
@@ -190,11 +299,30 @@
         <h1 style="margin:0;">העלאת תמונת פנים אחת</h1>
         <p class="meta">התמונה שאת מעלה נשארת בדפדפן. העמוד מחשב תיאור פנים מקומי ומשווה אותו למאגר שפרסמת.</p>
         <div id="status" class="notice">טוען…</div>
-        <form id="search-form" class="row" novalidate>
-          <input id="query-file" type="file" accept="image/*" required aria-label="בחירת תמונת פנים">
-          <button id="search-btn" type="submit">חיפוש במאגר</button>
+        <form id="search-form" class="stack" novalidate>
+          <div class="field-grid">
+            <input id="query-file" type="file" accept="image/*" required aria-label="בחירת תמונת פנים">
+            <div class="stack" style="gap:8px;">
+              <div class="inline-meter">
+                <label for="min-score">סף התאמה מינימלי</label>
+                <output id="min-score-value" for="min-score">55%</output>
+              </div>
+              <input id="min-score" type="range" min="35" max="90" step="1" value="55" aria-label="סף התאמה מינימלי">
+            </div>
+          </div>
+          <div class="field-grid">
+            <input id="city-name" type="text" placeholder="עיר לדיווח 106, למשל תל אביב-יפו" aria-label="שם העיר לדיווח">
+            <div class="row">
+              <button id="locate-btn" class="secondary" type="button">שימוש במיקום הנוכחי</button>
+              <div id="location-status" class="location-pill">לא נשמר מיקום עדיין.</div>
+            </div>
+          </div>
+          <div class="row">
+            <button id="search-btn" type="submit">חיפוש במאגר</button>
+          </div>
         </form>
         <div id="library-stats" class="small"></div>
+        <div id="prep-note" class="small"></div>
       </section>
 
       <section class="grid grid-2" style="margin-top:16px;">
@@ -219,14 +347,18 @@
       <section class="card stack" style="margin-top:16px;">
         <div class="space-between">
           <h2 class="section-title" style="margin:0;">אופציונלי: הוספת קובץ JSON זמני של המאגר</h2>
-          <button id="clear-imported" class="secondary" type="button">ניקוי המיובא</button>
+          <button id="clear-imported" class="secondary small" type="button">ניקוי המיובא</button>
         </div>
         <div class="small">זה שימושי לפני שמבצעים commit למאגר חדש בריפו.</div>
         <input id="import-json" type="file" accept="application/json,.json">
       </section>
 
-      <section class="card stack" style="margin-top:16px;">
-        <h2 class="section-title">התאמות</h2>
+      <section id="results-section" class="card stack" style="margin-top:16px;">
+        <div class="space-between">
+          <h2 class="section-title" style="margin:0;">התאמות מיידיות</h2>
+          <div class="small">הכרטיסים מסודרים לפי ההתאמה הטובה ביותר.</div>
+        </div>
+        <div id="summary" class="hidden"></div>
         <div id="results" class="empty">התוצאות שלך יופיעו כאן.</div>
       </section>
     </main>

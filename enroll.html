@@ -9,6 +9,8 @@
     <script defer src="./assets/common.js"></script>
     <script defer>
       async function runEnrollPage() {
+        registerServiceWorker();
+
         const statusEl = document.getElementById('status');
         const createForm = document.getElementById('create-entry-form');
         const labelInput = document.getElementById('person-label');
@@ -20,6 +22,7 @@
         const clearBtn = document.getElementById('clear-btn');
         const outputEl = document.getElementById('output-json');
         const libraryEl = document.getElementById('library-list');
+        const prepNoteEl = document.getElementById('prep-note');
 
         [labelInput, hrefInput, notesInput, fileInput].forEach(clearValidityOnInput);
 
@@ -43,7 +46,7 @@
                   <strong>${safeLabel}</strong>
                   <div class="small">${formatDescriptorCount(entry.descriptors.length)}</div>
                   <div class="small">${safeNotes}</div>
-                  <button class="bad" type="button" data-remove="${idx}">הסרה</button>
+                  <button class="bad small" type="button" data-remove="${idx}">הסרה</button>
                 </div>
               </article>
             `;
@@ -63,11 +66,11 @@
         createForm.addEventListener('submit', async (event) => {
           event.preventDefault();
           if (!setRequiredValidity(labelInput, 'שם האדם הוא שדה חובה.')) {
-            statusEl.textContent = 'יש להזין שם קודם.';
+            setStatus(statusEl, 'יש להזין שם קודם.', { tone: 'warn' });
             return;
           }
           if (!setRequiredValidity(fileInput, 'נא לבחור לפחות תמונה אחת.')) {
-            statusEl.textContent = 'יש לבחור לפחות תמונה אחת.';
+            setStatus(statusEl, 'יש לבחור לפחות תמונה אחת.', { tone: 'warn' });
             return;
           }
 
@@ -77,7 +80,7 @@
           if (href && !isSafeProfileHref(href)) {
             hrefInput.setCustomValidity('יש להזין נתיב יחסי כמו ./profiles/jane.html, נתיב אתר, או כתובת http(s) מלאה.');
             hrefInput.reportValidity();
-            statusEl.textContent = 'נא לתקן את שדה קישור הפרופיל.';
+            setStatus(statusEl, 'נא לתקן את שדה קישור הפרופיל.', { tone: 'warn' });
             return;
           }
 
@@ -86,23 +89,29 @@
             const descriptors = [];
             let thumb = '';
             let usable = 0;
-            statusEl.textContent = `מעבד ${files.length} תמונות…`;
+            let resizedCount = 0;
+            setStatus(statusEl, `מעבד ${files.length} תמונות…`, { busy: true });
             for (const file of files) {
-              const { img, url } = await fileToImage(file);
+              const prepared = await fileToPreparedImage(file, { maxWidth: 960, maxHeight: 960, quality: 0.88 });
               try {
-                const detections = await detectFaces(img, statusEl);
+                if (prepared.wasResized) resizedCount += 1;
+                const detections = await detectFaces(prepared.img, statusEl);
                 const best = pickBestDetection(detections);
                 if (!best) continue;
                 descriptors.push(Array.from(best.descriptor));
                 usable += 1;
-                if (!thumb) thumb = cropFaceDataUrl(img, best);
+                if (!thumb) thumb = cropFaceDataUrl(prepared.img, best);
               } finally {
-                URL.revokeObjectURL(url);
+                prepared.cleanup();
               }
             }
 
+            prepNoteEl.textContent = resizedCount
+              ? `${resizedCount} תמונות כבדות נדחסו מקומית כדי לקצר זמן עיבוד.`
+              : 'לא נדרשה דחיסה מקומית לתמונות שבחרת.';
+
             if (!descriptors.length) {
-              statusEl.textContent = 'לא נמצאו פנים שימושיות בקבצים האלה. נסי תמונה קרובה יותר, פחות מרחוק, ואם אפשר עם עיניים גלויות.';
+              setStatus(statusEl, 'לא נמצאו פנים שימושיות בקבצים האלה. נסי תמונה קרובה יותר, פחות מרחוק, ואם אפשר עם עיניים גלויות.', { tone: 'warn' });
               return;
             }
 
@@ -134,10 +143,10 @@
             saveLocalLibrary(entries.map((item) => normalizeEntry({ ...item, source: 'local' })));
             render();
             createForm.reset();
-            statusEl.textContent = `${existingIndex >= 0 ? 'עודכן' : 'נוסף'} ${label} עם ${usable} ${usable === 1 ? 'דוגמה תקינה אחת' : 'דוגמאות תקינות'}.`;
+            setStatus(statusEl, `${existingIndex >= 0 ? 'עודכן' : 'נוסף'} ${label} עם ${usable} ${usable === 1 ? 'דוגמה תקינה אחת' : 'דוגמאות תקינות'}.`, { tone: 'success' });
           } catch (error) {
             console.error(error);
-            statusEl.textContent = `לא ניתן היה ליצור את הרשומה: ${error.message}`;
+            setStatus(statusEl, `לא ניתן היה ליצור את הרשומה: ${error.message}`, { tone: 'warn' });
           } finally {
             addBtn.disabled = false;
           }
@@ -146,17 +155,17 @@
         exportBtn.addEventListener('click', () => {
           const entries = loadLocalLibrary().map((entry) => normalizeEntry({ ...entry, source: 'local' })).filter((entry) => entry.descriptors.length);
           if (!entries.length) {
-            statusEl.textContent = 'יש להוסיף לפחות רשומה תקינה אחת לפני ייצוא library.json.';
+            setStatus(statusEl, 'יש להוסיף לפחות רשומה תקינה אחת לפני ייצוא library.json.', { tone: 'warn' });
             return;
           }
           exportJson('library.json', { version: 1, updated_at: new Date().toISOString().slice(0, 10), entries });
-          statusEl.textContent = 'הקובץ library.json יוצא בהצלחה.';
+          setStatus(statusEl, 'הקובץ library.json יוצא בהצלחה.', { tone: 'success' });
         });
 
         clearBtn.addEventListener('click', () => {
           saveLocalLibrary([]);
           render();
-          statusEl.textContent = 'המאגר המקומי בדפדפן נוקה.';
+          setStatus(statusEl, 'המאגר המקומי בדפדפן נוקה.', { tone: 'success' });
         });
 
         render();
@@ -164,7 +173,7 @@
       window.addEventListener('DOMContentLoaded', () => { runEnrollPage().catch((error) => {
         console.error(error);
         const statusEl = document.getElementById('status');
-        statusEl.textContent = `הטעינה נכשלה: ${error.message}`;
+        setStatus(statusEl, `הטעינה נכשלה: ${error.message}`, { tone: 'warn' });
       });});
     </script>
   </head>
@@ -184,6 +193,7 @@
         <h1 style="margin:0;">בניית רשומות מאגר בתוך הדפדפן</h1>
         <p class="meta">העמוד הזה מיועד לך ולא למבקרים. מעלים תמונות דוגמה של אדם אחד, מחשבים תיאורי פנים בדפדפן, ואז מייצאים JSON עבור <code>data/library.json</code>.</p>
         <div id="status" class="notice">טוען…</div>
+        <div id="prep-note" class="small"></div>
       </section>
 
       <section class="grid grid-2" style="margin-top:16px;">
@@ -205,12 +215,11 @@
         </article>
 
         <article class="card stack">
-          <h2 class="section-title">איך לפרסם לכולם</h2>
-          <div class="small">1. ייצאי את קובץ ה-JSON מהעמוד הזה.</div>
-          <div class="small">2. החליפי את <code>data/library.json</code> בריפו בקובץ שייצאת.</div>
-          <div class="small">3. דחפי את הריפו ל-GitHub Pages.</div>
-          <div class="small">4. שתפי את <code>search.html</code>.</div>
-          <div class="notice success">לספרייה ציבורית מלוטשת יותר, כדאי להוסיף גם קבצי תמונות ממוזערות משלך לריפו ולשנות את השדה <code>thumb</code> מנתיב data URL לנתיב רגיל של קובץ בריפו.</div>
+          <h2 class="section-title">מה חדש בתהליך</h2>
+          <div class="small">1. תמונות גדולות נדחסות מקומית לפני העיבוד כדי לחסוך זמן.</div>
+          <div class="small">2. רשומה קיימת עם אותו שם מתמזגת במקום ליצור כפילות חדשה.</div>
+          <div class="small">3. הממשק נשמר גם ללא רשת אם העמוד כבר נטען בעבר.</div>
+          <div class="notice success">אחרי ייצוא הקובץ, החליפי את <code>data/library.json</code> בריפו ועשי commit כדי לפרסם את המאגר החדש.</div>
         </article>
       </section>
 
