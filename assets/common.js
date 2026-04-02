@@ -4,16 +4,28 @@ const MODEL_URIS = {
   recognition: 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js-models@master/face_recognition',
 };
 
-const STORAGE_KEY = 'petconnect-ghpages-library-v1';
-const SEARCH_IMPORT_KEY = 'petconnect-ghpages-imported-library-v1';
+const STORAGE_KEY = 'petconnect-ghpages-library-v2';
+const SEARCH_IMPORT_KEY = 'petconnect-ghpages-imported-library-v2';
+
+function hashString(text) {
+  const value = String(text || '');
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
 
 function slugify(text) {
-  return String(text || '')
+  const original = String(text || '').trim();
+  const slug = original
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '') || `person-${Math.random().toString(36).slice(2, 10)}`;
+    .replace(/^-+|-+$/g, '');
+  return slug || `person-${hashString(original || 'entry')}`;
 }
 
 function distanceToScore(distance) {
@@ -47,7 +59,50 @@ function safeJsonParse(text, fallback) {
   }
 }
 
+function normalizeDescriptorArray(descriptor) {
+  if (!Array.isArray(descriptor)) return [];
+  const normalized = descriptor.map((value) => Number(value)).filter((value) => Number.isFinite(value));
+  return normalized.length ? normalized : [];
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function clearValidityOnInput(field) {
+  if (!field) return;
+  const clear = () => field.setCustomValidity('');
+  field.addEventListener('input', clear);
+  field.addEventListener('change', clear);
+}
+
+function setRequiredValidity(field, message) {
+  if (!field) return false;
+  const value = field.type === 'file' ? (field.files?.length || 0) : String(field.value || '').trim();
+  if (value) {
+    field.setCustomValidity('');
+    return true;
+  }
+  field.setCustomValidity(message);
+  field.reportValidity();
+  return false;
+}
+
+function isSafeProfileHref(value) {
+  const href = String(value || '').trim();
+  if (!href || href === '#') return true;
+  return /^(https?:\/\/|\.\/?|\.\.\/|\/|#)/i.test(href);
+}
+
 async function loadModels(statusEl) {
+  if (!window.faceapi) {
+    throw new Error('face-api.js did not load. Check your internet connection or CDN blocking settings.');
+  }
   if (window.__petconnectModelsReady) {
     if (statusEl) statusEl.textContent = 'Models ready.';
     return;
@@ -157,13 +212,16 @@ function saveImportedLibrary(entries) {
 }
 
 function normalizeEntry(entry) {
+  const descriptors = Array.isArray(entry.descriptors)
+    ? entry.descriptors.map((descriptor) => normalizeDescriptorArray(descriptor)).filter((descriptor) => descriptor.length)
+    : [];
   return {
     id: entry.id || slugify(entry.label || 'entry'),
-    label: entry.label || 'Unnamed',
-    href: entry.href || '#',
-    thumb: entry.thumb || '',
-    notes: entry.notes || '',
-    descriptors: Array.isArray(entry.descriptors) ? entry.descriptors : [],
+    label: String(entry.label || 'Unnamed').trim() || 'Unnamed',
+    href: isSafeProfileHref(entry.href) ? (String(entry.href || '').trim() || '#') : '#',
+    thumb: String(entry.thumb || '').trim(),
+    notes: String(entry.notes || '').trim(),
+    descriptors,
     source: entry.source || 'repo',
   };
 }
@@ -172,7 +230,7 @@ async function getMergedLibrary() {
   const repo = (await loadRepoLibrary()).map((entry) => normalizeEntry({ ...entry, source: 'repo' }));
   const local = loadLocalLibrary().map((entry) => normalizeEntry({ ...entry, source: 'local' }));
   const imported = loadImportedLibrary().map((entry) => normalizeEntry({ ...entry, source: 'imported' }));
-  return [...repo, ...local, ...imported];
+  return [...repo, ...local, ...imported].filter((entry) => entry.descriptors.length);
 }
 
 function exportJson(filename, data) {

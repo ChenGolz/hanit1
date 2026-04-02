@@ -10,6 +10,7 @@
     <script defer>
       async function runEnrollPage() {
         const statusEl = document.getElementById('status');
+        const createForm = document.getElementById('create-entry-form');
         const labelInput = document.getElementById('person-label');
         const hrefInput = document.getElementById('person-href');
         const notesInput = document.getElementById('person-notes');
@@ -19,6 +20,8 @@
         const clearBtn = document.getElementById('clear-btn');
         const outputEl = document.getElementById('output-json');
         const libraryEl = document.getElementById('library-list');
+
+        [labelInput, hrefInput, notesInput, fileInput].forEach(clearValidityOnInput);
 
         await loadModels(statusEl);
 
@@ -30,14 +33,16 @@
             return;
           }
           const cards = entries.map((entry, idx) => {
-            const thumb = entry.thumb ? `<div class="thumb-wrap"><img src="${entry.thumb}" alt="${entry.label}"></div>` : '<div class="thumb-wrap"><div class="small">No thumb</div></div>';
+            const safeLabel = escapeHtml(entry.label);
+            const safeNotes = escapeHtml(entry.notes || '');
+            const thumb = entry.thumb ? `<div class="thumb-wrap"><img src="${entry.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">No thumb</div></div>';
             return `
               <article class="library-card">
                 ${thumb}
                 <div class="body">
-                  <strong>${entry.label}</strong>
+                  <strong>${safeLabel}</strong>
                   <div class="small">${entry.descriptors.length} descriptor${entry.descriptors.length === 1 ? '' : 's'}</div>
-                  <div class="small">${entry.notes || ''}</div>
+                  <div class="small">${safeNotes}</div>
                   <button class="bad" type="button" data-remove="${idx}">Remove</button>
                 </div>
               </article>
@@ -55,15 +60,24 @@
           });
         }
 
-        addBtn.addEventListener('click', async () => {
-          const label = labelInput.value.trim();
-          const files = Array.from(fileInput.files || []);
-          if (!label) {
+        createForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          if (!setRequiredValidity(labelInput, 'Person name is required.')) {
             statusEl.textContent = 'Enter a label first.';
             return;
           }
-          if (!files.length) {
+          if (!setRequiredValidity(fileInput, 'Please choose at least one image.')) {
             statusEl.textContent = 'Choose at least one image.';
+            return;
+          }
+
+          const label = labelInput.value.trim();
+          const href = hrefInput.value.trim();
+          const files = Array.from(fileInput.files || []);
+          if (href && !isSafeProfileHref(href)) {
+            hrefInput.setCustomValidity('Use a relative path like ./profiles/jane.html, a site path, or a full http(s) URL.');
+            hrefInput.reportValidity();
+            statusEl.textContent = 'Please fix the profile link field.';
             return;
           }
 
@@ -95,17 +109,32 @@
             const entry = {
               id: slugify(label),
               label,
-              href: hrefInput.value.trim() || '#',
+              href: href || '#',
               thumb,
               notes: notesInput.value.trim(),
               descriptors,
               source: 'local',
             };
             const entries = loadLocalLibrary();
-            entries.push(entry);
-            saveLocalLibrary(entries);
+            const existingIndex = entries.findIndex((item) => item.id === entry.id);
+            if (existingIndex >= 0) {
+              const existing = normalizeEntry(entries[existingIndex]);
+              entries[existingIndex] = {
+                ...existing,
+                label: entry.label,
+                href: entry.href || existing.href || '#',
+                thumb: entry.thumb || existing.thumb || '',
+                notes: entry.notes || existing.notes || '',
+                descriptors: [...existing.descriptors, ...entry.descriptors],
+                source: 'local',
+              };
+            } else {
+              entries.push(entry);
+            }
+            saveLocalLibrary(entries.map((item) => normalizeEntry({ ...item, source: 'local' })));
             render();
-            statusEl.textContent = `Added ${label} with ${usable} usable sample${usable === 1 ? '' : 's'}.`;
+            createForm.reset();
+            statusEl.textContent = `${existingIndex >= 0 ? 'Updated' : 'Added'} ${label} with ${usable} usable sample${usable === 1 ? '' : 's'}.`;
           } catch (error) {
             console.error(error);
             statusEl.textContent = `Could not build entry: ${error.message}`;
@@ -115,8 +144,13 @@
         });
 
         exportBtn.addEventListener('click', () => {
-          const entries = loadLocalLibrary();
+          const entries = loadLocalLibrary().map((entry) => normalizeEntry({ ...entry, source: 'local' })).filter((entry) => entry.descriptors.length);
+          if (!entries.length) {
+            statusEl.textContent = 'Add at least one valid entry before exporting library.json.';
+            return;
+          }
           exportJson('library.json', { version: 1, updated_at: new Date().toISOString().slice(0, 10), entries });
+          statusEl.textContent = 'library.json exported.';
         });
 
         clearBtn.addEventListener('click', () => {
@@ -155,15 +189,18 @@
       <section class="grid grid-2" style="margin-top:16px;">
         <article class="card stack">
           <h2 class="section-title">Create one entry</h2>
-          <input id="person-label" type="text" placeholder="Person name" />
-          <input id="person-href" type="text" placeholder="Optional profile link, e.g. ./profiles/jane.html" />
-          <textarea id="person-notes" placeholder="Optional notes shown on search results"></textarea>
-          <input id="person-files" type="file" accept="image/*" multiple />
-          <div class="row">
-            <button id="add-btn">Add to local library</button>
-            <button id="export-btn" class="good" type="button">Export library.json</button>
-            <button id="clear-btn" class="secondary" type="button">Clear local library</button>
-          </div>
+          <form id="create-entry-form" class="stack" novalidate>
+            <input id="person-label" type="text" placeholder="Person name" required aria-label="Person name" />
+            <input id="person-href" type="text" placeholder="Optional profile link, e.g. ./profiles/jane.html" aria-label="Optional profile link" />
+            <textarea id="person-notes" placeholder="Optional notes shown on search results" aria-label="Optional notes"></textarea>
+            <input id="person-files" type="file" accept="image/*" multiple required aria-label="Choose one or more face photos" />
+            <div class="small">Required fields: person name and at least one image.</div>
+            <div class="row">
+              <button id="add-btn" type="submit">Add to local library</button>
+              <button id="export-btn" class="good" type="button">Export library.json</button>
+              <button id="clear-btn" class="secondary" type="button">Clear local library</button>
+            </div>
+          </form>
           <div class="notice warn">Entries created here live only in this browser until you export them. To make them public for everyone, commit the exported JSON into the repo.</div>
         </article>
 
