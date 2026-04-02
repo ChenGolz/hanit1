@@ -126,6 +126,16 @@ async function runSearchPage() {
     reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top || null });
   }
 
+  function classifyResultState(bundle) {
+    const top = bundle?.matches?.[0];
+    if (!top) return { band: 'empty', score: 0 };
+    const score = bundle.kind === 'visual' ? Number(top.score || 0) : Number(top.colorScore || top.score || 0);
+    if (bundle.kind !== 'visual') return { band: 'fallback', score };
+    if (score >= 0.9) return { band: 'high', score };
+    if (score >= 0.6) return { band: 'medium', score };
+    return { band: 'low', score };
+  }
+
   function redrawPreview() {
     if (!currentPreviewImage) {
       const ctx = canvas.getContext('2d');
@@ -165,7 +175,9 @@ async function runSearchPage() {
       resultsEl.innerHTML = '<div class="empty">אין כרגע תוצאות להצגה.</div>';
       return;
     }
-    resultsEl.innerHTML = `<div class="result-grid">${matches.map((match) => {
+    const resultState = classifyResultState(bundle);
+    const gridClass = resultState.band === 'medium' ? 'result-grid result-grid--swipe' : 'result-grid';
+    resultsEl.innerHTML = `<div class="${gridClass}">${matches.map((match) => {
       const target = match.href && match.href !== '#' ? match.href : '';
       const safeLabel = escapeHtml(match.label);
       const safeNotes = escapeHtml(match.notes || '');
@@ -212,32 +224,72 @@ async function runSearchPage() {
     }
 
     const top = matches[0];
+    const state = classifyResultState(bundle);
+    const scorePct = Math.round(state.score * 100);
     let tone = 'low';
+    let chip = 'נמצאו תוצאות להשוואה';
     let title = 'נמצאו בעלי חיים דומים';
     let body = 'עברו על הכרטיסים למטה ובדקו מי מהם נראה הכי קרוב לחיה שבתמונה.';
-    if (bundle.kind === 'visual') {
-      if (top.score >= 0.85) {
-        tone = 'high';
-        title = `נמצאה התאמה חזקה: ${escapeHtml(top.label)}`;
-        body = `נמצאה התאמה חזקה של ${Math.round((top.score || 0) * 100)}%. כדאי ליצור קשר קודם עם הבעלים של הכרטיס הראשון.`;
-      } else if (top.score >= 0.70) {
-        tone = 'medium';
-        title = `מועמד מוביל: ${escapeHtml(top.label)}`;
-        body = `המערכת מצאה מועמד מוביל של ${Math.round((top.score || 0) * 100)}%. מומלץ לעבור גם על 2–3 הכרטיסים שאחריו.`;
-      }
-    } else {
+    let tipsHtml = '';
+    let heroHtml = '';
+
+    if (state.band === 'high') {
+      tone = 'high';
+      chip = 'נמצאה התאמה חזקה מאוד';
+      title = `יכול להיות שזו ${escapeHtml(top.label)}`;
+      body = `המערכת מצאה התאמה של ${scorePct}% — זה הסוג של מקרה שבו כדאי ליצור קשר מיד דרך הכפתורים למטה.`;
+      heroHtml = `
+        <div class="summary-hero">
+          ${top.thumb ? `<img class="summary-hero-thumb" src="${top.thumb}" alt="${escapeHtml(top.label)}">` : ''}
+          <div class="summary-hero-body">
+            <div class="summary-hero-score">${scorePct}% התאמה</div>
+            <div class="summary-hero-meta">${top.animalType ? `${escapeHtml(top.animalType)} · ` : ''}${escapeHtml(top.colors || top.colorName || 'צבע מעורב')}</div>
+            <div class="small">${escapeHtml(top.notes || 'המועמד המוביל קפץ לראש הרשימה. מומלץ לעבור גם על עוד 1–2 כרטיסים כדי לוודא.')}</div>
+          </div>
+        </div>`;
+    } else if (state.band === 'medium') {
       tone = 'medium';
-      title = 'לא נמצאה התאמה ויזואלית חזקה — מציג חיות בצבעים דומים';
-      body = 'כדי לא לפספס, מוצגות עכשיו חיות עם פרופיל צבע דומה. אם צריך, נסי לסמן אזור מדויק יותר סביב החיה בלבד.';
+      chip = 'נמצאו התאמות אפשריות';
+      title = `יש כמה מועמדים טובים — המוביל הוא ${escapeHtml(top.label)}`;
+      body = `ההתאמה המובילה היא ${scorePct}%. עברי ימינה ושמאלה בין הכרטיסים ובדקי עוד 2–3 מועמדים לפני שמחליטים.`;
+      tipsHtml = `
+        <ul class="retake-list compact">
+          <li>בדקי קודם את הכרטיס הראשון ואז את השניים שאחריו.</li>
+          <li>חפשי סימנים בולטים כמו צבעים, מבנה גוף או רתמה.</li>
+        </ul>`;
+    } else if (state.band === 'low') {
+      tone = 'low';
+      chip = 'ההתאמה חלשה כרגע';
+      title = 'כנראה שצריך עוד תמונה אחת טובה יותר';
+      body = `נמצאה התאמה של ${scorePct}% בלבד. נציג עדיין את התוצאות, אבל עדיף לנסות תמונה נוספת מזווית קדמית או לסמן אזור מדויק יותר סביב החיה.`;
+      tipsHtml = `
+        <ul class="retake-list">
+          <li>נסי תמונה קרובה יותר שבה החיה תופסת יותר מהפריים.</li>
+          <li>אם יש אנשים או רקע עמוס, סמני רק את החיה.</li>
+          <li>זווית קדמית או חצי-צד בדרך כלל נותנת תוצאה טובה יותר.</li>
+        </ul>
+        <div class="summary-actions"><button id="retry-search-inline" class="secondary small" type="button">בחירת אזור חדש</button></div>`;
+    } else if (state.band === 'fallback') {
+      tone = 'medium';
+      chip = 'לא נמצאה התאמה חזקה';
+      title = 'מציג חיות בצבעים דומים';
+      body = 'כדי לא לפספס, מוצגות עכשיו חיות עם פרופיל צבע דומה. אם אפשר, נסי תמונה נוספת או אזור מדויק יותר סביב החיה בלבד.';
+      tipsHtml = `
+        <ul class="retake-list compact">
+          <li>נסי חיפוש נוסף עם חיתוך הדוק יותר.</li>
+          <li>צילום מזווית אחרת יכול לשפר את ההתאמה הוויזואלית.</li>
+        </ul>`;
     }
 
     const reportHref = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
     const profileAction = top.href && top.href !== '#' ? `<a class="button-link small" href="${escapeHtml(top.href)}">פתיחת הפרופיל של ${escapeHtml(top.label)}</a>` : '';
     summaryEl.className = `summary-banner ${tone}`;
     summaryEl.innerHTML = `
-      <div class="chip">נמצאו ${matches.length} תוצאות</div>
+      <div class="chip">${chip} · ${matches.length} תוצאות</div>
       <h3 style="margin:0;">${title}</h3>
       <div class="small">${body}</div>
+      ${heroHtml}
+      ${tipsHtml}
       <div class="summary-actions">
         ${profileAction}
         <button id="share-top-inline" class="small" type="button">שיתוף</button>
@@ -248,6 +300,10 @@ async function runSearchPage() {
     summaryEl.querySelector('#share-top-inline')?.addEventListener('click', async () => {
       const ok = await shareResult({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
       setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
+    });
+    summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
+      document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setStatus(statusEl, 'בחרי אזור חדש סביב החיה ונסי שוב. תמונה קרובה יותר בדרך כלל תשפר את התוצאה.', { tone: 'warn' });
     });
   }
 
@@ -288,13 +344,16 @@ async function runSearchPage() {
     rerenderResults();
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setSearchProgress(100, currentResultBundle.kind === 'visual' ? 'נסרקו התאמות ויזואליות.' : 'לא נמצאה התאמה חזקה, מוצגות חיות בצבעים דומים.');
-    setStatus(
-      statusEl,
-      currentResultBundle.kind === 'visual'
-        ? `החיפוש הושלם. נמצאו ${currentResultBundle.matches.length} התאמות ויזואליות אפשריות.`
-        : 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.',
-      { tone: currentResultBundle.kind === 'visual' ? 'success' : 'warn' },
-    );
+    const state = classifyResultState(currentResultBundle);
+    if (state.band === 'high') {
+      setStatus(statusEl, `נמצאה התאמה חזקה מאוד של ${Math.round(state.score * 100)}%. מומלץ לפתוח מיד את הכרטיס הראשון.`, { tone: 'success' });
+    } else if (state.band === 'medium') {
+      setStatus(statusEl, 'נמצאו כמה מועמדים טובים. עברי על הגלריה והשווי בין הכרטיסים.', { tone: 'success' });
+    } else if (state.band === 'low') {
+      setStatus(statusEl, 'נמצאו תוצאות חלשות בלבד. עדיף לנסות חיפוש נוסף עם אזור מדויק יותר או תמונה מזווית אחרת.', { tone: 'warn' });
+    } else {
+      setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
+    }
     runSelectedBtn.disabled = false;
   }
 
