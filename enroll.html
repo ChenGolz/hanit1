@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Build Library · PetConnect Pages</title>
+    <link rel="stylesheet" href="./assets/styles.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script defer src="./assets/common.js"></script>
+    <script defer>
+      async function runEnrollPage() {
+        const statusEl = document.getElementById('status');
+        const labelInput = document.getElementById('person-label');
+        const hrefInput = document.getElementById('person-href');
+        const notesInput = document.getElementById('person-notes');
+        const fileInput = document.getElementById('person-files');
+        const addBtn = document.getElementById('add-btn');
+        const exportBtn = document.getElementById('export-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        const outputEl = document.getElementById('output-json');
+        const libraryEl = document.getElementById('library-list');
+
+        await loadModels(statusEl);
+
+        function render() {
+          const entries = loadLocalLibrary();
+          if (!entries.length) {
+            libraryEl.innerHTML = '<div class="empty">No local entries yet.</div>';
+            outputEl.textContent = JSON.stringify({ version: 1, updated_at: new Date().toISOString().slice(0, 10), entries: [] }, null, 2);
+            return;
+          }
+          const cards = entries.map((entry, idx) => {
+            const thumb = entry.thumb ? `<div class="thumb-wrap"><img src="${entry.thumb}" alt="${entry.label}"></div>` : '<div class="thumb-wrap"><div class="small">No thumb</div></div>';
+            return `
+              <article class="library-card">
+                ${thumb}
+                <div class="body">
+                  <strong>${entry.label}</strong>
+                  <div class="small">${entry.descriptors.length} descriptor${entry.descriptors.length === 1 ? '' : 's'}</div>
+                  <div class="small">${entry.notes || ''}</div>
+                  <button class="bad" type="button" data-remove="${idx}">Remove</button>
+                </div>
+              </article>
+            `;
+          }).join('');
+          libraryEl.innerHTML = `<div class="library-grid">${cards}</div>`;
+          outputEl.textContent = JSON.stringify({ version: 1, updated_at: new Date().toISOString().slice(0, 10), entries }, null, 2);
+          libraryEl.querySelectorAll('[data-remove]').forEach((button) => {
+            button.addEventListener('click', () => {
+              const items = loadLocalLibrary();
+              items.splice(Number(button.dataset.remove), 1);
+              saveLocalLibrary(items);
+              render();
+            });
+          });
+        }
+
+        addBtn.addEventListener('click', async () => {
+          const label = labelInput.value.trim();
+          const files = Array.from(fileInput.files || []);
+          if (!label) {
+            statusEl.textContent = 'Enter a label first.';
+            return;
+          }
+          if (!files.length) {
+            statusEl.textContent = 'Choose at least one image.';
+            return;
+          }
+
+          addBtn.disabled = true;
+          try {
+            const descriptors = [];
+            let thumb = '';
+            let usable = 0;
+            statusEl.textContent = `Processing ${files.length} image${files.length === 1 ? '' : 's'}…`;
+            for (const file of files) {
+              const { img, url } = await fileToImage(file);
+              try {
+                const detections = await detectFaces(img);
+                const best = pickBestDetection(detections);
+                if (!best) continue;
+                descriptors.push(Array.from(best.descriptor));
+                usable += 1;
+                if (!thumb) thumb = cropFaceDataUrl(img, best);
+              } finally {
+                URL.revokeObjectURL(url);
+              }
+            }
+
+            if (!descriptors.length) {
+              statusEl.textContent = 'No usable faces were found in those files.';
+              return;
+            }
+
+            const entry = {
+              id: slugify(label),
+              label,
+              href: hrefInput.value.trim() || '#',
+              thumb,
+              notes: notesInput.value.trim(),
+              descriptors,
+              source: 'local',
+            };
+            const entries = loadLocalLibrary();
+            entries.push(entry);
+            saveLocalLibrary(entries);
+            render();
+            statusEl.textContent = `Added ${label} with ${usable} usable sample${usable === 1 ? '' : 's'}.`;
+          } catch (error) {
+            console.error(error);
+            statusEl.textContent = `Could not build entry: ${error.message}`;
+          } finally {
+            addBtn.disabled = false;
+          }
+        });
+
+        exportBtn.addEventListener('click', () => {
+          const entries = loadLocalLibrary();
+          exportJson('library.json', { version: 1, updated_at: new Date().toISOString().slice(0, 10), entries });
+        });
+
+        clearBtn.addEventListener('click', () => {
+          saveLocalLibrary([]);
+          render();
+          statusEl.textContent = 'Local browser library cleared.';
+        });
+
+        render();
+      }
+      window.addEventListener('DOMContentLoaded', () => { runEnrollPage().catch((error) => {
+        console.error(error);
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = `Startup failed: ${error.message}`;
+      });});
+    </script>
+  </head>
+  <body>
+    <main class="page">
+      <nav class="nav">
+        <div><strong>PetConnect Pages</strong></div>
+        <div class="links">
+          <a class="link" href="./index.html">Home</a>
+          <a class="link" href="./search.html">Search by photo</a>
+          <a class="link" href="./enroll.html">Build library</a>
+        </div>
+      </nav>
+
+      <section class="card stack">
+        <div class="chip">Admin helper</div>
+        <h1 style="margin:0;">Build library entries in the browser</h1>
+        <p class="meta">This page is for you, not public visitors. Upload sample photos for one person, compute descriptors in the browser, then export JSON for <code>data/library.json</code>.</p>
+        <div id="status" class="notice">Loading…</div>
+      </section>
+
+      <section class="grid grid-2" style="margin-top:16px;">
+        <article class="card stack">
+          <h2 class="section-title">Create one entry</h2>
+          <input id="person-label" type="text" placeholder="Person name" />
+          <input id="person-href" type="text" placeholder="Optional profile link, e.g. ./profiles/jane.html" />
+          <textarea id="person-notes" placeholder="Optional notes shown on search results"></textarea>
+          <input id="person-files" type="file" accept="image/*" multiple />
+          <div class="row">
+            <button id="add-btn">Add to local library</button>
+            <button id="export-btn" class="good" type="button">Export library.json</button>
+            <button id="clear-btn" class="secondary" type="button">Clear local library</button>
+          </div>
+          <div class="notice warn">Entries created here live only in this browser until you export them. To make them public for everyone, commit the exported JSON into the repo.</div>
+        </article>
+
+        <article class="card stack">
+          <h2 class="section-title">Publish it for everyone</h2>
+          <div class="small">1. Export the JSON file from this page.</div>
+          <div class="small">2. Replace <code>data/library.json</code> in the repo with that export.</div>
+          <div class="small">3. Push the repo to GitHub Pages.</div>
+          <div class="small">4. Share <code>search.html</code>.</div>
+          <div class="notice success">For a polished public library, also add your own thumbnail image files to the repo and change each entry’s <code>thumb</code> path from a browser data URL to a normal repo file path.</div>
+        </article>
+      </section>
+
+      <section class="card stack" style="margin-top:16px;">
+        <h2 class="section-title">Current local library</h2>
+        <div id="library-list"></div>
+      </section>
+
+      <section class="card stack" style="margin-top:16px;">
+        <div class="space-between">
+          <h2 class="section-title" style="margin:0;">JSON output</h2>
+          <div class="small">Paste into <code>data/library.json</code></div>
+        </div>
+        <pre id="output-json"></pre>
+      </section>
+    </main>
+  </body>
+</html>

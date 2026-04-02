@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PetConnect Pages</title>
+    <link rel="stylesheet" href="./assets/styles.css">
+  </head>
+  <body>
+    <main class="page">
+      <nav class="nav">
+        <div><strong>PetConnect Pages</strong></div>
+        <div class="links">
+          <a class="link" href="./index.html">Home</a>
+          <a class="link" href="./search.html">Search by photo</a>
+          <a class="link" href="./enroll.html">Build library</a>
+        </div>
+      </nav>
+
+      <section class="hero stack">
+        <div class="chip">GitHub Pages-ready</div>
+        <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.4rem);">Use face search on a static GitHub Pages site.</h1>
+        <p class="meta" style="font-size:1.08rem; max-width: 760px;">This version moves the matching into the browser. Visitors can upload a photo and search your published face library without a Python server.</p>
+        <div class="row">
+          <a href="./search.html"><button>Open search</button></a>
+          <a href="./enroll.html"><button class="secondary">Build your library</button></a>
+        </div>
+        <div class="notice warn">
+          GitHub Pages can host the site itself, but it cannot run your FastAPI backend or store shared public uploads. For a shared live database, you’ll still want real hosting later.
+        </div>
+      </section>
+
+      <section class="grid grid-2" style="margin-top:16px;">
+        <article class="card stack">
+          <h2 class="section-title">What works right now</h2>
+          <div class="small">• Public visitors can upload one image and search your published library in their browser.</div>
+          <div class="small">• You can build test entries locally from the <strong>Build library</strong> page.</div>
+          <div class="small">• You can export JSON and publish it in <code>data/library.json</code> for everyone to use.</div>
+          <div class="small">• No backend bill for the static demo.</div>
+        </article>
+        <article class="card stack">
+          <h2 class="section-title">What still needs real hosting later</h2>
+          <div class="small">• Shared uploads into one central DB</div>
+          <div class="small">• Private admin accounts</div>
+          <div class="small">• Long-term storage for submitted images</div>
+          <div class="small">• Heavy background processing for videos or bulk imports</div>
+        </article>
+      </section>
+
+      <section class="grid grid-3" style="margin-top:16px;">
+        <article class="card stack">
+          <div class="chip">Step 1</div>
+          <h3 style="margin:0;">Create your face library</h3>
+          <div class="meta">Open <strong>Build library</strong>, upload sample photos for each person, and export a JSON file.</div>
+        </article>
+        <article class="card stack">
+          <div class="chip">Step 2</div>
+          <h3 style="margin:0;">Publish the library</h3>
+          <div class="meta">Commit your exported data into <code>data/library.json</code> and add thumbnail images to the repo.</div>
+        </article>
+        <article class="card stack">
+          <div class="chip">Step 3</div>
+          <h3 style="margin:0;">Share the search page</h3>
+          <div class="meta">Send people to <code>/search.html</code> so they can upload one photo and get ranked matches.</div>
+        </article>
+      </section>
+
+      <section class="card stack" style="margin-top:16px;">
+        <h2 class="section-title">File layout</h2>
+<pre>your-repo/
+├─ index.html
+├─ search.html
+├─ enroll.html
+├─ assets/
+│  ├─ styles.css
+│  └─ common.js
+└─ data/
+   └─ library.json</pre>
+        <div class="small">You can publish this repo directly from the repository root on GitHub Pages.</div>
+      </section>
+
+      <div class="footer">Static site starter for GitHub Pages.</div>
+    </main>
+  </body>
+</html>
