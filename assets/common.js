@@ -131,7 +131,7 @@ async function fileToImage(file) {
     const img = await new Promise((resolve, reject) => {
       const el = new Image();
       el.onload = () => resolve(el);
-      el.onerror = () => reject(new Error(`Failed to load image ${file.name}`));
+      el.onerror = () => reject(new Error(`לא ניתן היה לטעון את התמונה ${file.name}`));
       el.src = url;
     });
     return { img, url };
@@ -280,14 +280,15 @@ function pickBestDetection(detections) {
   })[0];
 }
 
-function drawDetection(canvas, img, detection) {
+function drawDetection(canvas, img, detection, options = {}) {
+  const { showBox = true } = options;
   const ratio = Math.min(1, 900 / img.width);
   canvas.width = Math.round(img.width * ratio);
   canvas.height = Math.round(img.height * ratio);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  if (!detection) return;
+  if (!detection || !showBox) return;
   const { x, y, width, height } = detection.detection.box;
   ctx.strokeStyle = '#8b5cf6';
   ctx.lineWidth = 4;
@@ -314,7 +315,7 @@ function cropFaceDataUrl(img, detection, paddingRatio = 0.35) {
 async function loadRepoLibrary() {
   try {
     const response = await fetch('./data/library.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`library.json returned ${response.status}`);
+    if (!response.ok) throw new Error(`קובץ library.json החזיר שגיאה ${response.status}`);
     const data = await response.json();
     return Array.isArray(data.entries) ? data.entries : [];
   } catch (error) {

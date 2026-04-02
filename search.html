@@ -15,6 +15,7 @@
         const searchBtn = document.getElementById('search-btn');
         const canvas = document.getElementById('preview-canvas');
         const cropImg = document.getElementById('query-crop');
+        const showBoxInput = document.getElementById('show-box');
         const resultsEl = document.getElementById('results');
         const libraryStatsEl = document.getElementById('library-stats');
         const importInput = document.getElementById('import-json');
@@ -25,6 +26,20 @@
         await loadModels(statusEl);
         const mergedLibrary = await getMergedLibrary();
         libraryStatsEl.textContent = formatEntryCount(mergedLibrary.length);
+
+        let currentPreviewImage = null;
+        let currentPreviewDetection = null;
+
+        function redrawPreview() {
+          if (!currentPreviewImage) {
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            return;
+          }
+          drawDetection(canvas, currentPreviewImage, currentPreviewDetection, { showBox: showBoxInput.checked });
+        }
+
+        showBoxInput.addEventListener('change', redrawPreview);
 
         importInput.addEventListener('change', async () => {
           const file = importInput.files?.[0];
@@ -70,12 +85,17 @@
           searchBtn.disabled = true;
           resultsEl.innerHTML = '';
           try {
+            currentPreviewImage = null;
+            currentPreviewDetection = null;
+            redrawPreview();
             statusEl.textContent = 'קורא את התמונה ומאתר פנים…';
             const { img, url } = await fileToImage(file);
             try {
               const detections = await detectFaces(img, statusEl);
               const best = pickBestDetection(detections);
-              drawDetection(canvas, img, best);
+              currentPreviewImage = img;
+              currentPreviewDetection = best;
+              redrawPreview();
               if (!best) {
                 cropImg.classList.add('hidden');
                 statusEl.textContent = 'לא נמצאו פנים ברורות בתמונה הזאת. נסי תמונה קרובה יותר, עם פנים גדולות יותר בפריים ואם אפשר עם עיניים גלויות.';
@@ -179,8 +199,15 @@
 
       <section class="grid grid-2" style="margin-top:16px;">
         <article class="card stack">
-          <h2 class="section-title">תצוגה מקדימה</h2>
+          <div class="space-between">
+            <h2 class="section-title" style="margin:0;">תצוגה מקדימה</h2>
+            <label class="small" style="display:flex; align-items:center; gap:8px;">
+              <input id="show-box" type="checkbox" checked>
+              להציג מסגרת זיהוי
+            </label>
+          </div>
           <canvas id="preview-canvas" class="preview"></canvas>
+          <div class="small">אפשר להסיר את מסגרת הזיהוי מהתצוגה המקדימה מתי שתרצי.</div>
         </article>
         <article class="card stack">
           <h2 class="section-title">חיתוך הפנים ששימש להתאמה</h2>
