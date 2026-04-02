@@ -1,5 +1,5 @@
-const STORAGE_KEY = 'petconnect-ghpages-animal-library-v1';
-const SEARCH_IMPORT_KEY = 'petconnect-ghpages-animal-imported-library-v1';
+const STORAGE_KEY = 'petconnect-ghpages-animal-library-v2';
+const SEARCH_IMPORT_KEY = 'petconnect-ghpages-animal-imported-library-v2';
 
 function hashString(text) {
   const value = String(text || '');
@@ -270,8 +270,8 @@ function drawImageSelection(canvas, img, rect = null, options = {}) {
     ctx.save();
     ctx.fillStyle = 'rgba(11,16,32,0.45)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.clearRect(sx, sy, sw, sh);
     ctx.restore();
+    ctx.drawImage(img, rect.x, rect.y, rect.width, rect.height, sx, sy, sw, sh);
   }
 
   ctx.strokeStyle = '#8b5cf6';

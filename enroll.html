@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="./assets/styles.css">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/common.js"></script>
+    <script defer src="./assets/common.js?v=20260403b"></script>
     <script defer>
       function fallbackSetStatus(element, text, options = {}) {
         if (!element) return;
@@ -19,14 +19,36 @@
         if (busy) element.classList.add('busy');
       }
 
+      async function loadCommonScriptOnce() {
+        if (window.__petconnectCommonLoadPromise) return window.__petconnectCommonLoadPromise;
+        window.__petconnectCommonLoadPromise = new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = `./assets/common.js?v=20260403b`;
+          script.async = true;
+          script.onload = () => resolve();
+          script.onerror = () => reject(new Error('לא ניתן היה לטעון את assets/common.js.'));
+          document.head.appendChild(script);
+        });
+        return window.__petconnectCommonLoadPromise;
+      }
+
       async function waitForCommonHelpers() {
         const needed = ['registerServiceWorker', 'setStatus', 'extractAnimalFeaturesForEnrollment'];
+        const hasNeeded = () => needed.every((name) => typeof window[name] === 'function');
+        if (hasNeeded()) return;
+
+        try {
+          await loadCommonScriptOnce();
+        } catch (error) {
+          console.warn(error);
+        }
+
         const start = Date.now();
-        while (Date.now() - start < 5000) {
-          if (needed.every((name) => typeof window[name] === 'function')) return;
+        while (Date.now() - start < 8000) {
+          if (hasNeeded()) return;
           await new Promise((resolve) => setTimeout(resolve, 50));
         }
-        throw new Error('קובץ העזר assets/common.js לא נטען. נסי רענון קשיח עם Ctrl + F5.');
+        throw new Error('קובץ העזר assets/common.js לא נטען. נסי Ctrl + F5 או חלון אינקוגניטו.');
       }
 
       async function runEnrollPage() {
