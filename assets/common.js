@@ -514,3 +514,52 @@ function registerServiceWorker() {
     });
   });
 }
+
+
+if (typeof window !== 'undefined') {
+  Object.assign(window, {
+    hashString,
+    slugify,
+    distanceToScore,
+    scoreLabel,
+    formatPct,
+    descriptorDistance,
+    safeJsonParse,
+    normalizeDescriptorArray,
+    escapeHtml,
+    clearValidityOnInput,
+    setRequiredValidity,
+    isSafeProfileHref,
+    setStatus,
+    loadModels,
+    ensureSsdModel,
+    blobToImage,
+    fileToImage,
+    canvasToBlob,
+    fileToPreparedImage,
+    createScaledCanvas,
+    createCropCanvas,
+    remapDetection,
+    detectFacesWithTiny,
+    detectFacesWithSsd,
+    detectFaces,
+    pickBestDetection,
+    drawDetection,
+    cropFaceDataUrl,
+    loadRepoLibrary,
+    loadLocalLibrary,
+    saveLocalLibrary,
+    loadImportedLibrary,
+    saveImportedLibrary,
+    normalizeEntry,
+    getMergedLibrary,
+    exportJson,
+    formatEntryCount,
+    formatSampleCount,
+    formatDescriptorCount,
+    sourceLabel,
+    formatCoordinates,
+    buildMunicipalReportHref,
+    registerServiceWorker,
+  });
+}

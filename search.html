@@ -8,8 +8,29 @@
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script defer src="./assets/common.js"></script>
     <script defer>
+
+      function fallbackSetStatus(element, text, options = {}) {
+        if (!element) return;
+        const { tone = 'default', busy = false } = options;
+        element.textContent = text;
+        element.classList.remove('warn', 'success', 'busy');
+        if (tone === 'warn') element.classList.add('warn');
+        if (tone === 'success') element.classList.add('success');
+        if (busy) element.classList.add('busy');
+      }
+
+      async function waitForCommonHelpers() {
+        const needed = ['registerServiceWorker', 'setStatus'];
+        const start = Date.now();
+        while (Date.now() - start < 5000) {
+          if (needed.every((name) => typeof window[name] === 'function')) return;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        throw new Error('קובץ העזר assets/common.js לא נטען. נסי רענון קשיח עם Ctrl + F5.');
+      }
       async function runSearchPage() {
-        registerServiceWorker();
+        await waitForCommonHelpers();
+        window.registerServiceWorker?.();
 
         const statusEl = document.getElementById('status');
         const searchForm = document.getElementById('search-form');
@@ -279,7 +300,7 @@
       window.addEventListener('DOMContentLoaded', () => { runSearchPage().catch((error) => {
         console.error(error);
         const statusEl = document.getElementById('status');
-        setStatus(statusEl, `הטעינה נכשלה: ${error.message}`, { tone: 'warn' });
+        (window.setStatus || fallbackSetStatus)(statusEl, `הטעינה נכשלה: ${error.message}`, { tone: 'warn' });
       });});
     </script>
   </head>
