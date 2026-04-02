@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+python-multipart
+jinja2
+opencv-python
+mediapipe
+numpy
+scikit-learn
+yt-dlp
+python-dotenv
+deepface

@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Home · PetConnect Rebuilt{% endblock %}
+{% block content %}
+<div class="grid grid-2">
+  <div class="card stack">
+    <h2>Upload image or video</h2>
+    <form class="stack" action="/upload" method="post" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi,.mkv,.webm" required>
+      <button type="submit">Start processing</button>
+    </form>
+    <div class="meta">Supported images: jpg, jpeg, png, webp. Supported videos: mp4, mov, avi, mkv, webm.</div>
+  </div>
+
+  <div class="card stack">
+    <h2>YouTube</h2>
+    <form class="stack" action="/youtube" method="post">
+      <input type="url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." required>
+      <button type="submit">Process one link</button>
+    </form>
+    <div class="sep"></div>
+    <form class="stack" action="/youtube-bulk" method="post">
+      <textarea name="youtube_urls" placeholder="Paste one YouTube URL per line"></textarea>
+      <button class="secondary" type="submit">Process up to {{ max_bulk }} links</button>
+    </form>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:16px;">
+  <div class="card stack">
+    <h2>Reference sets</h2>
+    <form class="stack" action="/upload-known" method="post" enctype="multipart/form-data">
+      <input type="text" name="reference_name" placeholder="Reference label" required>
+      <input type="file" name="files" accept=".jpg,.jpeg,.png,.webp" multiple required>
+      <button type="submit">Upload references</button>
+    </form>
+    {% if reference_sets %}
+      <div class="list">
+        {% for ref in reference_sets %}
+          <div class="card" style="padding:12px;">
+            <div class="space-between">
+              <div>
+                <div><strong>{{ ref.label }}</strong></div>
+                <div class="meta">{{ ref.count }} image(s)</div>
+              </div>
+              <form action="/reference-set/{{ ref.slug }}/delete" method="post" onsubmit="return confirm('Delete this reference set?');">
+                <button class="bad" type="submit">Delete</button>
+              </form>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">No reference sets yet.</div>
+    {% endif %}
+  </div>
+
+  <div class="card stack">
+    <h2>Projects</h2>
+    {% if projects %}
+      <div class="list">
+        {% for project_id in projects %}
+          <a class="card" style="padding:12px; display:block;" href="/project/{{ project_id }}">{{ project_id }}</a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">No processed projects yet.</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  <h2>Named people index</h2>
+  {% if named_people %}
+    <div class="person-grid">
+      {% for person in named_people %}
+        <a class="card" href="/person/{{ person.slug }}">
+          {% if person.thumb %}
+            <img class="thumb" src="{{ person.thumb }}" alt="{{ person.name }}">
+          {% endif %}
+          <h3>{{ person.name }}</h3>
+          <div class="meta">{{ person.count }} appearances across {{ person.project_count }} project(s)</div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">No saved names yet.</div>
+  {% endif %}
+</div>
+{% endblock %}

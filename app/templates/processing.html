@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Processing · {{ project_id }}{% endblock %}
+{% block head %}
+{% if status.state in ["queued", "processing"] %}
+<meta http-equiv="refresh" content="3">
+{% endif %}
+{% endblock %}
+{% block content %}
+<div class="card stack">
+  <h2>Project {{ project_id }}</h2>
+  <div class="row">
+    <span class="chip">State: {{ status.state }}</span>
+    {% if done_batch %}<span class="chip">Batch finished</span>{% endif %}
+  </div>
+  <div>{{ status.message or "Working..." }}</div>
+
+  {% if status.children %}
+    <div class="sep"></div>
+    <h3>Generated child projects</h3>
+    <div class="list">
+      {% for child in status.children %}
+        <a href="/project/{{ child }}">{{ child }}</a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if status.state == "error" %}
+    <div class="empty">Processing failed: {{ status.message }}</div>
+  {% elif status.state in ["queued", "processing"] %}
+    <div class="meta">This page refreshes automatically.</div>
+  {% endif %}
+</div>
+{% endblock %}

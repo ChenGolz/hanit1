@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Project · {{ project_id }}{% endblock %}
+{% block content %}
+<div class="card stack">
+  <div class="space-between">
+    <div>
+      <h2>{{ project.source_name or project_id }}</h2>
+      <div class="meta">Project ID: {{ project_id }} · Type: {{ project.source_type }}</div>
+      {% if project.source_url %}
+        <div class="meta">Source: <a href="{{ project.source_url }}" target="_blank" rel="noopener">{{ project.source_url }}</a></div>
+      {% endif %}
+      {% if project.source_date %}
+        <div class="meta">Source date: {{ project.source_date }}</div>
+      {% endif %}
+    </div>
+    <span class="chip">{{ project.clusters|length }} cluster(s)</span>
+  </div>
+</div>
+
+{% if project.clusters %}
+<form action="/project/{{ project_id }}/bulk-rename" method="post" class="cluster-grid" style="margin-top:16px;">
+  {% for cluster in project.clusters %}
+    <div class="card stack">
+      {% if cluster.thumbnail_face_path %}
+        <img class="thumb" src="/data/{{ project_id }}/{{ cluster.thumbnail_face_path }}" alt="Cluster {{ cluster.cluster_id }}">
+      {% endif %}
+      <div class="space-between">
+        <strong>{{ cluster.display_name }}</strong>
+        <span class="chip">{{ cluster.count }} items</span>
+      </div>
+      {% if cluster.possible_match %}
+        <div class="hint-warn small">Possible previous match: {{ cluster.possible_match_label or "anonymous cluster" }} ({{ '%.3f'|format(cluster.possible_match_score) }})</div>
+      {% endif %}
+      {% if cluster.possible_reference_match %}
+        <div class="hint-good small">Possible reference match: {{ cluster.possible_reference_label }} ({{ '%.3f'|format(cluster.possible_reference_score) }})</div>
+      {% endif %}
+      <input type="hidden" name="cluster_id" value="{{ cluster.cluster_id }}">
+      <input type="text" name="manual_name" placeholder="Save a name" value="{{ cluster.manual_name }}">
+      {% if cluster.manual_name %}
+        <a class="small" href="/person/{{ person_slug(cluster.manual_name) }}">Open person page</a>
+      {% endif %}
+      <div class="item-grid">
+        {% for item in cluster.items[:6] %}
+          <div>
+            <img class="thumb" src="/data/{{ project_id }}/{{ item.face_path }}" alt="Face crop">
+            <div class="meta">{{ item.timestamp_sec }}s</div>
+            {% if item.source_link %}
+              <div class="small"><a href="{{ item.source_link }}" target="_blank" rel="noopener">Jump to source</a></div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+  <div class="card">
+    <button type="submit">Save all names</button>
+  </div>
+</form>
+{% else %}
+<div class="card empty" style="margin-top:16px;">No faces were found in this project.</div>
+{% endif %}
+{% endblock %}

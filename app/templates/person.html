@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Person · {{ person_name }}{% endblock %}
+{% block content %}
+<div class="card stack">
+  <div class="space-between">
+    <div>
+      <h2>{{ person_name }}</h2>
+      <div class="meta">Slug: {{ slug }}</div>
+      <div class="meta">{{ items|length }} appearance(s)</div>
+      {% if first_source_link %}
+        <div class="small"><a href="{{ first_source_link }}" target="_blank" rel="noopener">Open first source link</a></div>
+      {% endif %}
+    </div>
+    {% if person_thumb %}
+      <img class="thumb" src="{{ person_thumb }}" alt="{{ person_name }}" style="max-width:180px; width:180px;">
+    {% endif %}
+  </div>
+</div>
+
+{% for group in grouped_dates %}
+  <div class="card" style="margin-top:16px;">
+    <h3>{{ group.date }}</h3>
+    <div class="item-grid">
+      {% for item in group.items %}
+        <div class="stack">
+          <img class="thumb" src="/data/{{ item.project_id }}/{{ item.face_path }}" alt="{{ person_name }}">
+          <div class="meta">Project: <a href="{{ item.project_url }}">{{ item.project_id }}</a></div>
+          <div class="meta">Timestamp: {{ item.timestamp_sec }}s</div>
+          {% if item.source_link %}
+            <div class="small"><a href="{{ item.source_link }}" target="_blank" rel="noopener">Jump to source</a></div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endfor %}
+{% endblock %}
