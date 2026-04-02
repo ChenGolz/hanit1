@@ -1,5 +1,6 @@
 const MODEL_URIS = {
   tiny: 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js-models@master/tiny_face_detector',
+  ssd: 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js-models@master/ssd_mobilenetv1',
   landmarks: 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js-models@master/face_landmark_68',
   recognition: 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js-models@master/face_recognition',
 };
@@ -117,6 +118,13 @@ async function loadModels(statusEl) {
   if (statusEl) statusEl.textContent = 'Models ready.';
 }
 
+async function ensureSsdModel(statusEl) {
+  if (window.__petconnectSsdReady) return;
+  if (statusEl) statusEl.textContent = 'Trying a stronger face detector for harder photos…';
+  await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URIS.ssd);
+  window.__petconnectSsdReady = true;
+}
+
 async function fileToImage(file) {
   const url = URL.createObjectURL(file);
   try {
@@ -133,12 +141,134 @@ async function fileToImage(file) {
   }
 }
 
-async function detectFaces(img) {
-  const detections = await faceapi
-    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
+function createScaledCanvas(img, scale) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(img.width * scale));
+  canvas.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function createCropCanvas(img, sx, sy, sw, sh) {
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(sw));
+  canvas.height = Math.max(1, Math.round(sh));
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function remapDetection(detection, mapper) {
+  const { box } = detection.detection;
+  return {
+    ...detection,
+    detection: {
+      ...detection.detection,
+      box: {
+        ...box,
+        x: mapper.offsetX + (box.x / mapper.scaleX),
+        y: mapper.offsetY + (box.y / mapper.scaleY),
+        width: box.width / mapper.scaleX,
+        height: box.height / mapper.scaleY,
+      },
+    },
+  };
+}
+
+async function detectFacesWithTiny(image, options) {
+  return faceapi
+    .detectAllFaces(image, new faceapi.TinyFaceDetectorOptions(options))
     .withFaceLandmarks()
     .withFaceDescriptors();
-  return detections || [];
+}
+
+async function detectFacesWithSsd(image) {
+  return faceapi
+    .detectAllFaces(image, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.2 }))
+    .withFaceLandmarks()
+    .withFaceDescriptors();
+}
+
+async function detectFaces(img, statusEl) {
+  const tinyPasses = [
+    { inputSize: 512, scoreThreshold: 0.35 },
+    { inputSize: 608, scoreThreshold: 0.25 },
+    { inputSize: 800, scoreThreshold: 0.2 },
+  ];
+
+  for (const options of tinyPasses) {
+    const detections = await detectFacesWithTiny(img, options);
+    if (detections?.length) return detections;
+  }
+
+  const longestSide = Math.max(img.width, img.height) || 1;
+  const upscale = Math.min(2, 1600 / longestSide);
+  if (upscale > 1.05) {
+    const scaled = createScaledCanvas(img, upscale);
+    for (const options of tinyPasses) {
+      const detections = await detectFacesWithTiny(scaled, options);
+      if (detections?.length) {
+        return detections.map((detection) => remapDetection(detection, {
+          offsetX: 0,
+          offsetY: 0,
+          scaleX: upscale,
+          scaleY: upscale,
+        }));
+      }
+    }
+  }
+
+  const cropConfigs = [
+    { x: img.width * 0.2, y: 0, w: img.width * 0.8, h: img.height },
+    { x: 0, y: 0, w: img.width * 0.8, h: img.height },
+    { x: img.width * 0.1, y: img.height * 0.05, w: img.width * 0.8, h: img.height * 0.9 },
+    { x: img.width * 0.35, y: 0, w: img.width * 0.65, h: img.height },
+  ];
+
+  for (const crop of cropConfigs) {
+    const sx = Math.max(0, Math.floor(crop.x));
+    const sy = Math.max(0, Math.floor(crop.y));
+    const sw = Math.min(img.width - sx, Math.floor(crop.w));
+    const sh = Math.min(img.height - sy, Math.floor(crop.h));
+    if (sw < 64 || sh < 64) continue;
+    const cropped = createCropCanvas(img, sx, sy, sw, sh);
+    for (const options of tinyPasses) {
+      const detections = await detectFacesWithTiny(cropped, options);
+      if (detections?.length) {
+        return detections.map((detection) => remapDetection(detection, {
+          offsetX: sx,
+          offsetY: sy,
+          scaleX: 1,
+          scaleY: 1,
+        }));
+      }
+    }
+  }
+
+  await ensureSsdModel(statusEl);
+  let detections = await detectFacesWithSsd(img);
+  if (detections?.length) return detections;
+
+  for (const crop of cropConfigs) {
+    const sx = Math.max(0, Math.floor(crop.x));
+    const sy = Math.max(0, Math.floor(crop.y));
+    const sw = Math.min(img.width - sx, Math.floor(crop.w));
+    const sh = Math.min(img.height - sy, Math.floor(crop.h));
+    if (sw < 64 || sh < 64) continue;
+    const cropped = createCropCanvas(img, sx, sy, sw, sh);
+    detections = await detectFacesWithSsd(cropped);
+    if (detections?.length) {
+      return detections.map((detection) => remapDetection(detection, {
+        offsetX: sx,
+        offsetY: sy,
+        scaleX: 1,
+        scaleY: 1,
+      }));
+    }
+  }
+
+  return [];
 }
 
 function pickBestDetection(detections) {

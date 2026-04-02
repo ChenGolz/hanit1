@@ -73,12 +73,12 @@
             statusEl.textContent = 'Reading photo and detecting faces…';
             const { img, url } = await fileToImage(file);
             try {
-              const detections = await detectFaces(img);
+              const detections = await detectFaces(img, statusEl);
               const best = pickBestDetection(detections);
               drawDetection(canvas, img, best);
               if (!best) {
                 cropImg.classList.add('hidden');
-                statusEl.textContent = 'No clear face was found in that image.';
+                statusEl.textContent = 'No clear face was found in that image. Try a closer photo with the face larger in frame and eyes visible if possible.';
                 return;
               }
 

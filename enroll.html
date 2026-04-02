@@ -90,7 +90,7 @@
             for (const file of files) {
               const { img, url } = await fileToImage(file);
               try {
-                const detections = await detectFaces(img);
+                const detections = await detectFaces(img, statusEl);
                 const best = pickBestDetection(detections);
                 if (!best) continue;
                 descriptors.push(Array.from(best.descriptor));
@@ -102,7 +102,7 @@
             }
 
             if (!descriptors.length) {
-              statusEl.textContent = 'No usable faces were found in those files.';
+              statusEl.textContent = 'No usable faces were found in those files. Try a closer photo, less distance, and eyes visible if possible.';
               return;
             }
 
