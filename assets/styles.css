@@ -383,3 +383,49 @@ canvas.preview {
   align-items: center;
   gap: 8px;
 }
+
+
+.match-gallery-shell {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+.match-gallery {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(260px, 320px);
+  gap: 14px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
+}
+.match-slide {
+  scroll-snap-align: start;
+}
+.match-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 999px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: var(--shadow);
+}
+.gallery-nav {
+  min-width: 48px;
+  min-height: 48px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+@media (max-width: 900px) {
+  .match-gallery-shell {
+    grid-template-columns: 1fr;
+  }
+  .gallery-nav {
+    display: none;
+  }
+}

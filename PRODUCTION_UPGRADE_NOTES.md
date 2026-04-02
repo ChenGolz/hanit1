@@ -25,3 +25,13 @@ When you move off GitHub Pages, these are the recommended upgrades:
 
 ## Important note
 The static site still performs matching in the browser for GitHub Pages compatibility. The new backend scaffold files are documentation and starter code, not a deployed production pipeline yet.
+
+
+## Added in this refresh
+- cache-first static asset loading in `sw.js` for faster offline boot
+- `manifest.webmanifest` + install icons
+- translation helper split into `assets/i18n.js` for future HE/AR/EN expansion
+- home-page instant match gallery backed by the last top-3 local search results
+
+## Privacy-safe map groundwork
+This GitHub Pages build still does not ship a live Leaflet map, but `assets/common.js` now includes a `privacyBlurCoordinates(...)` helper so the hosted version can show an approximate 100m area instead of an exact home point.

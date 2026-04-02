@@ -11,6 +11,9 @@ from typing import Iterable, Sequence
 
 import numpy as np
 
+DEFAULT_MATCH_THRESHOLD = 0.70
+STRONG_MATCH_THRESHOLD = 0.85
+
 
 @dataclass(slots=True)
 class AnimalEmbeddingResult:
@@ -43,3 +46,13 @@ def mean_embedding(vectors: Iterable[Sequence[float]]) -> np.ndarray:
     if not rows:
         raise ValueError("At least one vector is required")
     return normalize_vector(np.mean(np.stack(rows), axis=0))
+
+
+
+def score_match(vector_a: Sequence[float], vector_b: Sequence[float]) -> dict[str, float | bool]:
+    score = cosine_similarity(vector_a, vector_b)
+    return {
+        "score": score,
+        "is_match": score >= DEFAULT_MATCH_THRESHOLD,
+        "is_strong_match": score >= STRONG_MATCH_THRESHOLD,
+    }

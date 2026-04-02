@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
     <link rel="stylesheet" href="./assets/styles.css">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <meta name="theme-color" content="#111831">
+    <script defer src="./assets/i18n.js?v=20260403d"></script>
+    <script defer src="./assets/common.js?v=20260403d"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -76,6 +81,21 @@
         </article>
       </section>
 
+      <section id="match-results" class="card stack hidden" style="margin-top:16px;">
+        <div class="space-between">
+          <div class="stack" style="gap:8px;">
+            <h2 class="section-title" data-i18n="lastMatchesTitle">התוצאות האחרונות שלך</h2>
+            <div class="small" data-i18n="lastMatchesSubtitle">אחרי חיפוש, שלוש ההתאמות המובילות נשמרות כאן כדי שתוכלי לחזור אליהן מיד.</div>
+          </div>
+          <a class="button-link secondary small" href="./search.html" data-i18n="openSearch">פתיחת חיפוש חיה</a>
+        </div>
+        <div class="match-gallery-shell">
+          <button id="match-prev" class="secondary small gallery-nav" type="button" aria-label="הקודם" data-i18n-aria-label="previous">‹</button>
+          <div id="match-gallery" class="match-gallery" aria-live="polite"></div>
+          <button id="match-next" class="secondary small gallery-nav" type="button" aria-label="הבא" data-i18n-aria-label="next">›</button>
+        </div>
+      </section>
+
       <section class="card stack" style="margin-top:16px;">
         <h2 class="section-title">מבנה קבצים</h2>
 <pre>your-repo/
@@ -93,5 +113,55 @@
 
       <div class="footer">תבנית אתר סטטי בעברית לחיפוש בעלי חיים ב-GitHub Pages.</div>
     </main>
+  
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        window.initLang?.('he');
+        window.applyTranslations?.();
+        window.registerServiceWorker?.();
+
+        const section = document.getElementById('match-results');
+        const gallery = document.getElementById('match-gallery');
+        const prevBtn = document.getElementById('match-prev');
+        const nextBtn = document.getElementById('match-next');
+        const payload = window.loadLastMatchGallery?.();
+        if (!section || !gallery) return;
+        if (!payload?.matches?.length) {
+          gallery.innerHTML = `<div class="empty">${window.t?.('noRecentMatches', 'עדיין אין תוצאות אחרונות. בצעי חיפוש כדי לראות כאן את שלוש ההתאמות המובילות.') || ''}</div>`;
+          section.classList.remove('hidden');
+          prevBtn?.setAttribute('disabled', 'disabled');
+          nextBtn?.setAttribute('disabled', 'disabled');
+          return;
+        }
+
+        gallery.innerHTML = payload.matches.map((match) => {
+          const score = Math.round((Number(match.score || match.colorScore || 0) || 0) * 100);
+          const href = window.escapeHtml?.(match.href || '#') || '#';
+          const thumb = match.thumb ? `<img src="${match.thumb}" alt="${window.escapeHtml?.(match.label) || ''}">` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
+          return `
+            <article class="match-slide result-card">
+              <div class="match-badge">${score}%</div>
+              <div class="thumb-wrap">${thumb}</div>
+              <div class="body">
+                <strong>${window.escapeHtml?.(match.label) || ''}</strong>
+                <div class="row">
+                  ${match.animalType ? `<span class="badge">${window.escapeHtml?.(match.animalType) || ''}</span>` : ''}
+                  ${match.colors ? `<span class="badge">${window.escapeHtml?.(match.colors) || ''}</span>` : ''}
+                  ${match.source ? `<span class="badge">${window.sourceLabel?.(match.source) || window.escapeHtml?.(match.source) || ''}</span>` : ''}
+                </div>
+                <div class="small">${payload.kind === 'visual' ? 'התאמה מהחיפוש האחרון' : 'תוצאת גיבוי לפי צבעים דומים'}</div>
+                <div class="card-actions">
+                  <a class="button-link small" href="${href}">${window.t?.('openProfile', 'פתיחת פרופיל') || ''}</a>
+                </div>
+              </div>
+            </article>`;
+        }).join('');
+        section.classList.remove('hidden');
+        const slideWidth = () => Math.max(280, Math.min(gallery.clientWidth * 0.92, 360));
+        prevBtn?.addEventListener('click', () => gallery.scrollBy({ left: -slideWidth(), behavior: 'smooth' }));
+        nextBtn?.addEventListener('click', () => gallery.scrollBy({ left: slideWidth(), behavior: 'smooth' }));
+      });
+    </script>
+
   </body>
 </html>

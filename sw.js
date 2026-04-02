@@ -1,12 +1,17 @@
-const STATIC_CACHE = 'petconnect-animal-static-v8';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v8';
+const STATIC_CACHE = 'petconnect-animal-static-v9';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v9';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './search.html',
   './enroll.html',
+  './manifest.webmanifest',
+  './favicon.svg',
+  './icon-192.png',
+  './icon-512.png',
   './assets/styles.css',
   './assets/common.js',
+  './assets/i18n.js',
   './data/library.json',
 ];
 const RUNTIME_HOSTS = new Set([
@@ -26,13 +31,10 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys
-      .filter((key) => ![STATIC_CACHE, RUNTIME_CACHE].includes(key))
-      .map((key) => caches.delete(key)));
+    await Promise.all(keys.filter((key) => ![STATIC_CACHE, RUNTIME_CACHE].includes(key)).map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
 });
-
 
 async function putResponseInCache(cache, request, response) {
   if (!response || request.method !== 'GET') return;
@@ -44,7 +46,7 @@ async function putResponseInCache(cache, request, response) {
       await cache.put(new Request(normalizedUrl.toString(), { method: 'GET' }), response.clone());
     }
   } catch (error) {
-    // ignore cache write failures for opaque/CDN responses
+    // ignore opaque/cache write failures
   }
 }
 
@@ -54,6 +56,26 @@ async function matchWithFallback(cache, request) {
   const normalizedUrl = new URL(request.url);
   normalizedUrl.search = '';
   return cache.match(normalizedUrl.toString(), { ignoreSearch: true });
+}
+
+function isStaticAssetRequest(request) {
+  const url = new URL(request.url);
+  if (RUNTIME_HOSTS.has(url.host)) return true;
+  if (url.origin !== self.location.origin) return false;
+  return /\.(?:css|js|png|svg|ico|webmanifest|woff2?)$/i.test(url.pathname) || url.pathname.includes('/assets/');
+}
+
+async function cacheFirst(request) {
+  const cacheName = request.url.startsWith(self.location.origin) ? STATIC_CACHE : RUNTIME_CACHE;
+  const cache = await caches.open(cacheName);
+  const cached = await matchWithFallback(cache, request);
+  if (cached) {
+    fetch(request).then((response) => putResponseInCache(cache, request, response)).catch(() => {});
+    return cached;
+  }
+  const response = await fetch(request);
+  await putResponseInCache(cache, request, response);
+  return response;
 }
 
 async function networkFirst(request) {
@@ -67,7 +89,7 @@ async function networkFirst(request) {
     const cached = await matchWithFallback(cache, request);
     if (cached) return cached;
     if (request.mode === 'navigate') {
-      return (await caches.match('./search.html', { ignoreSearch: true })) || (await caches.match('./index.html', { ignoreSearch: true }));
+      return (await caches.match('./index.html', { ignoreSearch: true })) || (await caches.match('./search.html', { ignoreSearch: true }));
     }
     throw error;
   }
@@ -76,6 +98,10 @@ async function networkFirst(request) {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  if (isStaticAssetRequest(request)) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
   const url = new URL(request.url);
   if (url.origin === self.location.origin || RUNTIME_HOSTS.has(url.host)) {
     event.respondWith(networkFirst(request));

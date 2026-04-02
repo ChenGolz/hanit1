@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>בניית מאגר חיות · פאטקונקט</title>
     <link rel="stylesheet" href="./assets/styles.css">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+    <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/common.js?v=20260403c"></script>
+    <script defer src="./assets/i18n.js?v=20260403d"></script>
+    <script defer src="./assets/common.js?v=20260403d"></script>
     <script defer>
       function fallbackSetStatus(element, text, options = {}) {
         if (!element) return;
@@ -23,7 +27,7 @@
         if (window.__petconnectCommonLoadPromise) return window.__petconnectCommonLoadPromise;
         window.__petconnectCommonLoadPromise = new Promise((resolve, reject) => {
           const script = document.createElement('script');
-          script.src = `./assets/common.js?v=20260403c`;
+          script.src = `./assets/common.js?v=20260403d`;
           script.async = true;
           script.onload = () => resolve();
           script.onerror = () => reject(new Error('לא ניתן היה לטעון את assets/common.js.'));
@@ -53,6 +57,8 @@
 
       async function runEnrollPage() {
         await waitForCommonHelpers();
+        window.initLang?.('he');
+        window.applyTranslations?.();
         window.registerServiceWorker?.();
 
         const statusEl = document.getElementById('status');

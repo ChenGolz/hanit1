@@ -29,3 +29,11 @@
 - שיתוף התוצאה המובילה, וואטסאפ, וטיוטת 106
 - Service Worker מחוזק עם fallback בטוח יותר
 - קבצי scaffold לשלב ה-hosted הבא
+
+
+## New in this refreshed bundle
+- PWA manifest and installable icons
+- cache-first service worker strategy for CSS/JS/icons and CDN assets
+- separate `assets/i18n.js` translation helper scaffold
+- recent top-3 match gallery on the home page, fed by the last search
+- privacy helper groundwork for approximate location display in a future hosted map flow

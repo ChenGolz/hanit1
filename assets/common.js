@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'petconnect-ghpages-animal-library-v2';
 const SEARCH_IMPORT_KEY = 'petconnect-ghpages-animal-imported-library-v2';
+const LAST_MATCH_GALLERY_KEY = 'petconnect-ghpages-last-matches-v1';
 
 function hashString(text) {
   const value = String(text || '');
@@ -776,6 +777,70 @@ async function shareResult({ city = '', lat = null, lng = null, bestMatch = null
   return false;
 }
 
+
+function pickTopMatchesForGallery(bundle, limit = 3) {
+  const matches = Array.isArray(bundle?.matches) ? bundle.matches.slice(0, limit) : [];
+  return matches.map((match) => ({
+    label: String(match.label || 'ללא שם'),
+    score: Number(match.score || match.colorScore || 0),
+    colorScore: Number(match.colorScore || 0),
+    animalType: String(match.animalType || ''),
+    colors: String(match.colors || match.colorName || ''),
+    source: String(match.source || ''),
+    href: String(match.href || '#'),
+    thumb: String(match.thumb || ''),
+    notes: String(match.notes || ''),
+    confidence: String(match.confidence || 'low'),
+  }));
+}
+
+function saveLastMatchGallery(bundle, meta = {}) {
+  try {
+    const matches = pickTopMatchesForGallery(bundle, 3);
+    if (!matches.length) {
+      localStorage.removeItem(LAST_MATCH_GALLERY_KEY);
+      return;
+    }
+    localStorage.setItem(LAST_MATCH_GALLERY_KEY, JSON.stringify({
+      kind: String(bundle?.kind || 'visual'),
+      timestamp: new Date().toISOString(),
+      city: String(meta.city || ''),
+      pageUrl: String(meta.pageUrl || window.location.href),
+      matches,
+    }));
+  } catch (error) {
+    console.warn('שמירת גלריית ההתאמות נכשלה:', error);
+  }
+}
+
+function loadLastMatchGallery() {
+  const parsed = safeJsonParse(localStorage.getItem(LAST_MATCH_GALLERY_KEY), null);
+  if (!parsed || !Array.isArray(parsed.matches)) return null;
+  parsed.matches = parsed.matches.filter((match) => match && match.label);
+  return parsed.matches.length ? parsed : null;
+}
+
+function clearLastMatchGallery() {
+  try {
+    localStorage.removeItem(LAST_MATCH_GALLERY_KEY);
+  } catch (error) {
+    console.warn('ניקוי גלריית ההתאמות נכשל:', error);
+  }
+}
+
+function privacyBlurCoordinates(lat, lng, radiusMeters = 100) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return { lat: null, lng: null, radiusMeters };
+  const metersPerDegreeLat = 111320;
+  const metersPerDegreeLng = 111320 * Math.cos((lat * Math.PI) / 180);
+  const angle = (Math.abs(Math.sin(lat + lng)) * Math.PI * 2) % (Math.PI * 2);
+  const offset = radiusMeters * 0.65;
+  return {
+    lat: lat + ((Math.sin(angle) * offset) / metersPerDegreeLat),
+    lng: lng + ((Math.cos(angle) * offset) / Math.max(1, metersPerDegreeLng)),
+    radiusMeters,
+  };
+}
+
 function registerServiceWorker() {
   if (window.__petconnectSwRegistered) return;
   if (!('serviceWorker' in navigator)) return;
@@ -843,6 +908,11 @@ if (typeof window !== 'undefined') {
     buildMunicipalReportHref,
     buildWhatsAppHref,
     shareResult,
+    pickTopMatchesForGallery,
+    saveLastMatchGallery,
+    loadLastMatchGallery,
+    clearLastMatchGallery,
+    privacyBlurCoordinates,
     registerServiceWorker,
   });
 }
