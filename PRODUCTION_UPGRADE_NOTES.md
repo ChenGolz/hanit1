@@ -49,3 +49,10 @@ This GitHub Pages build still does not ship a live Leaflet map, but `assets/comm
 - נוסף `assets/app.js` כקובץ תאימות לשיטות `shrinkImage`, `displayMatches`, `postMultipart`.
 - דף הבית משתמש כעת ב-`match-results-container` מפורש לגלריית ההתאמות האחרונות.
 - `sw.js` שודרג ל-v11 ומקדים גם את `assets/app.js`.
+
+
+## משתני סביבה ואבטחה
+
+- בגרסת GitHub Pages אין מפתחות שרת חיים, אבל בגרסה המתארחת אסור לשמור מפתחות API או מחרוזות חיבור ב-`config.js` ציבורי.
+- שמרי קבצי סודיות כ-`.env` או `config.local.js` מחוץ ל-Git, והזרימי אותם לשרת דרך משתני סביבה.
+- מומלץ להוסיף בדיקות build שמוודאות שאין `API_KEY=` או `postgres://` בקבצים הציבוריים.

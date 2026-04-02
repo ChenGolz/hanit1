@@ -79,6 +79,47 @@ function isSafeProfileHref(value) {
   return /^(https?:\/\/|\.\/?|\.\.\/|\/|#)/i.test(href);
 }
 
+
+function setButtonBusy(button, busy, busyText = 'טוען…') {
+  if (!button) return;
+  if (!button.dataset.defaultText) {
+    button.dataset.defaultText = button.textContent || '';
+  }
+  button.disabled = !!busy;
+  button.setAttribute('aria-busy', busy ? 'true' : 'false');
+  button.textContent = busy ? busyText : (button.dataset.defaultText || button.textContent || '');
+}
+
+function getIsraeliCities() {
+  return [
+    'אבו גוש','אום אל-פחם','אופקים','אור יהודה','אור עקיבא','אילת','אלעד','אריאל','אשדוד','אשקלון','באר יעקב','באר שבע','בית שאן','בית שמש','ביתר עילית','בני ברק','בת ים','גבעת שמואל','גבעתיים','גדרה','גן יבנה','דימונה','הוד השרון','הרצליה','זכרון יעקב','חדרה','חולון','חיפה','טבריה','טייבה','טירה','טירת כרמל','יבנה','יהוד-מונוסון','ירוחם','ירושלים','יקנעם עילית','כפר יונה','כפר כנא','כפר סבא','כרמיאל','לוד','מבשרת ציון','מודיעין-מכבים-רעות','מגדל העמק','מזכרת בתיה','מעלה אדומים','מעלות-תרשיחא','נהריה','נס ציונה','נוף הגליל','נתיבות','נתניה','סחנין','עכו','עפולה','ערד','פתח תקווה','פרדס חנה-כרכור','צפת','קדימה-צורן','קצרין','קריית אונו','קריית אתא','קריית ביאליק','קריית גת','קריית ים','קריית מוצקין','קריית מלאכי','קריית שמונה','ראש העין','ראשון לציון','רהט','רחובות','רמלה','רמת גן','רמת השרון','רעננה','שדרות','שוהם','תל אביב-יפו'
+  ];
+}
+
+function attachCityAutocomplete(input, datalistId = 'city-suggestions') {
+  if (!input || typeof document === 'undefined') return;
+  let datalist = document.getElementById(datalistId);
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = datalistId;
+    document.body.appendChild(datalist);
+  }
+  input.setAttribute('list', datalistId);
+  const cities = getIsraeliCities();
+  const renderSuggestions = () => {
+    const query = String(input.value || '').trim();
+    const normalizedQuery = query.replace(/[-\s]/g, '').toLowerCase();
+    const suggestions = cities.filter((city) => {
+      if (!normalizedQuery) return true;
+      const normalizedCity = city.replace(/[-\s]/g, '').toLowerCase();
+      return normalizedCity.includes(normalizedQuery);
+    }).slice(0, 12);
+    datalist.innerHTML = suggestions.map((city) => `<option value="${escapeHtml(city)}"></option>`).join('');
+  };
+  input.addEventListener('input', renderSuggestions);
+  input.addEventListener('focus', renderSuggestions);
+  renderSuggestions();
+}
 function setStatus(element, text, options = {}) {
   if (!element) return;
   const { tone = 'default', busy = false } = options;
@@ -977,6 +1018,8 @@ if (typeof window !== 'undefined') {
     buildMunicipalReportHref,
     buildWhatsAppHref,
     shareResult,
+  setButtonBusy,
+  attachCityAutocomplete,
     pickTopMatchesForGallery,
     saveLastMatchGallery,
     loadLastMatchGallery,

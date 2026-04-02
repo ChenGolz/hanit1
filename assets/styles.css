@@ -522,3 +522,21 @@ canvas.preview {
 .match-scroller .match-card {
   scroll-snap-align: start;
 }
+
+
+button[aria-busy="true"]::after {
+  content: '';
+  width: 0.95em;
+  height: 0.95em;
+  margin-inline-start: 0.55rem;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-inline-end-color: transparent;
+  display: inline-block;
+  vertical-align: -0.15em;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

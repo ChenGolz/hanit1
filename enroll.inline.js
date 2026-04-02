@@ -103,7 +103,7 @@
             return;
           }
 
-          addBtn.disabled = true;
+          setButtonBusy?.(addBtn, true, 'מעבד תמונות…');
           try {
             const descriptors = [];
             const colorHistograms = [];
@@ -189,7 +189,7 @@
             console.error(error);
             setStatus(statusEl, `לא ניתן היה ליצור את הרשומה: ${error.message}`, { tone: 'warn' });
           } finally {
-            addBtn.disabled = false;
+            setButtonBusy?.(addBtn, false);
           }
         });
 

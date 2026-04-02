@@ -1,10 +1,11 @@
-const STATIC_CACHE = 'petconnect-animal-static-v12';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v12';
+const STATIC_CACHE = 'petconnect-animal-static-v13';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v13';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './search.html',
   './enroll.html',
+  './offline.html',
   './manifest.webmanifest',
   './favicon.svg',
   './icon-192.png',
@@ -27,7 +28,13 @@ const RUNTIME_HOSTS = new Set([
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(STATIC_CACHE);
-    await cache.addAll(ASSETS_TO_CACHE);
+    await Promise.allSettled(ASSETS_TO_CACHE.map(async (asset) => {
+      try {
+        await cache.add(asset);
+      } catch (error) {
+        // Ignore a single failed precache so installation can still complete.
+      }
+    }));
     await self.skipWaiting();
   })());
 });
@@ -41,7 +48,7 @@ self.addEventListener('activate', (event) => {
 });
 
 async function putResponseInCache(cache, request, response) {
-  if (!response || request.method !== 'GET') return;
+  if (!response || request.method !== 'GET' || !response.ok) return;
   try {
     await cache.put(request, response.clone());
     const normalizedUrl = new URL(request.url);
@@ -67,7 +74,7 @@ function isStaticAssetRequest(request) {
   if (RUNTIME_HOSTS.has(url.host)) return true;
   if (url.origin !== self.location.origin) return false;
   if (request.mode === 'navigate') return false;
-  return /\.(?:css|js|png|svg|ico|webmanifest|woff2?|json)$/i.test(url.pathname) || url.pathname.includes('/assets/');
+  return /\.(?:css|js|png|svg|ico|webmanifest|woff2?|json|html)$/i.test(url.pathname) || url.pathname.includes('/assets/');
 }
 
 async function cacheFirst(request) {
@@ -91,7 +98,9 @@ async function networkFirst(request) {
     const cached = await matchWithFallback(cache, request);
     if (cached) return cached;
     if (request.mode === 'navigate') {
-      return (await caches.match('./search.html', { ignoreSearch: true })) || (await caches.match('./index.html', { ignoreSearch: true }));
+      return (await cache.match('./offline.html', { ignoreSearch: true }))
+        || (await caches.match('./offline.html', { ignoreSearch: true }))
+        || (await caches.match('./index.html', { ignoreSearch: true }));
     }
     throw error;
   }
@@ -100,11 +109,13 @@ async function networkFirst(request) {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+
   if (isStaticAssetRequest(request)) {
     event.respondWith(cacheFirst(request));
     return;
   }
-  const url = new URL(request.url);
+
   if (request.mode === 'navigate' || url.origin === self.location.origin || RUNTIME_HOSTS.has(url.host)) {
     event.respondWith(networkFirst(request));
   }

@@ -60,6 +60,7 @@ async function runSearchPage() {
 
   clearValidityOnInput(fileInput);
   clearValidityOnInput(cityInput);
+  attachCityAutocomplete?.(cityInput);
   minScoreOutput.textContent = `${minScoreInput.value}%`;
 
   let currentPreviewImage = null;
@@ -79,6 +80,11 @@ async function runSearchPage() {
 
   function resetSearchProgress() {
     setSearchProgress(0, 'ממתין לתמונה לחיפוש.');
+  }
+
+  function setSearchButtonsBusy(busy, label = 'מעבד…') {
+    setButtonBusy?.(loadBtn, busy, label);
+    setButtonBusy?.(runSelectedBtn, busy, 'מחפש…');
   }
 
   function updatePrivacyNote() {
@@ -330,7 +336,7 @@ async function runSearchPage() {
       return;
     }
 
-    runSelectedBtn.disabled = true;
+    setSearchButtonsBusy(true, 'טוען תמונה…');
     setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
     setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
     const queryCanvas = cropRectToCanvas(currentPreviewImage, currentSelection);
@@ -354,7 +360,7 @@ async function runSearchPage() {
     } else {
       setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
     }
-    runSelectedBtn.disabled = false;
+    setSearchButtonsBusy(false);
   }
 
   await loadModels(statusEl);
@@ -445,8 +451,7 @@ async function runSearchPage() {
       return;
     }
     const file = fileInput.files?.[0];
-    loadBtn.disabled = true;
-    runSelectedBtn.disabled = true;
+    setSearchButtonsBusy(true, 'מכין תמונה…');
     resultsEl.innerHTML = '';
     summaryEl.innerHTML = '';
     summaryEl.classList.add('hidden');
@@ -488,8 +493,9 @@ async function runSearchPage() {
       setSearchProgress(0, 'הסריקה נעצרה.');
       setStatus(statusEl, `החיפוש נכשל: ${error.message}`, { tone: 'warn' });
     } finally {
-      loadBtn.disabled = false;
-      runSelectedBtn.disabled = !currentPreviewImage;
+      setButtonBusy?.(loadBtn, false);
+      setButtonBusy?.(runSelectedBtn, !currentPreviewImage, 'חיפוש לפי האזור שסומן');
+      if (!currentPreviewImage) runSelectedBtn.disabled = true;
     }
   });
 
