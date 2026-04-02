@@ -726,6 +726,56 @@ function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch
   return `mailto:?${params.toString()}`;
 }
 
+
+function buildWhatsAppHref({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+  const parts = ['שלום, מצאתי בעל חיים ואני בודק התאמה דרך פאטקונקט.'];
+  if (bestMatch) {
+    parts.push(`נראית התאמה אפשרית ל-${bestMatch.label} (${formatPct(bestMatch.score || bestMatch.colorScore || 0)}).`);
+    if (bestMatch.animalType) parts.push(`סוג: ${bestMatch.animalType}.`);
+    if (bestMatch.colors || bestMatch.colorName) parts.push(`צבעים: ${bestMatch.colors || bestMatch.colorName}.`);
+    if (bestMatch.href && bestMatch.href !== '#') parts.push(`פרופיל: ${new URL(bestMatch.href, pageUrl).href}`);
+  }
+  if (city) parts.push(`עיר: ${city}.`);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) parts.push(`מיקום: ${formatCoordinates(lat, lng)}.`);
+  parts.push(`עמוד החיפוש: ${pageUrl}`);
+  return `https://wa.me/?text=${encodeURIComponent(parts.join('\n'))}`;
+}
+
+async function shareResult({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+  const shareUrl = bestMatch?.href && bestMatch.href !== '#'
+    ? new URL(bestMatch.href, pageUrl).href
+    : pageUrl;
+  const lines = ['התאמה אפשרית מפאטקונקט'];
+  if (bestMatch) {
+    lines.push(`${bestMatch.label} (${formatPct(bestMatch.score || bestMatch.colorScore || 0)})`);
+    if (bestMatch.animalType) lines.push(`סוג: ${bestMatch.animalType}`);
+  }
+  if (city) lines.push(`עיר: ${city}`);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) lines.push(`מיקום: ${formatCoordinates(lat, lng)}`);
+  const text = lines.join(' · ');
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: bestMatch ? `התאמה אפשרית ל-${bestMatch.label}` : 'פאטקונקט',
+        text,
+        url: shareUrl,
+      });
+      return true;
+    } catch (error) {
+      if (error?.name !== 'AbortError') console.warn('שיתוף נכשל:', error);
+    }
+  }
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
+      return true;
+    }
+  } catch (error) {
+    console.warn('העתקה ללוח נכשלה:', error);
+  }
+  return false;
+}
+
 function registerServiceWorker() {
   if (window.__petconnectSwRegistered) return;
   if (!('serviceWorker' in navigator)) return;
@@ -791,6 +841,8 @@ if (typeof window !== 'undefined') {
     sourceLabel,
     formatCoordinates,
     buildMunicipalReportHref,
+    buildWhatsAppHref,
+    shareResult,
     registerServiceWorker,
   });
 }

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="./assets/styles.css">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/common.js?v=20260403b"></script>
+    <script defer src="./assets/common.js?v=20260403c"></script>
     <script defer>
       function fallbackSetStatus(element, text, options = {}) {
         if (!element) return;
@@ -23,7 +23,7 @@
         if (window.__petconnectCommonLoadPromise) return window.__petconnectCommonLoadPromise;
         window.__petconnectCommonLoadPromise = new Promise((resolve, reject) => {
           const script = document.createElement('script');
-          script.src = `./assets/common.js?v=20260403b`;
+          script.src = `./assets/common.js?v=20260403c`;
           script.async = true;
           script.onload = () => resolve();
           script.onerror = () => reject(new Error('לא ניתן היה לטעון את assets/common.js.'));
@@ -33,7 +33,7 @@
       }
 
       async function waitForCommonHelpers() {
-        const needed = ['registerServiceWorker', 'setStatus', 'extractAnimalFeatures'];
+        const needed = ['registerServiceWorker', 'setStatus', 'extractAnimalFeatures', 'buildWhatsAppHref', 'shareResult'];
         const hasNeeded = () => needed.every((name) => typeof window[name] === 'function');
         if (hasNeeded()) return;
 
@@ -73,11 +73,20 @@
         const minScoreInput = document.getElementById('min-score');
         const minScoreOutput = document.getElementById('min-score-value');
         const prepNoteEl = document.getElementById('prep-note');
+        const progressWrapEl = document.getElementById('search-progress');
+        const progressFillEl = document.getElementById('search-progress-fill');
+        const progressLabelEl = document.getElementById('search-progress-label');
         const cityInput = document.getElementById('city-name');
         const locateBtn = document.getElementById('locate-btn');
         const locationStatusEl = document.getElementById('location-status');
         const resultsSection = document.getElementById('results-section');
         const selectionHintEl = document.getElementById('selection-hint');
+        const filterAnimalTypeEl = document.getElementById('filter-animal-type');
+        const filterSourceEl = document.getElementById('filter-source');
+        const strongOnlyEl = document.getElementById('filter-strong-only');
+        const shareTopBtn = document.getElementById('share-top-btn');
+        const whatsappTopBtn = document.getElementById('whatsapp-top-btn');
+        const reportTopBtn = document.getElementById('report-top-btn');
 
         clearValidityOnInput(fileInput);
         clearValidityOnInput(cityInput);
@@ -88,12 +97,75 @@
         let currentLibrary = [];
         let currentPreparedImage = null;
         let currentQueryFeatures = null;
+        let currentResultBundle = null;
         let geoState = { lat: null, lng: null };
         let dragState = { active: false, startX: 0, startY: 0 };
 
         await loadModels(statusEl);
         currentLibrary = await getMergedLibrary();
         libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
+        resetSearchProgress();
+        updateTopActions(null);
+
+
+function setSearchProgress(percent = 0, label = '') {
+  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+  progressWrapEl.classList.remove('hidden');
+  progressFillEl.style.width = `${safePercent}%`;
+  progressFillEl.setAttribute('aria-valuenow', String(Math.round(safePercent)));
+  progressLabelEl.textContent = label || (safePercent >= 100 ? 'הסריקה הושלמה.' : `סריקה: ${Math.round(safePercent)}%`);
+}
+
+function resetSearchProgress() {
+  progressFillEl.style.width = '0%';
+  progressFillEl.setAttribute('aria-valuenow', '0');
+  progressLabelEl.textContent = 'ממתין לתמונה לחיפוש.';
+}
+
+function isStrongMatch(match, kind) {
+  if (kind === 'visual') return Number(match.score || 0) >= 0.75;
+  return Number(match.colorScore || match.score || 0) >= 0.72;
+}
+
+function applyResultFilters(bundle) {
+  if (!bundle) return { kind: 'visual', matches: [] };
+  const selectedType = filterAnimalTypeEl.value;
+  const selectedSource = filterSourceEl.value;
+  const strongOnly = strongOnlyEl.checked;
+  const filtered = (bundle.matches || []).filter((match) => {
+    if (selectedType && (match.animalType || '') !== selectedType) return false;
+    if (selectedSource && (match.source || '') !== selectedSource) return false;
+    if (strongOnly && !isStrongMatch(match, bundle.kind)) return false;
+    return true;
+  });
+  return { ...bundle, matches: filtered };
+}
+
+function refreshResultFilters(bundle) {
+  const types = Array.from(new Set((bundle?.matches || []).map((match) => (match.animalType || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'he'));
+  const previous = filterAnimalTypeEl.value;
+  filterAnimalTypeEl.innerHTML = '<option value="">כל הסוגים</option>' + types.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
+  if (types.includes(previous)) filterAnimalTypeEl.value = previous;
+}
+
+function updateTopActions(bundle) {
+  const top = bundle?.matches?.[0];
+  const disabled = !top;
+  shareTopBtn.disabled = disabled;
+  whatsappTopBtn.disabled = disabled;
+  if (disabled) {
+    reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: null });
+    return;
+  }
+  reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+}
+
+function rerenderResults() {
+  const filteredBundle = applyResultFilters(currentResultBundle);
+  renderSummary(filteredBundle);
+  renderResults(filteredBundle);
+  updateTopActions(filteredBundle);
+}
 
         function redrawPreview() {
           if (!currentPreviewImage) {
@@ -173,6 +245,7 @@
                   ${notes}
                   <div class="card-actions">
                     ${profileButton}
+                    <a class="button-link secondary small" href="${buildWhatsAppHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: match })}" target="_blank" rel="noopener">וואטסאפ</a>
                     <a class="button-link secondary small" href="${reportHref}">דיווח למוקד 106</a>
                   </div>
                 </div>
@@ -229,44 +302,57 @@
             <div class="small">${body}</div>
             <div class="summary-actions">
               ${profileAction}
+              <button id="share-top-inline" class="small" type="button">שיתוף</button>
+              <a class="button-link secondary small" href="${buildWhatsAppHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top })}" target="_blank" rel="noopener">וואטסאפ</a>
               <a class="button-link secondary small" href="${reportHref}">דיווח למוקד 106</a>
             </div>
           `;
           summaryEl.classList.remove('hidden');
-        }
-
-        async function runSearch() {
-          if (!currentPreviewImage || !currentSelection) {
-            setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
-            return;
-          }
-          currentLibrary = await getMergedLibrary();
-          libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
-          if (!currentLibrary.length) {
-            setStatus(statusEl, 'המאגר עדיין ריק. הוסיפי רשומות דרך עמוד בניית המאגר או דרך data/library.json.', { tone: 'warn' });
-            return;
-          }
-
-          runSelectedBtn.disabled = true;
-          setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
-          const queryCanvas = cropRectToCanvas(currentPreviewImage, currentSelection);
-          currentQueryFeatures = await extractAnimalFeatures(queryCanvas);
-          const bundle = computeSearchResults(currentQueryFeatures, currentLibrary, {
-            minScore: Math.max(0.35, Math.min(0.9, Number(minScoreInput.value) / 100)),
+          summaryEl.querySelector('#share-top-inline')?.addEventListener('click', async () => {
+            const ok = await shareResult({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+            setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
           });
-          renderSummary(bundle);
-          renderResults(bundle);
-          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-          if (bundle.kind === 'visual') {
-            setStatus(statusEl, `החיפוש הושלם. נמצאו ${bundle.matches.length} התאמות ויזואליות אפשריות.`, { tone: 'success' });
-          } else {
-            setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
-          }
-          runSelectedBtn.disabled = false;
         }
 
-        minScoreInput.addEventListener('input', () => {
+
+async function runSearch() {
+  if (!currentPreviewImage || !currentSelection) {
+    setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
+    return;
+  }
+  setSearchProgress(12, 'טוען את ספריית החיפוש…');
+  currentLibrary = await getMergedLibrary();
+  libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
+  if (!currentLibrary.length) {
+    setStatus(statusEl, 'המאגר עדיין ריק. הוסיפי רשומות דרך עמוד בניית המאגר או דרך data/library.json.', { tone: 'warn' });
+    resetSearchProgress();
+    return;
+  }
+
+  runSelectedBtn.disabled = true;
+  setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
+  setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
+  const queryCanvas = cropRectToCanvas(currentPreviewImage, currentSelection);
+  setSearchProgress(62, 'מפיק מאפיינים ויזואליים…');
+  currentQueryFeatures = await extractAnimalFeatures(queryCanvas);
+  setSearchProgress(84, 'משווה מול המאגר ומסנן תוצאות…');
+  currentResultBundle = computeSearchResults(currentQueryFeatures, currentLibrary, {
+    minScore: Math.max(0.35, Math.min(0.9, Number(minScoreInput.value) / 100)),
+  });
+  refreshResultFilters(currentResultBundle);
+  rerenderResults();
+  resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  setSearchProgress(100, currentResultBundle.kind === 'visual' ? 'נסרקו התאמות ויזואליות.' : 'לא נמצאה התאמה חזקה, מוצגות חיות בצבעים דומים.');
+
+  if (currentResultBundle.kind === 'visual') {
+    setStatus(statusEl, `החיפוש הושלם. נמצאו ${currentResultBundle.matches.length} התאמות ויזואליות אפשריות.`, { tone: 'success' });
+  } else {
+    setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
+  }
+  runSelectedBtn.disabled = false;
+}
+
+minScoreInput.addEventListener('input', () => {
           minScoreOutput.textContent = `${minScoreInput.value}%`;
         });
 
@@ -297,6 +383,24 @@
           }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
         });
 
+
+[filterAnimalTypeEl, filterSourceEl, strongOnlyEl].forEach((element) => {
+  element.addEventListener('change', rerenderResults);
+});
+
+shareTopBtn.addEventListener('click', async () => {
+  const top = applyResultFilters(currentResultBundle).matches?.[0];
+  if (!top) return;
+  const ok = await shareResult({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+  setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
+});
+
+whatsappTopBtn.addEventListener('click', () => {
+  const top = applyResultFilters(currentResultBundle).matches?.[0];
+  if (!top) return;
+  window.open(buildWhatsAppHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+});
+
         importInput.addEventListener('change', async () => {
           const file = importInput.files?.[0];
           if (!file) return;
@@ -315,14 +419,140 @@
           saveImportedLibrary(sanitizedEntries);
           currentLibrary = await getMergedLibrary();
           libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
+        resetSearchProgress();
+        updateTopActions(null);
+
+
+function setSearchProgress(percent = 0, label = '') {
+  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+  progressWrapEl.classList.remove('hidden');
+  progressFillEl.style.width = `${safePercent}%`;
+  progressFillEl.setAttribute('aria-valuenow', String(Math.round(safePercent)));
+  progressLabelEl.textContent = label || (safePercent >= 100 ? 'הסריקה הושלמה.' : `סריקה: ${Math.round(safePercent)}%`);
+}
+
+function resetSearchProgress() {
+  progressFillEl.style.width = '0%';
+  progressFillEl.setAttribute('aria-valuenow', '0');
+  progressLabelEl.textContent = 'ממתין לתמונה לחיפוש.';
+}
+
+function isStrongMatch(match, kind) {
+  if (kind === 'visual') return Number(match.score || 0) >= 0.75;
+  return Number(match.colorScore || match.score || 0) >= 0.72;
+}
+
+function applyResultFilters(bundle) {
+  if (!bundle) return { kind: 'visual', matches: [] };
+  const selectedType = filterAnimalTypeEl.value;
+  const selectedSource = filterSourceEl.value;
+  const strongOnly = strongOnlyEl.checked;
+  const filtered = (bundle.matches || []).filter((match) => {
+    if (selectedType && (match.animalType || '') !== selectedType) return false;
+    if (selectedSource && (match.source || '') !== selectedSource) return false;
+    if (strongOnly && !isStrongMatch(match, bundle.kind)) return false;
+    return true;
+  });
+  return { ...bundle, matches: filtered };
+}
+
+function refreshResultFilters(bundle) {
+  const types = Array.from(new Set((bundle?.matches || []).map((match) => (match.animalType || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'he'));
+  const previous = filterAnimalTypeEl.value;
+  filterAnimalTypeEl.innerHTML = '<option value="">כל הסוגים</option>' + types.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
+  if (types.includes(previous)) filterAnimalTypeEl.value = previous;
+}
+
+function updateTopActions(bundle) {
+  const top = bundle?.matches?.[0];
+  const disabled = !top;
+  shareTopBtn.disabled = disabled;
+  whatsappTopBtn.disabled = disabled;
+  if (disabled) {
+    reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: null });
+    return;
+  }
+  reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+}
+
+function rerenderResults() {
+  const filteredBundle = applyResultFilters(currentResultBundle);
+  renderSummary(filteredBundle);
+  renderResults(filteredBundle);
+  updateTopActions(filteredBundle);
+}
           setStatus(statusEl, 'המאגר המיובא נוסף לדפדפן עבור הסשן הנוכחי.', { tone: 'success' });
+          if (currentResultBundle) rerenderResults();
         });
 
         clearImportedBtn.addEventListener('click', async () => {
           saveImportedLibrary([]);
           currentLibrary = await getMergedLibrary();
           libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
+        resetSearchProgress();
+        updateTopActions(null);
+
+
+function setSearchProgress(percent = 0, label = '') {
+  const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
+  progressWrapEl.classList.remove('hidden');
+  progressFillEl.style.width = `${safePercent}%`;
+  progressFillEl.setAttribute('aria-valuenow', String(Math.round(safePercent)));
+  progressLabelEl.textContent = label || (safePercent >= 100 ? 'הסריקה הושלמה.' : `סריקה: ${Math.round(safePercent)}%`);
+}
+
+function resetSearchProgress() {
+  progressFillEl.style.width = '0%';
+  progressFillEl.setAttribute('aria-valuenow', '0');
+  progressLabelEl.textContent = 'ממתין לתמונה לחיפוש.';
+}
+
+function isStrongMatch(match, kind) {
+  if (kind === 'visual') return Number(match.score || 0) >= 0.75;
+  return Number(match.colorScore || match.score || 0) >= 0.72;
+}
+
+function applyResultFilters(bundle) {
+  if (!bundle) return { kind: 'visual', matches: [] };
+  const selectedType = filterAnimalTypeEl.value;
+  const selectedSource = filterSourceEl.value;
+  const strongOnly = strongOnlyEl.checked;
+  const filtered = (bundle.matches || []).filter((match) => {
+    if (selectedType && (match.animalType || '') !== selectedType) return false;
+    if (selectedSource && (match.source || '') !== selectedSource) return false;
+    if (strongOnly && !isStrongMatch(match, bundle.kind)) return false;
+    return true;
+  });
+  return { ...bundle, matches: filtered };
+}
+
+function refreshResultFilters(bundle) {
+  const types = Array.from(new Set((bundle?.matches || []).map((match) => (match.animalType || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'he'));
+  const previous = filterAnimalTypeEl.value;
+  filterAnimalTypeEl.innerHTML = '<option value="">כל הסוגים</option>' + types.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
+  if (types.includes(previous)) filterAnimalTypeEl.value = previous;
+}
+
+function updateTopActions(bundle) {
+  const top = bundle?.matches?.[0];
+  const disabled = !top;
+  shareTopBtn.disabled = disabled;
+  whatsappTopBtn.disabled = disabled;
+  if (disabled) {
+    reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: null });
+    return;
+  }
+  reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+}
+
+function rerenderResults() {
+  const filteredBundle = applyResultFilters(currentResultBundle);
+  renderSummary(filteredBundle);
+  renderResults(filteredBundle);
+  updateTopActions(filteredBundle);
+}
           setStatus(statusEl, 'המאגר המיובא של הסשן נוקה.', { tone: 'success' });
+          if (currentResultBundle) rerenderResults();
         });
 
         searchForm.addEventListener('submit', async (event) => {
@@ -338,6 +568,9 @@
           resultsEl.innerHTML = '';
           summaryEl.innerHTML = '';
           summaryEl.classList.add('hidden');
+          currentResultBundle = null;
+          updateTopActions(currentResultBundle);
+          resetSearchProgress();
           try {
             currentPreviewImage = null;
             currentSelection = null;
@@ -347,6 +580,7 @@
             cropMetaEl.textContent = 'עדיין לא נבחר אזור חיה.';
             prepNoteEl.textContent = '';
 
+            setSearchProgress(8, 'מכין את התמונה לסריקה…');
             setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
             const prepared = await fileToPreparedImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.88 });
             currentPreparedImage = prepared;
@@ -357,6 +591,7 @@
               updateSelectionPreview();
               runSelectedBtn.disabled = false;
 
+              setSearchProgress(24, 'התמונה נדחסה ומוכנה להצגה.');
               if (prepared.wasResized) {
                 prepNoteEl.textContent = `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height} כדי לזרז את החיפוש.`;
               } else {
@@ -371,6 +606,7 @@
             }
           } catch (error) {
             console.error(error);
+            setSearchProgress(0, 'הסריקה נעצרה.');
             setStatus(statusEl, `החיפוש נכשל: ${error.message}`, { tone: 'warn' });
           } finally {
             currentPreparedImage = null;
@@ -470,6 +706,13 @@
         </form>
         <div id="library-stats" class="small"></div>
         <div id="prep-note" class="small"></div>
+        <div id="search-progress" class="progress-block">
+          <div class="progress-head">
+            <strong>מצב סריקה</strong>
+            <span id="search-progress-label" class="small">ממתין לתמונה לחיפוש.</span>
+          </div>
+          <div class="progress-track" aria-hidden="true"><div id="search-progress-fill" class="progress-fill" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div></div>
+        </div>
       </section>
 
       <section class="grid grid-2" style="margin-top:16px;">
@@ -509,6 +752,32 @@
         <div class="space-between">
           <h2 class="section-title" style="margin:0;">תוצאות החיפוש</h2>
           <div class="small">הכרטיסים מסודרים לפי ההתאמה הטובה ביותר או לפי צבעים דומים.</div>
+        </div>
+        <div class="filter-bar">
+          <label class="stack small" style="gap:6px;">
+            <span>סינון לפי סוג</span>
+            <select id="filter-animal-type">
+              <option value="">כל הסוגים</option>
+            </select>
+          </label>
+          <label class="stack small" style="gap:6px;">
+            <span>סינון לפי מקור</span>
+            <select id="filter-source">
+              <option value="">כל המקורות</option>
+              <option value="repo">מהמאגר</option>
+              <option value="local">מקומי</option>
+              <option value="imported">מיובא</option>
+            </select>
+          </label>
+          <label class="small checkbox-inline">
+            <input id="filter-strong-only" type="checkbox">
+            רק התאמות חזקות
+          </label>
+          <div class="summary-actions" style="margin-inline-start:auto;">
+            <button id="share-top-btn" class="small" type="button" disabled>שיתוף התוצאה המובילה</button>
+            <button id="whatsapp-top-btn" class="secondary small" type="button" disabled>שליחה בוואטסאפ</button>
+            <a id="report-top-btn" class="button-link secondary small" href="mailto:?subject=%D7%93%D7%99%D7%95%D7%95%D7%97%20%D7%9C%D7%9E%D7%95%D7%A7%D7%93%20106">טיוטת 106</a>
+          </div>
         </div>
         <div id="summary" class="hidden"></div>
         <div id="results" class="empty">התוצאות שלך יופיעו כאן.</div>
