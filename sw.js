@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v13';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v13';
+const STATIC_CACHE = 'petconnect-animal-static-v14';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v14';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

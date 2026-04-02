@@ -56,3 +56,19 @@ This GitHub Pages build still does not ship a live Leaflet map, but `assets/comm
 - בגרסת GitHub Pages אין מפתחות שרת חיים, אבל בגרסה המתארחת אסור לשמור מפתחות API או מחרוזות חיבור ב-`config.js` ציבורי.
 - שמרי קבצי סודיות כ-`.env` או `config.local.js` מחוץ ל-Git, והזרימי אותם לשרת דרך משתני סביבה.
 - מומלץ להוסיף בדיקות build שמוודאות שאין `API_KEY=` או `postgres://` בקבצים הציבוריים.
+
+
+## Added in v7
+- auto timestamping on the search page the moment a photo is chosen
+- reverse-geocode helper for geolocation so the location field can prefill automatically when connectivity exists
+- breed-aware enroll/search fields with chips and browser-side ranking boosts
+- local-only impact counters and badges on the homepage (searches, strong matches, exports)
+- blur-up image rendering on result cards for a faster feel on slower devices
+- hosted-only scaffolding for the Owner Wall in `app/security.py`
+- hosted-only `pgvector` + HNSW SQL starter in `app/vector_index.sql`
+
+## Owner Wall guidance
+For the hosted backend, expose only the verification prompt publicly. Keep the verification answer hash, owner phone number, and any proof-of-ownership workflow strictly server-side.
+
+## What is still static-only here
+The GitHub Pages build still cannot safely expose private owner contact data, proof-of-ownership uploads, or real badge leaderboards. Those features require a hosted backend and authenticated users.

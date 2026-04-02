@@ -1,4 +1,3 @@
-
 function fallbackSetStatus(element, text, options = {}) {
   if (!element) return;
   const { tone = 'default', busy = false } = options;
@@ -10,7 +9,16 @@ function fallbackSetStatus(element, text, options = {}) {
 }
 
 async function waitForCommonHelpers() {
-  const needed = ['registerServiceWorker', 'setStatus', 'extractAnimalFeatures', 'buildWhatsAppHref', 'shareResult'];
+  const needed = [
+    'registerServiceWorker',
+    'setStatus',
+    'extractAnimalFeatures',
+    'buildWhatsAppHref',
+    'shareResult',
+    'reverseGeocodeLatLng',
+    'attachBreedAutocomplete',
+    'renderMatchCards',
+  ];
   const start = Date.now();
   while (Date.now() - start < 8000) {
     if (needed.every((name) => typeof window[name] === 'function')) return;
@@ -46,6 +54,11 @@ async function runSearchPage() {
   const progressFillEl = document.getElementById('search-progress-fill');
   const progressLabelEl = document.getElementById('search-progress-label');
   const cityInput = document.getElementById('city-name');
+  const queryAnimalTypeEl = document.getElementById('query-animal-type');
+  const breedInput = document.getElementById('breed-name');
+  const breedChipEl = document.getElementById('breed-suggestion-chips');
+  const locationTextInput = document.getElementById('location-text');
+  const reportedAtInput = document.getElementById('reported-at');
   const locateBtn = document.getElementById('locate-btn');
   const locationStatusEl = document.getElementById('location-status');
   const resultsSection = document.getElementById('results-section');
@@ -57,10 +70,11 @@ async function runSearchPage() {
   const whatsappTopBtn = document.getElementById('whatsapp-top-btn');
   const reportTopBtn = document.getElementById('report-top-btn');
   const privacyNoteEl = document.getElementById('privacy-note');
+  const smartHintEl = document.getElementById('smart-hint');
 
-  clearValidityOnInput(fileInput);
-  clearValidityOnInput(cityInput);
+  [fileInput, cityInput, queryAnimalTypeEl, breedInput].forEach(clearValidityOnInput);
   attachCityAutocomplete?.(cityInput);
+  attachBreedAutocomplete?.(breedInput, queryAnimalTypeEl);
   minScoreOutput.textContent = `${minScoreInput.value}%`;
 
   let currentPreviewImage = null;
@@ -70,6 +84,7 @@ async function runSearchPage() {
   let currentQueryFeatures = null;
   let geoState = { lat: null, lng: null };
   let dragState = { active: false, startX: 0, startY: 0 };
+  let currentReportTimestamp = '';
 
   function setSearchProgress(percent = 0, label = '') {
     const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
@@ -87,6 +102,11 @@ async function runSearchPage() {
     setButtonBusy?.(runSelectedBtn, busy, 'מחפש…');
   }
 
+  function setAutoTimestamp(date = new Date()) {
+    currentReportTimestamp = typeof date === 'string' ? date : new Date(date).toISOString();
+    reportedAtInput.value = formatReportedAt(currentReportTimestamp) || '';
+  }
+
   function updatePrivacyNote() {
     if (!privacyNoteEl) return;
     if (Number.isFinite(geoState.lat) && Number.isFinite(geoState.lng)) {
@@ -94,6 +114,46 @@ async function runSearchPage() {
       privacyNoteEl.textContent = `לפרטיות, בשיתוף ובטיוטת 106 נשתמש באזור משוער של כ-${blurred.radiusMeters} מטר ולא בכתובת מדויקת.`;
     } else {
       privacyNoteEl.textContent = 'אם תשתמשי במיקום, בשיתופים ובטיוטת 106 יופיע אזור משוער בלבד כדי לשמור על פרטיות.';
+    }
+  }
+
+  function renderBreedChips(type = '', preferredBreed = '') {
+    if (!breedChipEl) return;
+    const breeds = getBreedsForType(type);
+    if (!breeds.length) {
+      breedChipEl.innerHTML = '<div class="small">אפשר להשאיר גזע ריק, או לבחור אותו אחרי שקיבלת התאמות ראשוניות.</div>';
+      return;
+    }
+    breedChipEl.innerHTML = breeds.map((breed) => `
+      <button class="chip-btn ${breed === preferredBreed ? 'active' : ''}" type="button" data-breed="${escapeHtml(breed)}">${escapeHtml(breed)}</button>
+    `).join('');
+    breedChipEl.querySelectorAll('[data-breed]').forEach((button) => {
+      button.addEventListener('click', () => {
+        breedInput.value = button.dataset.breed || '';
+        renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim());
+        setStatus(statusEl, `הגזע "${breedInput.value}" נוסף לחיפוש כדי לשפר את הדירוג.`, { tone: 'success' });
+      });
+    });
+  }
+
+  function suggestBreedFromResults(bundle) {
+    if (!smartHintEl) return;
+    const breeds = (bundle?.matches || []).map((match) => String(match.breed || '').trim()).filter(Boolean).slice(0, 5);
+    if (breedInput.value.trim()) {
+      smartHintEl.textContent = 'שדה הגזע משמש לשיפור הדירוג. אפשר למחוק אותו אם אינך בטוחה.';
+      return;
+    }
+    if (!breeds.length) {
+      smartHintEl.textContent = 'אם אינך בטוחה בגזע, השאירי את השדה ריק. אחרי הסריקה נציע גזעים נפוצים לפי סוג החיה ולפי התוצאות המובילות.';
+      renderBreedChips(queryAnimalTypeEl.value, '');
+      return;
+    }
+    const tally = new Map();
+    breeds.forEach((breed) => tally.set(breed, (tally.get(breed) || 0) + 1));
+    const suggested = [...tally.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || '';
+    if (suggested) {
+      smartHintEl.textContent = `לפי התוצאות הראשונות, כדאי לבדוק גם את הגזע "${suggested}".`;
+      renderBreedChips(queryAnimalTypeEl.value || (bundle?.matches?.[0]?.animalType || ''), suggested);
     }
   }
 
@@ -129,7 +189,14 @@ async function runSearchPage() {
     shareTopBtn.disabled = disabled;
     whatsappTopBtn.disabled = disabled;
     reportTopBtn.classList.toggle('disabled-link', disabled);
-    reportTopBtn.href = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top || null });
+    reportTopBtn.href = buildMunicipalReportHref({
+      city: cityInput.value,
+      locationText: locationTextInput.value,
+      reportedAt: currentReportTimestamp,
+      lat: geoState.lat,
+      lng: geoState.lng,
+      bestMatch: top || null,
+    });
   }
 
   function classifyResultState(bundle) {
@@ -182,130 +249,60 @@ async function runSearchPage() {
       return;
     }
     const resultState = classifyResultState(bundle);
-    const gridClass = resultState.band === 'medium' ? 'result-grid result-grid--swipe' : 'result-grid';
-    resultsEl.innerHTML = `<div class="${gridClass}">${matches.map((match) => {
-      const target = match.href && match.href !== '#' ? match.href : '';
-      const safeLabel = escapeHtml(match.label);
-      const safeNotes = escapeHtml(match.notes || '');
-      const animalType = match.animalType ? `<span class="badge">${escapeHtml(match.animalType)}</span>` : '';
-      const colors = match.colors ? `<span class="badge">${escapeHtml(match.colors)}</span>` : `<span class="badge">${escapeHtml(match.colorName || '')}</span>`;
-      const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
-      const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
-      const reportHref = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: match });
-      const profileButton = target ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>` : '<span class="badge">אין קישור פרופיל</span>';
-      const score = bundle.kind === 'visual' ? Number(match.score || 0) : Number(match.colorScore || 0);
-      const scoreText = bundle.kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
-      const reason = bundle.kind === 'visual' ? 'התאמה ויזואלית + צבע' : 'גיבוי לפי צבעים דומים';
-      return `
-        <article class="result-card">
-          ${thumb}
-          <div class="body">
-            <div class="space-between">
-              <strong>${safeLabel}</strong>
-              <span class="score-pill ${match.confidence || 'low'}">${scoreText}</span>
-            </div>
-            <div class="row">
-              ${animalType}
-              ${colors}
-              <span class="badge">${sourceLabel(match.source)}</span>
-            </div>
-            <div class="small">${reason}</div>
-            ${notes}
-            <div class="card-actions">
-              ${profileButton}
-              <a class="button-link secondary small" href="${buildWhatsAppHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: match })}" target="_blank" rel="noopener">וואטסאפ</a>
-              <a class="button-link secondary small" href="${reportHref}">דיווח למוקד 106</a>
-            </div>
-          </div>
-        </article>`;
-    }).join('')}</div>`;
+    const wrapperClass = resultState.band === 'medium' ? 'result-grid result-grid--swipe' : 'result-grid';
+    resultsEl.innerHTML = `<div class="${wrapperClass}">${renderMatchCards(matches, { kind: bundle.kind })}</div>`;
   }
 
   function renderSummary(bundle) {
-    const matches = bundle.matches || [];
-    if (!matches.length) {
+    const top = bundle.matches?.[0];
+    if (!top) {
       summaryEl.innerHTML = '';
       summaryEl.classList.add('hidden');
       return;
     }
-
-    const top = matches[0];
     const state = classifyResultState(bundle);
-    const scorePct = Math.round(state.score * 100);
-    let tone = 'low';
-    let chip = 'נמצאו תוצאות להשוואה';
-    let title = 'נמצאו בעלי חיים דומים';
-    let body = 'עברו על הכרטיסים למטה ובדקו מי מהם נראה הכי קרוב לחיה שבתמונה.';
-    let tipsHtml = '';
-    let heroHtml = '';
-
+    const score = bundle.kind === 'visual' ? Number(top.score || 0) : Number(top.colorScore || top.score || 0);
+    const scoreLabel = bundle.kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
+    const topThumb = top.thumb ? `<img class="summary-hero-thumb blur-up is-loading" loading="lazy" decoding="async" onload="this.classList.remove('is-loading')" src="${top.thumb}" alt="${escapeHtml(top.label)}">` : '';
+    let title = 'תוצאת החיפוש';
+    let text = 'התוצאות מוצגות כאן.';
     if (state.band === 'high') {
-      tone = 'high';
-      chip = 'נמצאה התאמה חזקה מאוד';
-      title = `יכול להיות שזו ${escapeHtml(top.label)}`;
-      body = `המערכת מצאה התאמה של ${scorePct}% — זה הסוג של מקרה שבו כדאי ליצור קשר מיד דרך הכפתורים למטה.`;
-      heroHtml = `
-        <div class="summary-hero">
-          ${top.thumb ? `<img class="summary-hero-thumb" src="${top.thumb}" alt="${escapeHtml(top.label)}">` : ''}
-          <div class="summary-hero-body">
-            <div class="summary-hero-score">${scorePct}% התאמה</div>
-            <div class="summary-hero-meta">${top.animalType ? `${escapeHtml(top.animalType)} · ` : ''}${escapeHtml(top.colors || top.colorName || 'צבע מעורב')}</div>
-            <div class="small">${escapeHtml(top.notes || 'המועמד המוביל קפץ לראש הרשימה. מומלץ לעבור גם על עוד 1–2 כרטיסים כדי לוודא.')}</div>
-          </div>
-        </div>`;
+      title = 'נמצאה התאמה חזקה מאוד';
+      text = 'זה הזמן הטוב ביותר לפתוח מיד את הכרטיס הראשון ולשתף את ההתאמה.';
     } else if (state.band === 'medium') {
-      tone = 'medium';
-      chip = 'נמצאו התאמות אפשריות';
-      title = `יש כמה מועמדים טובים — המוביל הוא ${escapeHtml(top.label)}`;
-      body = `ההתאמה המובילה היא ${scorePct}%. עברי ימינה ושמאלה בין הכרטיסים ובדקי עוד 2–3 מועמדים לפני שמחליטים.`;
-      tipsHtml = `
-        <ul class="retake-list compact">
-          <li>בדקי קודם את הכרטיס הראשון ואז את השניים שאחריו.</li>
-          <li>חפשי סימנים בולטים כמו צבעים, מבנה גוף או רתמה.</li>
-        </ul>`;
+      title = 'נמצאו התאמות אפשריות';
+      text = 'כדאי לעבור על המועמדים ולבדוק את התמונות והפרטים.';
     } else if (state.band === 'low') {
-      tone = 'low';
-      chip = 'ההתאמה חלשה כרגע';
-      title = 'כנראה שצריך עוד תמונה אחת טובה יותר';
-      body = `נמצאה התאמה של ${scorePct}% בלבד. נציג עדיין את התוצאות, אבל עדיף לנסות תמונה נוספת מזווית קדמית או לסמן אזור מדויק יותר סביב החיה.`;
-      tipsHtml = `
-        <ul class="retake-list">
-          <li>נסי תמונה קרובה יותר שבה החיה תופסת יותר מהפריים.</li>
-          <li>אם יש אנשים או רקע עמוס, סמני רק את החיה.</li>
-          <li>זווית קדמית או חצי-צד בדרך כלל נותנת תוצאה טובה יותר.</li>
-        </ul>
-        <div class="summary-actions"><button id="retry-search-inline" class="secondary small" type="button">בחירת אזור חדש</button></div>`;
+      title = 'ההתאמה חלשה כרגע';
+      text = 'מומלץ לנסות שוב עם תמונה קרובה יותר או בחירת אזור מדויקת יותר של החיה.';
     } else if (state.band === 'fallback') {
-      tone = 'medium';
-      chip = 'לא נמצאה התאמה חזקה';
-      title = 'מציג חיות בצבעים דומים';
-      body = 'כדי לא לפספס, מוצגות עכשיו חיות עם פרופיל צבע דומה. אם אפשר, נסי תמונה נוספת או אזור מדויק יותר סביב החיה בלבד.';
-      tipsHtml = `
-        <ul class="retake-list compact">
-          <li>נסי חיפוש נוסף עם חיתוך הדוק יותר.</li>
-          <li>צילום מזווית אחרת יכול לשפר את ההתאמה הוויזואלית.</li>
-        </ul>`;
+      title = 'אין התאמה ויזואלית חזקה';
+      text = 'הנה חיות בצבעים דומים שעדיין שווה לבדוק.';
     }
-
-    const reportHref = buildMunicipalReportHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
-    const profileAction = top.href && top.href !== '#' ? `<a class="button-link small" href="${escapeHtml(top.href)}">פתיחת הפרופיל של ${escapeHtml(top.label)}</a>` : '';
-    summaryEl.className = `summary-banner ${tone}`;
     summaryEl.innerHTML = `
-      <div class="chip">${chip} · ${matches.length} תוצאות</div>
-      <h3 style="margin:0;">${title}</h3>
-      <div class="small">${body}</div>
-      ${heroHtml}
-      ${tipsHtml}
-      <div class="summary-actions">
-        ${profileAction}
-        <button id="share-top-inline" class="small" type="button">שיתוף</button>
-        <a class="button-link secondary small" href="${buildWhatsAppHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top })}" target="_blank" rel="noopener">וואטסאפ</a>
-        <a class="button-link secondary small" href="${reportHref}">דיווח למוקד 106</a>
+      <div class="summary-hero summary-hero--${state.band}">
+        ${topThumb}
+        <div class="summary-hero-body stack">
+          <div class="chip">${escapeHtml(title)}</div>
+          <h3 style="margin:0;">${escapeHtml(top.label)}</h3>
+          <div class="summary-hero-meta">${top.animalType ? `${escapeHtml(top.animalType)} · ` : ''}${top.breed ? `${escapeHtml(top.breed)} · ` : ''}${escapeHtml(top.colors || top.colorName || 'צבע מעורב')}</div>
+          <div class="score-pill ${escapeHtml(String(top.confidence || 'medium'))}">${scoreLabel}</div>
+          <div class="small">${escapeHtml(text)}</div>
+          <div class="small">${reportedAtInput.value ? `דווח אוטומטית ב-${escapeHtml(reportedAtInput.value)}.` : ''} ${locationTextInput.value ? `אזור: ${escapeHtml(locationTextInput.value)}.` : ''}</div>
+          <div class="summary-actions">
+            <button id="share-inline" class="small" type="button">שיתוף עכשיו</button>
+            <button id="whatsapp-inline" class="secondary small" type="button">וואטסאפ</button>
+            ${state.band === 'low' ? '<button id="retry-search-inline" class="secondary small" type="button">בחירת אזור חדש</button>' : ''}
+          </div>
+        </div>
       </div>`;
     summaryEl.classList.remove('hidden');
-    summaryEl.querySelector('#share-top-inline')?.addEventListener('click', async () => {
-      const ok = await shareResult({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+    summaryEl.querySelector('#share-inline')?.addEventListener('click', async () => {
+      const ok = await shareResult({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
       setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
+    });
+    summaryEl.querySelector('#whatsapp-inline')?.addEventListener('click', () => {
+      window.open(buildWhatsAppHref({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
     });
     summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
       document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -318,7 +315,12 @@ async function runSearchPage() {
     renderSummary(filteredBundle);
     renderResults(filteredBundle);
     updateTopActions(filteredBundle);
-    saveLastMatchGallery(filteredBundle, { city: cityInput.value, pageUrl: window.location.href });
+    saveLastMatchGallery(filteredBundle, {
+      city: cityInput.value,
+      pageUrl: window.location.href,
+      reportedAt: currentReportTimestamp,
+      locationText: locationTextInput.value,
+    });
   }
 
   async function runSearch() {
@@ -336,7 +338,7 @@ async function runSearchPage() {
       return;
     }
 
-    setSearchButtonsBusy(true, 'טוען תמונה…');
+    setSearchButtonsBusy(true, 'מנתח תמונה…');
     setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
     setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
     const queryCanvas = cropRectToCanvas(currentPreviewImage, currentSelection);
@@ -345,13 +347,18 @@ async function runSearchPage() {
     setSearchProgress(84, 'משווה מול המאגר ומסנן תוצאות…');
     currentResultBundle = computeSearchResults(currentQueryFeatures, currentLibrary, {
       minScore: Math.max(0.35, Math.min(0.9, Number(minScoreInput.value) / 100)),
+      queryAnimalType: queryAnimalTypeEl.value,
+      queryBreed: breedInput.value,
     });
     refreshResultFilters(currentResultBundle);
     rerenderResults();
+    suggestBreedFromResults(currentResultBundle);
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setSearchProgress(100, currentResultBundle.kind === 'visual' ? 'נסרקו התאמות ויזואליות.' : 'לא נמצאה התאמה חזקה, מוצגות חיות בצבעים דומים.');
     const state = classifyResultState(currentResultBundle);
+    recordImpactEvent('search');
     if (state.band === 'high') {
+      recordImpactEvent('strong-match');
       setStatus(statusEl, `נמצאה התאמה חזקה מאוד של ${Math.round(state.score * 100)}%. מומלץ לפתוח מיד את הכרטיס הראשון.`, { tone: 'success' });
     } else if (state.band === 'medium') {
       setStatus(statusEl, 'נמצאו כמה מועמדים טובים. עברי על הגלריה והשווי בין הכרטיסים.', { tone: 'success' });
@@ -369,11 +376,21 @@ async function runSearchPage() {
   resetSearchProgress();
   updateTopActions(null);
   updatePrivacyNote();
+  renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim());
 
   minScoreInput.addEventListener('input', () => {
     minScoreOutput.textContent = `${minScoreInput.value}%`;
   });
   showBoxInput.addEventListener('change', redrawPreview);
+  queryAnimalTypeEl.addEventListener('input', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
+  queryAnimalTypeEl.addEventListener('change', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
+  breedInput.addEventListener('input', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files?.length) {
+      setAutoTimestamp(new Date());
+      setStatus(statusEl, 'התמונה נבחרה. זמן הדיווח נשמר אוטומטית.', { tone: 'success' });
+    }
+  });
   useWholeBtn.addEventListener('click', () => {
     if (!currentPreviewImage) return;
     setSelection(fullImageRect(currentPreviewImage), 'נבחרה כל התמונה. אם יש גם אנשים בפריים, עדיף לסמן רק את החיה.');
@@ -386,32 +403,44 @@ async function runSearchPage() {
     }
     locateBtn.disabled = true;
     locationStatusEl.textContent = 'מבקש הרשאה למיקום…';
-    navigator.geolocation.getCurrentPosition((position) => {
+    navigator.geolocation.getCurrentPosition(async (position) => {
       geoState = { lat: position.coords.latitude, lng: position.coords.longitude };
       const blurred = privacyBlurCoordinates(geoState.lat, geoState.lng, 100);
       locationStatusEl.textContent = `המיקום נשמר כאזור משוער: ${formatCoordinates(blurred.lat, blurred.lng)}`;
-      locateBtn.disabled = false;
-      updatePrivacyNote();
-      updateTopActions(applyResultFilters(currentResultBundle));
+      locationTextInput.value = `אזור משוער: ${formatCoordinates(blurred.lat, blurred.lng)}`;
+      try {
+        const resolved = await reverseGeocodeLatLng(geoState.lat, geoState.lng, 'he');
+        if (resolved?.city && !cityInput.value.trim()) cityInput.value = resolved.city;
+        if (resolved?.display) locationTextInput.value = resolved.display;
+        locationStatusEl.textContent = resolved?.city ? `הכתובת הוערכה ל-${resolved.city}.` : locationStatusEl.textContent;
+      } catch (error) {
+        console.warn('Reverse geocoding failed:', error);
+      } finally {
+        locateBtn.disabled = false;
+        updatePrivacyNote();
+        updateTopActions(applyResultFilters(currentResultBundle));
+      }
     }, (error) => {
       locationStatusEl.textContent = `לא ניתן היה לקבל מיקום: ${error.message}`;
       locateBtn.disabled = false;
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
   });
 
-  [filterAnimalTypeEl, filterSourceEl, strongOnlyEl].forEach((element) => element.addEventListener('change', rerenderResults));
+  [filterAnimalTypeEl, filterSourceEl, strongOnlyEl].forEach((element) => element.addEventListener('change', () => {
+    if (currentResultBundle) rerenderResults();
+  }));
 
   shareTopBtn.addEventListener('click', async () => {
     const top = applyResultFilters(currentResultBundle).matches?.[0];
     if (!top) return;
-    const ok = await shareResult({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+    const ok = await shareResult({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
     setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
   });
 
   whatsappTopBtn.addEventListener('click', () => {
     const top = applyResultFilters(currentResultBundle).matches?.[0];
     if (!top) return;
-    window.open(buildWhatsAppHref({ city: cityInput.value, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+    window.open(buildWhatsAppHref({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
   });
 
   importInput.addEventListener('change', async () => {
@@ -451,6 +480,7 @@ async function runSearchPage() {
       return;
     }
     const file = fileInput.files?.[0];
+    if (!currentReportTimestamp) setAutoTimestamp(new Date());
     setSearchButtonsBusy(true, 'מכין תמונה…');
     resultsEl.innerHTML = '';
     summaryEl.innerHTML = '';
@@ -483,7 +513,7 @@ async function runSearchPage() {
           ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height} כדי לזרז את החיפוש ברשת סלולרית.`
           : 'התמונה עובדה בגודל המקורי שלה.';
         selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה.';
-        setStatus(statusEl, 'התמונה נטענה. סַמְּנִי את אזור החיה או השאירי את ברירת המחדל, ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
+        setStatus(statusEl, 'התמונה נטענה. סמני את אזור החיה או השאירי את ברירת המחדל, ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
         await runSearch();
       } finally {
         prepared.cleanup();

@@ -540,3 +540,78 @@ button[aria-busy="true"]::after {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+.readonly-input {
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+}
+
+.suggestion-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip-btn {
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+}
+
+.chip-btn.active,
+.chip-btn:hover {
+  border-color: rgba(139,92,246,0.7);
+  background: rgba(139,92,246,0.18);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.impact-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255,255,255,0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.impact-card strong {
+  font-size: 1.8rem;
+}
+
+.badge-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.blur-shell {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+}
+
+.blur-up {
+  transition: filter 220ms ease, transform 220ms ease, opacity 220ms ease;
+}
+
+.blur-up.is-loading {
+  filter: blur(14px);
+  transform: scale(1.03);
+  opacity: 0.82;
+}
+
+.summary-hero-thumb.blur-up {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 18px;
+}

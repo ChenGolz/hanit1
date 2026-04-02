@@ -4,16 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>חיפוש חיה לפי תמונה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403h">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403h">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v7">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v7">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/i18n.js?v=20260403h"></script>
-    <script defer src="./assets/common.js?v=20260403h"></script>
-    <script defer src="./assets/app.js?v=20260403h"></script>
-    <script defer src="./search.inline.js?v=20260403h"></script>
+    <script defer src="./assets/i18n.js?v=20260403v7"></script>
+    <script defer src="./assets/common.js?v=20260403v7"></script>
+    <script defer src="./assets/app.js?v=20260403v7"></script>
+    <script defer src="./search.inline.js?v=20260403v7"></script>
   </head>
   <body>
     <main class="page">
@@ -49,6 +49,15 @@
               <div id="location-status" class="location-pill">לא נשמר מיקום עדיין.</div>
             </div>
           </div>
+          <div class="field-grid">
+            <input id="location-text" type="text" class="readonly-input" placeholder="כתובת / אזור משוער יופיעו כאן אוטומטית" aria-label="כתובת משוערת" readonly>
+            <input id="reported-at" type="text" class="readonly-input" placeholder="זמן הדיווח יתמלא אוטומטית" aria-label="זמן הדיווח האוטומטי" readonly>
+          </div>
+          <div class="field-grid">
+            <input id="query-animal-type" type="text" placeholder="סוג חיה, למשל כלב / חתול" aria-label="סוג החיה לחיפוש">
+            <input id="breed-name" type="text" placeholder="גזע משוער, למשל לברדור" aria-label="גזע משוער">
+          </div>
+          <div id="breed-suggestion-chips" class="suggestion-chips"></div>
           <div class="row">
             <button id="search-btn" type="submit">טעינת תמונה וחיפוש</button>
           </div>
@@ -65,7 +74,7 @@
       </section>
 
       <section class="grid grid-2" style="margin-top:16px;">
-        <article class="card stack">
+        <article id="preview-card" class="card stack">
           <div class="space-between">
             <h2 class="section-title" style="margin:0;">סימון אזור החיה</h2>
             <label class="small" style="display:flex; align-items:center; gap:8px;">
@@ -86,6 +95,7 @@
           <div id="crop-meta" class="small">עדיין לא נבחר אזור חיה.</div>
           <div class="notice warn">כדי לזהות כלב מתוך תמונה עם אדם, סמני רק את הכלב. אם אין התאמה חזקה, יוצגו גם חיות עם צבעים דומים.</div>
           <div id="privacy-note" class="small privacy-note">אם תשתמשי במיקום, בשיתופים ובטיוטת 106 יופיע אזור משוער בלבד כדי לשמור על פרטיות.</div>
+          <div id="smart-hint" class="small">אם אינך בטוחה בגזע, השאירי את השדה ריק. אחרי הסריקה נציע גזעים נפוצים לפי סוג החיה ולפי התוצאות המובילות.</div>
         </article>
       </section>
 

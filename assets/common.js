@@ -1,6 +1,14 @@
 const STORAGE_KEY = 'petconnect-ghpages-animal-library-v2';
 const SEARCH_IMPORT_KEY = 'petconnect-ghpages-animal-imported-library-v2';
 const LAST_MATCH_GALLERY_KEY = 'petconnect-ghpages-last-matches-v1';
+const IMPACT_STATS_KEY = 'petconnect-ghpages-impact-stats-v1';
+const DEFAULT_BREEDS = Object.freeze({
+  'כלב': ['לברדור', 'גולדן רטריבר', 'רועה גרמני', 'האסקי סיבירי', 'פומרניאן', 'שיצו', 'בוקסר', 'כנעני', 'מלינואה', 'יורקשייר טרייר'],
+  'חתול': ['אירופאי קצר-שיער', 'חתול רחוב', 'פרסי', 'בריטי קצר-שיער', 'סיאמי', 'מיין קון', 'רגדול'],
+  'סוס': ['ערבי', 'קוורטר', 'פריזיאן', 'אנדלוסי'],
+  'ארנב': ['ננסי', 'הולנדי', 'אנגורה'],
+  'תוכי': ['קוקטייל', 'ג׳אקו', 'דררה'],
+});
 
 function hashString(text) {
   const value = String(text || '');
@@ -120,6 +128,137 @@ function attachCityAutocomplete(input, datalistId = 'city-suggestions') {
   input.addEventListener('focus', renderSuggestions);
   renderSuggestions();
 }
+
+function inferAnimalTypeLabel(value = '') {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (raw.includes('כלב') || lower.includes('dog')) return 'כלב';
+  if (raw.includes('חת') || lower.includes('cat')) return 'חתול';
+  if (raw.includes('סוס') || lower.includes('horse')) return 'סוס';
+  if (raw.includes('ארנב') || lower.includes('rabbit')) return 'ארנב';
+  if (raw.includes('תוכ') || lower.includes('parrot') || lower.includes('bird')) return 'תוכי';
+  return raw;
+}
+
+function getBreedCatalog() {
+  return DEFAULT_BREEDS;
+}
+
+function getBreedsForType(animalType = '') {
+  const normalized = inferAnimalTypeLabel(animalType);
+  return DEFAULT_BREEDS[normalized] || [];
+}
+
+function attachBreedAutocomplete(input, animalTypeSource = null, datalistId = 'breed-suggestions') {
+  if (!input || typeof document === 'undefined') return;
+  let datalist = document.getElementById(datalistId);
+  if (!datalist) {
+    datalist = document.createElement('datalist');
+    datalist.id = datalistId;
+    document.body.appendChild(datalist);
+  }
+  input.setAttribute('list', datalistId);
+  const resolveType = () => {
+    if (!animalTypeSource) return '';
+    if (typeof animalTypeSource === 'function') return animalTypeSource() || '';
+    return animalTypeSource.value || '';
+  };
+  const renderSuggestions = () => {
+    const query = String(input.value || '').trim().toLowerCase();
+    const directBreeds = getBreedsForType(resolveType());
+    const fallbackBreeds = Object.values(DEFAULT_BREEDS).flat();
+    const source = directBreeds.length ? directBreeds : fallbackBreeds;
+    const suggestions = source.filter((breed) => {
+      if (!query) return true;
+      return String(breed).toLowerCase().includes(query);
+    }).slice(0, 12);
+    datalist.innerHTML = suggestions.map((breed) => `<option value="${escapeHtml(breed)}"></option>`).join('');
+  };
+  input.addEventListener('input', renderSuggestions);
+  input.addEventListener('focus', renderSuggestions);
+  if (animalTypeSource && animalTypeSource.addEventListener) {
+    animalTypeSource.addEventListener('input', renderSuggestions);
+    animalTypeSource.addEventListener('change', renderSuggestions);
+  }
+  renderSuggestions();
+}
+
+function formatReportedAt(value) {
+  if (!value) return '';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat('he-IL', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(date);
+}
+
+async function reverseGeocodeLatLng(lat, lng, language = 'he') {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  const params = new URLSearchParams({
+    format: 'jsonv2',
+    lat: String(lat),
+    lon: String(lng),
+    'accept-language': language,
+    zoom: '18',
+    addressdetails: '1',
+  });
+  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?${params.toString()}`, {
+    headers: { 'Accept': 'application/json' },
+  });
+  if (!response.ok) throw new Error(`שירות הכתובת החזיר ${response.status}`);
+  const payload = await response.json();
+  const address = payload?.address || {};
+  const city = address.city || address.town || address.village || address.municipality || address.suburb || '';
+  const road = [address.road, address.house_number].filter(Boolean).join(' ');
+  const display = payload?.display_name || [road, city].filter(Boolean).join(', ');
+  return {
+    city: String(city || '').trim(),
+    road: String(road || '').trim(),
+    display: String(display || '').trim(),
+  };
+}
+
+function loadImpactStats() {
+  const parsed = safeJsonParse(localStorage.getItem(IMPACT_STATS_KEY), null);
+  return {
+    searches: Number(parsed?.searches || 0),
+    strongMatches: Number(parsed?.strongMatches || 0),
+    librariesExported: Number(parsed?.librariesExported || 0),
+    localAnimals: Number(loadLocalLibrary().length || 0),
+    updatedAt: parsed?.updatedAt || null,
+  };
+}
+
+function saveImpactStats(stats) {
+  localStorage.setItem(IMPACT_STATS_KEY, JSON.stringify({
+    searches: Number(stats?.searches || 0),
+    strongMatches: Number(stats?.strongMatches || 0),
+    librariesExported: Number(stats?.librariesExported || 0),
+    updatedAt: new Date().toISOString(),
+  }));
+}
+
+function recordImpactEvent(eventName, payload = {}) {
+  const stats = loadImpactStats();
+  if (eventName === 'search') stats.searches += 1;
+  if (eventName === 'strong-match') stats.strongMatches += 1;
+  if (eventName === 'export-library') stats.librariesExported += 1;
+  saveImpactStats(stats);
+  return { ...stats, localAnimals: Number(payload.localAnimals || loadLocalLibrary().length || 0) };
+}
+
+function getImpactBadges(stats = loadImpactStats()) {
+  const badges = [];
+  if (stats.searches >= 1) badges.push('תצפית ראשונה');
+  if (stats.searches >= 5) badges.push('גיבורת שכונה');
+  if (stats.strongMatches >= 1) badges.push('זיהוי מהיר');
+  if (stats.strongMatches >= 5) badges.push('5 איחודים מקומיים');
+  if (stats.librariesExported >= 1) badges.push('בונת מאגר');
+  return badges;
+}
+
 function setStatus(element, text, options = {}) {
   if (!element) return;
   const { tone = 'default', busy = false } = options;
@@ -596,6 +735,7 @@ function normalizeEntry(entry) {
     id: entry.id || slugify(entry.label || 'רשומה'),
     label: String(entry.label || 'ללא שם').trim() || 'ללא שם',
     animalType: String(entry.animal_type || entry.animalType || '').trim(),
+    breed: String(entry.breed || entry.animal_breed || '').trim(),
     colors: String(entry.colors || '').trim(),
     href: isSafeProfileHref(entry.href) ? (String(entry.href || '').trim() || '#') : '#',
     thumb: String(entry.thumb || '').trim(),
@@ -634,14 +774,22 @@ function bestEntryMatch(queryFeatures, entry) {
 
 function computeSearchResults(queryFeatures, library, options = {}) {
   const minScore = Math.max(0, Math.min(1, Number(options.minScore ?? 0.55)));
+  const queryAnimalType = inferAnimalTypeLabel(options.queryAnimalType || '');
+  const queryBreed = String(options.queryBreed || '').trim().toLowerCase();
+
   const visualMatches = library
     .map((entry) => {
       const match = bestEntryMatch(queryFeatures, entry);
+      let boostedScore = match.visualScore;
+      if (queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType) boostedScore += 0.06;
+      if (queryBreed && String(entry.breed || '').trim().toLowerCase() === queryBreed) boostedScore += 0.08;
+      boostedScore = Math.min(0.999, boostedScore);
       return {
         ...entry,
-        score: match.visualScore,
+        score: boostedScore,
+        rawScore: match.visualScore,
         colorScore: match.colorScore,
-        confidence: similarityLabel(match.visualScore),
+        confidence: similarityLabel(boostedScore),
         matchKind: 'visual',
       };
     })
@@ -656,7 +804,10 @@ function computeSearchResults(queryFeatures, library, options = {}) {
   const colorMatches = library
     .map((entry) => {
       const colorCandidates = entry.colorHistograms?.length ? entry.colorHistograms : [[]];
-      const colorScore = Math.max(...colorCandidates.map((histogram) => histogramSimilarity(queryFeatures.colorHistogram, histogram)));
+      let colorScore = Math.max(...colorCandidates.map((histogram) => histogramSimilarity(queryFeatures.colorHistogram, histogram)));
+      if (queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType) colorScore += 0.05;
+      if (queryBreed && String(entry.breed || '').trim().toLowerCase() === queryBreed) colorScore += 0.07;
+      colorScore = Math.min(0.999, colorScore);
       return {
         ...entry,
         score: colorScore,
@@ -742,8 +893,10 @@ function formatCoordinates(lat, lng) {
   return `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
 }
 
-function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+function buildMunicipalReportHref({ city = '', locationText = '', reportedAt = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
   const cleanCity = String(city || '').trim();
+  const cleanLocation = String(locationText || '').trim();
+  const cleanReportedAt = formatReportedAt(reportedAt);
   const blurred = privacyBlurCoordinates(lat, lng, 100);
   const subjectCity = cleanCity || 'עיר לא צוינה';
   const lines = [
@@ -751,9 +904,12 @@ function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch
     '',
     'ברצוני לדווח על בעל חיים שנבדק מול המאגר באתר.',
   ];
+  if (cleanReportedAt) lines.push(`שעת הדיווח האוטומטית: ${cleanReportedAt}.`);
+  if (cleanLocation) lines.push(`כתובת/אזור משוער שנמשכו אוטומטית: ${cleanLocation}.`);
   if (bestMatch) {
     lines.push(`התאמה מובילה במאגר: ${bestMatch.label} (${formatPct(bestMatch.score)}).`);
     if (bestMatch.animalType) lines.push(`סוג בעל החיים: ${bestMatch.animalType}.`);
+    if (bestMatch.breed) lines.push(`גזע משוער/מדווח: ${bestMatch.breed}.`);
     if (bestMatch.colors || bestMatch.colorName) lines.push(`צבעים דומיננטיים: ${bestMatch.colors || bestMatch.colorName}.`);
   }
   if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) {
@@ -770,32 +926,42 @@ function buildMunicipalReportHref({ city = '', lat = null, lng = null, bestMatch
 }
 
 
-function buildWhatsAppHref({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+function buildWhatsAppHref({ city = '', locationText = '', reportedAt = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
   const blurred = privacyBlurCoordinates(lat, lng, 100);
   const parts = ['שלום, מצאתי בעל חיים ואני בודק התאמה דרך פאטקונקט.'];
+  const cleanLocation = String(locationText || '').trim();
+  const cleanReportedAt = formatReportedAt(reportedAt);
   if (bestMatch) {
     parts.push(`נראית התאמה אפשרית ל-${bestMatch.label} (${formatPct(bestMatch.score || bestMatch.colorScore || 0)}).`);
     if (bestMatch.animalType) parts.push(`סוג: ${bestMatch.animalType}.`);
+    if (bestMatch.breed) parts.push(`גזע: ${bestMatch.breed}.`);
     if (bestMatch.colors || bestMatch.colorName) parts.push(`צבעים: ${bestMatch.colors || bestMatch.colorName}.`);
     if (bestMatch.href && bestMatch.href !== '#') parts.push(`פרופיל: ${new URL(bestMatch.href, pageUrl).href}`);
   }
   if (city) parts.push(`עיר: ${city}.`);
+  if (cleanLocation) parts.push(`אזור: ${cleanLocation}.`);
+  if (cleanReportedAt) parts.push(`זמן דיווח: ${cleanReportedAt}.`);
   if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) parts.push(`אזור משוער: ${formatCoordinates(blurred.lat, blurred.lng)}.`);
   parts.push(`עמוד החיפוש: ${pageUrl}`);
   return `https://wa.me/?text=${encodeURIComponent(parts.join('\n'))}`;
 }
 
-async function shareResult({ city = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+async function shareResult({ city = '', locationText = '', reportedAt = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
   const blurred = privacyBlurCoordinates(lat, lng, 100);
   const shareUrl = bestMatch?.href && bestMatch.href !== '#'
     ? new URL(bestMatch.href, pageUrl).href
     : pageUrl;
   const lines = ['התאמה אפשרית מפאטקונקט'];
+  const cleanLocation = String(locationText || '').trim();
+  const cleanReportedAt = formatReportedAt(reportedAt);
   if (bestMatch) {
     lines.push(`${bestMatch.label} (${formatPct(bestMatch.score || bestMatch.colorScore || 0)})`);
     if (bestMatch.animalType) lines.push(`סוג: ${bestMatch.animalType}`);
+    if (bestMatch.breed) lines.push(`גזע: ${bestMatch.breed}`);
   }
   if (city) lines.push(`עיר: ${city}`);
+  if (cleanLocation) lines.push(`אזור: ${cleanLocation}`);
+  if (cleanReportedAt) lines.push(`זמן דיווח: ${cleanReportedAt}`);
   if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) lines.push(`אזור משוער: ${formatCoordinates(blurred.lat, blurred.lng)}`);
   const text = lines.join(' · ');
   if (navigator.share) {
@@ -829,6 +995,7 @@ function pickTopMatchesForGallery(bundle, limit = 3) {
     score: Number(match.score || match.colorScore || 0),
     colorScore: Number(match.colorScore || 0),
     animalType: String(match.animalType || ''),
+    breed: String(match.breed || ''),
     colors: String(match.colors || match.colorName || ''),
     source: String(match.source || ''),
     href: String(match.href || '#'),
@@ -897,20 +1064,23 @@ function shrinkImage(file, options = {}) {
 
 function renderMatchCards(matches = [], options = {}) {
   const kind = options.kind || 'visual';
-  return matches.map((match) => {
+  return matches.map((match, index) => {
     const target = match.href && match.href !== '#' ? match.href : '';
     const safeLabel = escapeHtml(String(match.label || 'ללא שם'));
     const safeNotes = escapeHtml(String(match.notes || ''));
     const animalType = match.animalType ? `<span class="badge">${escapeHtml(match.animalType)}</span>` : '';
+    const breed = match.breed ? `<span class="badge">${escapeHtml(match.breed)}</span>` : '';
     const colors = match.colors ? `<span class="badge">${escapeHtml(match.colors)}</span>` : (match.colorName ? `<span class="badge">${escapeHtml(match.colorName)}</span>` : '');
     const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
-    const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
+    const thumb = match.thumb
+      ? `<div class="thumb-wrap blur-shell"><img class="blur-up is-loading" loading="lazy" decoding="async" onload="this.classList.remove('is-loading')" src="${match.thumb}" alt="${safeLabel}"></div>`
+      : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
     const score = kind === 'visual' ? Number(match.score || 0) : Number(match.colorScore || match.score || 0);
     const scoreText = kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
     const reason = kind === 'visual' ? 'התאמה מיידית מהסריקה' : 'תוצאת גיבוי לפי צבעים דומים';
     const profileButton = target ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>` : '<span class="badge">אין קישור פרופיל</span>';
     return `
-      <article class="match-card result-card">
+      <article class="match-card result-card" data-match-index="${index}">
         ${thumb}
         <div class="body">
           <div class="space-between">
@@ -919,6 +1089,7 @@ function renderMatchCards(matches = [], options = {}) {
           </div>
           <div class="row">
             ${animalType}
+            ${breed}
             ${colors}
             ${match.source ? `<span class="badge">${sourceLabel(match.source)}</span>` : ''}
           </div>
