@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Reference Set · {{ ref.label }}{% endblock %}
+{% block content %}
+<div class="card stack">
+  <div class="space-between">
+    <div>
+      <h2>{{ ref.label }}</h2>
+      <div class="meta">{{ ref.count }} image(s)</div>
+    </div>
+    {% if ref.thumb %}
+      <img class="thumb" src="{{ ref.thumb }}" alt="{{ ref.label }}" style="max-width:180px; width:180px;">
+    {% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+  {% if ref.images %}
+    <div class="item-grid">
+      {% for image in ref.images %}
+        <img class="thumb" src="{{ image }}" alt="{{ ref.label }} reference image">
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty">No images in this reference set.</div>
+  {% endif %}
+</div>
+{% endblock %}

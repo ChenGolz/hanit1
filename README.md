@@ -13,7 +13,8 @@ This is a rebuilt, improved version of the uploaded FastAPI face-clustering app.
 - stops rewriting `results.json` during GET requests
 - validates bulk rename payload length
 - allows downloaded YouTube videos in non-mp4 containers to be found correctly
-- includes a minimal working template set so the app can run end-to-end
+- includes a dedicated **Search by photo** page for searching your saved face library
+- adds reference-set detail pages so search results have somewhere to land
 
 ## Install
 
@@ -32,6 +33,13 @@ Then open:
 ```text
 http://127.0.0.1:8000
 ```
+
+## Recommended flow
+
+1. Upload reference photos into one or more reference sets.
+2. Upload media or YouTube videos and let the app cluster faces.
+3. Save names on the clusters you recognize.
+4. Open **Search by photo** and upload a face image to search the library.
 
 ## Notes
 

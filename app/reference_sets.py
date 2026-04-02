@@ -29,6 +29,8 @@ def _safe_reference_dir(slug: str) -> Path:
 
 def _reference_tree_stamp() -> tuple:
     rows: list[tuple[str, int]] = []
+    if not REFERENCE_SETS_DIR.exists():
+        return tuple(rows)
     for ref_dir in sorted(REFERENCE_SETS_DIR.iterdir()):
         if not ref_dir.is_dir():
             continue
@@ -55,6 +57,8 @@ def save_reference_images(reference_name: str, file_pairs: list[tuple[str, bytes
 
 def list_reference_sets() -> list[dict]:
     refs = []
+    if not REFERENCE_SETS_DIR.exists():
+        return refs
     for ref_dir in sorted(REFERENCE_SETS_DIR.iterdir()):
         if not ref_dir.is_dir():
             continue
@@ -68,6 +72,20 @@ def list_reference_sets() -> list[dict]:
             }
         )
     return refs
+
+
+def get_reference_set(slug: str) -> dict | None:
+    path = _safe_reference_dir(slug)
+    if not path.exists() or not path.is_dir():
+        return None
+    images = sorted([p for p in path.iterdir() if p.is_file() and p.suffix.lower() in ALLOWED_IMAGE_EXTENSIONS])
+    return {
+        "slug": path.name,
+        "label": path.name.replace("-", " ").title(),
+        "count": len(images),
+        "images": [f"/data/reference_sets/{path.name}/{img.name}" for img in images],
+        "thumb": f"/data/reference_sets/{path.name}/{images[0].name}" if images else "",
+    }
 
 
 def remove_reference_set(slug: str) -> None:
@@ -84,6 +102,11 @@ def load_reference_prototypes(compute_face_feature_public: Callable) -> list[dic
         return list(_REFERENCE_CACHE["value"])
 
     refs: list[dict] = []
+    if not REFERENCE_SETS_DIR.exists():
+        _REFERENCE_CACHE["stamp"] = stamp
+        _REFERENCE_CACHE["value"] = refs
+        return list(refs)
+
     for ref_dir in sorted(REFERENCE_SETS_DIR.iterdir()):
         if not ref_dir.is_dir():
             continue

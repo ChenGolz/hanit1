@@ -152,6 +152,58 @@ def _save_frame_with_box(frame_bgr: np.ndarray, bbox: list[int], frame_box_path:
     cv2.imwrite(str(frame_box_path), boxed, [int(cv2.IMWRITE_JPEG_QUALITY), 92])
 
 
+def extract_best_search_face(image_path: Path, search_dir: Path) -> dict:
+    image_bgr = cv2.imread(str(image_path))
+    if image_bgr is None:
+        raise ValueError(f"Could not read image: {image_path}")
+
+    frame_bgr = _review_enhance(_resize_if_needed(image_bgr))
+    height, width = frame_bgr.shape[:2]
+    candidates: list[dict] = []
+
+    with mp_face_detection.FaceDetection(model_selection=1, min_detection_confidence=0.55) as detector:
+        for idx, (left, top, right, bottom) in enumerate(_detect_faces(frame_bgr, detector)):
+            tight_crop = frame_bgr[top:bottom, left:right]
+            if tight_crop.size == 0:
+                continue
+            ok, quality = _quality_ok(tight_crop)
+            if not ok:
+                continue
+            feat, _ = compute_face_feature_public(tight_crop)
+            if feat is None:
+                continue
+            r_left, r_top, r_right, r_bottom = _extract_review_bbox([left, top, right, bottom], width, height)
+            review_crop = frame_bgr[r_top:r_bottom, r_left:r_right]
+            if review_crop.size == 0:
+                continue
+            review_crop = _upscale_review_crop_if_needed(review_crop)
+            candidates.append(
+                {
+                    "idx": idx,
+                    "bbox": [left, top, right, bottom],
+                    "quality_score": quality,
+                    "feature": feat,
+                    "review_crop": review_crop,
+                }
+            )
+
+    if not candidates:
+        raise ValueError("No usable face was found in the uploaded image.")
+
+    best = max(candidates, key=lambda row: float(row["quality_score"]))
+    face_path = search_dir / "faces" / "query_face.jpg"
+    frame_path = search_dir / "frames" / "query_face_box.jpg"
+    cv2.imwrite(str(face_path), best["review_crop"], [int(cv2.IMWRITE_JPEG_QUALITY), 96])
+    _save_frame_with_box(frame_bgr, best["bbox"], frame_path)
+
+    return {
+        "feature": best["feature"],
+        "faces_detected": len(candidates),
+        "query_face_path": str(face_path.relative_to(search_dir.parent.parent if search_dir.parent.name == 'search_queries' else search_dir.parent)),
+        "query_frame_path": str(frame_path.relative_to(search_dir.parent.parent if search_dir.parent.name == 'search_queries' else search_dir.parent)),
+    }
+
+
 def _process_frame(
     frame_bgr: np.ndarray,
     timestamp_sec: float,
@@ -181,7 +233,7 @@ def _process_frame(
             continue
         review_crop = _upscale_review_crop_if_needed(review_crop)
 
-        feat, age = compute_face_feature_public(tight_crop)
+        feat, _ = compute_face_feature_public(tight_crop)
         if feat is None:
             continue
 
@@ -193,7 +245,6 @@ def _process_frame(
         all_items.append(
             {
                 "feature": feat,
-                "estimated_age": age,
                 "timestamp_sec": timestamp_sec,
                 "frame_path": str(frame_box_path.relative_to(project_dir)),
                 "face_path": str(face_path.relative_to(project_dir)),
@@ -254,7 +305,6 @@ def process_video(video_path: Path, project_dir: Path, sample_every_seconds: flo
             if frame_idx not in target_frames:
                 frame_idx += 1
                 continue
-
             timestamp_sec = round(frame_idx / fps, 2)
             face_count = _process_frame(frame_bgr, timestamp_sec, project_dir, all_items, face_count, detector)
             frame_idx += 1
@@ -306,7 +356,7 @@ def _smart_dedupe_items(items: list[dict]) -> list[dict]:
 def _load_previous_rows(data_dir: Path, current_project_id: str) -> list[dict]:
     rows = []
     for project_dir in data_dir.iterdir():
-        if not project_dir.is_dir() or project_dir.name in {"reference_sets", current_project_id}:
+        if not project_dir.is_dir() or project_dir.name in {"reference_sets", "search_queries", current_project_id}:
             continue
         path = project_dir / "features.json"
         if not path.exists():

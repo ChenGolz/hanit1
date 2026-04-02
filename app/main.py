@@ -15,9 +15,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .config import ALLOWED_IMAGE_EXTENSIONS, ALLOWED_VIDEO_EXTENSIONS, DATA_DIR, MAX_BULK_YOUTUBE_LINKS
-from .pipeline import process_image, process_video
-from .reference_sets import list_reference_sets, remove_reference_set, save_reference_images
-from .storage import list_projects, load_json, new_project_dir, save_json
+from .pipeline import compute_face_feature_public, extract_best_search_face, process_image, process_video
+from .reference_sets import get_reference_set, list_reference_sets, remove_reference_set, save_reference_images
+from .search_index import search_matches
+from .storage import list_projects, load_json, new_project_dir, new_search_dir, save_json
 from .youtube import download_youtube_video
 
 app = FastAPI(title="Kibbutz Face Archive")
@@ -165,13 +166,15 @@ def _named_people_index() -> list[dict]:
                 people[key]["thumb"] = f"/data/{project_id}/{thumb}"
     cards = []
     for p in people.values():
-        cards.append({
-            "name": p["name"],
-            "slug": p["slug"],
-            "count": p["count"],
-            "project_count": len(p["project_ids"]),
-            "thumb": p["thumb"],
-        })
+        cards.append(
+            {
+                "name": p["name"],
+                "slug": p["slug"],
+                "count": p["count"],
+                "project_count": len(p["project_ids"]),
+                "thumb": p["thumb"],
+            }
+        )
     cards.sort(key=lambda x: (-x["count"], x["name"].casefold()))
     return cards
 
@@ -257,6 +260,52 @@ def home(request: Request):
     )
 
 
+@app.get("/search", response_class=HTMLResponse)
+def search_page(request: Request):
+    return templates.TemplateResponse("search.html", {"request": request, "matches": None, "query_face": "", "query_frame": "", "faces_detected": 0, "error": ""})
+
+
+@app.post("/search-photo", response_class=HTMLResponse)
+async def search_photo(request: Request, file: UploadFile = File(...)):
+    suffix = _suffix(file.filename or "")
+    if suffix not in ALLOWED_IMAGE_EXTENSIONS:
+        raise HTTPException(status_code=400, detail="Please upload a JPG, PNG, JPEG, or WEBP image.")
+
+    search_dir = new_search_dir()
+    safe_name = _safe_upload_name(file.filename or "query.jpg", default_stem="query")
+    upload_path = search_dir / "uploads" / safe_name
+    with upload_path.open("wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    try:
+        extracted = extract_best_search_face(upload_path, search_dir)
+        matches = search_matches(extracted["feature"], compute_face_feature_public)
+        return templates.TemplateResponse(
+            "search.html",
+            {
+                "request": request,
+                "matches": matches,
+                "query_face": f"/data/{extracted['query_face_path']}",
+                "query_frame": f"/data/{extracted['query_frame_path']}",
+                "faces_detected": extracted["faces_detected"],
+                "error": "",
+            },
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            "search.html",
+            {
+                "request": request,
+                "matches": [],
+                "query_face": "",
+                "query_frame": "",
+                "faces_detected": 0,
+                "error": str(e),
+            },
+            status_code=400,
+        )
+
+
 @app.post("/upload-known")
 async def upload_known_reference(reference_name: str = Form(...), files: list[UploadFile] = File(...)):
     valid = []
@@ -267,6 +316,14 @@ async def upload_known_reference(reference_name: str = Form(...), files: list[Up
         raise HTTPException(status_code=400, detail="Reference set name and valid images are required.")
     save_reference_images(reference_name.strip(), valid)
     return RedirectResponse("/", status_code=303)
+
+
+@app.get("/reference-set/{slug}", response_class=HTMLResponse)
+def reference_set_page(request: Request, slug: str):
+    ref = get_reference_set(slug)
+    if not ref:
+        raise HTTPException(status_code=404, detail="Reference set not found.")
+    return templates.TemplateResponse("reference_set.html", {"request": request, "ref": ref})
 
 
 @app.post("/reference-set/{slug}/delete")

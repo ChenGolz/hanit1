@@ -27,9 +27,7 @@
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
     .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-    .topbar {
-      display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px;
-    }
+    .topbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
     .brand { font-size: 1.35rem; font-weight: 700; color: white; }
     .muted { color: var(--muted); }
     .grid { display: grid; gap: 16px; }
@@ -74,6 +72,17 @@
     .empty { padding: 18px; border: 1px dashed var(--border); border-radius: 14px; color: var(--muted); }
     code { background: #020617; padding: 2px 6px; border-radius: 6px; }
     .small { font-size: .9rem; }
+    .hero {
+      display: grid; gap: 18px; align-items: center;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, .9fr);
+    }
+    .score { font-weight: 700; font-size: 1.1rem; }
+    .pill-strong { color: #bbf7d0; }
+    .pill-good { color: #fde68a; }
+    .pill-possible { color: #cbd5e1; }
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+    }
   </style>
   {% block head %}{% endblock %}
 </head>
@@ -82,10 +91,11 @@
     <div class="topbar">
       <div>
         <a class="brand" href="/">PetConnect Rebuilt</a>
-        <div class="muted small">Safer uploads, faster face detection, stable slugs, better reference caching.</div>
+        <div class="muted small">Upload references, process media, and now search your face library from a single photo.</div>
       </div>
       <div class="row small">
         <a href="/">Home</a>
+        <a href="/search">Search by photo</a>
       </div>
     </div>
     {% block content %}{% endblock %}

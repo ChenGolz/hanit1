@@ -1,28 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Home · PetConnect Rebuilt{% endblock %}
 {% block content %}
-<div class="grid grid-2">
+<div class="card hero">
+  <div class="stack">
+    <div class="chip">Public search flow ready</div>
+    <h2 style="margin:0;">Build your library, then let people search it with one face photo.</h2>
+    <div class="meta">Reference sets and named people are now searchable from a dedicated photo-search page. Upload your archive below, then open <a href="/search">Search by photo</a>.</div>
+    <div class="row">
+      <a href="/search"><button type="button">Open search page</button></a>
+    </div>
+  </div>
+  <div class="card stack" style="padding:14px;">
+    <div class="small muted">Best workflow</div>
+    <div>1. Upload reference photos.</div>
+    <div>2. Process media and save names on clusters.</div>
+    <div>3. Send people to the photo search page.</div>
+  </div>
+</div>
+
+<div class="grid grid-2" style="margin-top:16px;">
   <div class="card stack">
     <h2>Upload image or video</h2>
     <form class="stack" action="/upload" method="post" enctype="multipart/form-data">
       <input type="file" name="file" accept=".jpg,.jpeg,.png,.webp,.mp4,.mov,.avi,.mkv,.webm" required>
-      <button type="submit">Start processing</button>
+      <button type="submit">Process upload</button>
     </form>
-    <div class="meta">Supported images: jpg, jpeg, png, webp. Supported videos: mp4, mov, avi, mkv, webm.</div>
   </div>
 
   <div class="card stack">
-    <h2>YouTube</h2>
+    <h2>Process one YouTube link</h2>
     <form class="stack" action="/youtube" method="post">
       <input type="url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." required>
-      <button type="submit">Process one link</button>
-    </form>
-    <div class="sep"></div>
-    <form class="stack" action="/youtube-bulk" method="post">
-      <textarea name="youtube_urls" placeholder="Paste one YouTube URL per line"></textarea>
-      <button class="secondary" type="submit">Process up to {{ max_bulk }} links</button>
+      <button type="submit">Process YouTube</button>
     </form>
   </div>
+</div>
+
+<div class="card stack" style="margin-top:16px;">
+  <h2>Bulk YouTube links</h2>
+  <form class="stack" action="/youtube-bulk" method="post">
+    <textarea name="youtube_urls" placeholder="One URL per line"></textarea>
+    <button class="secondary" type="submit">Process up to {{ max_bulk }} links</button>
+  </form>
 </div>
 
 <div class="grid grid-2" style="margin-top:16px;">
@@ -39,7 +58,7 @@
           <div class="card" style="padding:12px;">
             <div class="space-between">
               <div>
-                <div><strong>{{ ref.label }}</strong></div>
+                <div><strong><a href="/reference-set/{{ ref.slug }}">{{ ref.label }}</a></strong></div>
                 <div class="meta">{{ ref.count }} image(s)</div>
               </div>
               <form action="/reference-set/{{ ref.slug }}/delete" method="post" onsubmit="return confirm('Delete this reference set?');">

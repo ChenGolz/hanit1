@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Search by Photo · PetConnect Rebuilt{% endblock %}
+{% block content %}
+<div class="card stack">
+  <div class="chip">Search your DB</div>
+  <h2>Upload one face photo</h2>
+  <div class="meta">The app picks the best detected face in the uploaded image, compares it against your saved reference sets, named people, and anonymous project clusters, then returns ranked matches.</div>
+  <form class="stack" action="/search-photo" method="post" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".jpg,.jpeg,.png,.webp" required>
+    <button type="submit">Search library</button>
+  </form>
+</div>
+
+{% if error %}
+  <div class="card empty" style="margin-top:16px;">{{ error }}</div>
+{% endif %}
+
+{% if query_face %}
+  <div class="grid grid-2" style="margin-top:16px;">
+    <div class="card stack">
+      <h3>Face used for search</h3>
+      <img class="thumb" src="{{ query_face }}" alt="Search face">
+      <div class="meta">Detected usable faces: {{ faces_detected }}</div>
+      {% if faces_detected > 1 %}
+        <div class="meta">The highest-quality detected face was used for matching.</div>
+      {% endif %}
+    </div>
+    <div class="card stack">
+      <h3>Selected detection</h3>
+      <img class="thumb" src="{{ query_frame }}" alt="Selected face box">
+    </div>
+  </div>
+{% endif %}
+
+{% if matches is not none %}
+  <div class="card" style="margin-top:16px;">
+    <h2>Matches</h2>
+    {% if matches %}
+      <div class="person-grid">
+        {% for match in matches %}
+          <a class="card" href="{{ match.href }}">
+            {% if match.thumb %}
+              <img class="thumb" src="{{ match.thumb }}" alt="{{ match.label }}">
+            {% endif %}
+            <div class="space-between">
+              <h3 style="margin:0;">{{ match.label }}</h3>
+              <div class="score pill-{{ match.confidence }}">{{ '%.3f'|format(match.score) }}</div>
+            </div>
+            <div class="meta">{{ match.subtitle }}</div>
+            <div class="row small" style="margin-top:8px;">
+              <span class="chip">{{ match.entity_type }}</span>
+              <span class="chip">{{ match.confidence }}</span>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">No strong enough matches were found yet. Add more reference photos or name more clusters to improve search quality.</div>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}
