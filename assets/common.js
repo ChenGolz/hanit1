@@ -349,28 +349,65 @@ async function detectFaces(img, statusEl) {
   return [];
 }
 
-function pickBestDetection(detections) {
-  if (!detections.length) return null;
-  return [...detections].sort((a, b) => {
+function sortDetectionsByArea(detections) {
+  return [...(detections || [])].sort((a, b) => {
     const areaA = a.detection.box.width * a.detection.box.height;
     const areaB = b.detection.box.width * b.detection.box.height;
     return areaB - areaA;
-  })[0];
+  });
+}
+
+function pickBestDetection(detections) {
+  return sortDetectionsByArea(detections)[0] || null;
+}
+
+function getDetectionIndexAtPoint(detections, x, y) {
+  const sorted = sortDetectionsByArea(detections).map((detection, index) => ({ detection, index }));
+  for (const item of sorted) {
+    const { box } = item.detection.detection;
+    if (x >= box.x && x <= box.x + box.width && y >= box.y && y <= box.y + box.height) {
+      return item.index;
+    }
+  }
+  return -1;
 }
 
 function drawDetection(canvas, img, detection, options = {}) {
-  const { showBox = true } = options;
+  return drawDetections(canvas, img, detection ? [detection] : [], {
+    showBox: options.showBox,
+    selectedIndex: 0,
+  });
+}
+
+function drawDetections(canvas, img, detections, options = {}) {
+  const { showBox = true, selectedIndex = 0 } = options;
   const ratio = Math.min(1, 900 / img.width);
   canvas.width = Math.round(img.width * ratio);
   canvas.height = Math.round(img.height * ratio);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-  if (!detection || !showBox) return;
-  const { x, y, width, height } = detection.detection.box;
-  ctx.strokeStyle = '#8b5cf6';
-  ctx.lineWidth = 4;
-  ctx.strokeRect(x * ratio, y * ratio, width * ratio, height * ratio);
+  if (!showBox || !detections?.length) return ratio;
+
+  detections.forEach((detection, index) => {
+    const { x, y, width, height } = detection.detection.box;
+    const isSelected = index === selectedIndex;
+    ctx.strokeStyle = isSelected ? '#8b5cf6' : 'rgba(255,255,255,0.75)';
+    ctx.lineWidth = isSelected ? 4 : 2;
+    ctx.strokeRect(x * ratio, y * ratio, width * ratio, height * ratio);
+
+    const label = `פנים ${index + 1}`;
+    ctx.font = 'bold 16px Assistant, Heebo, Arial';
+    const textWidth = ctx.measureText(label).width;
+    const pillX = x * ratio;
+    const pillY = Math.max(4, y * ratio - 28);
+    ctx.fillStyle = isSelected ? '#8b5cf6' : 'rgba(15,23,42,0.84)';
+    ctx.fillRect(pillX, pillY, textWidth + 18, 24);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(label, pillX + 9, pillY + 17);
+  });
+
+  return ratio;
 }
 
 function cropFaceDataUrl(img, detection, paddingRatio = 0.35) {
@@ -543,8 +580,11 @@ if (typeof window !== 'undefined') {
     detectFacesWithTiny,
     detectFacesWithSsd,
     detectFaces,
+    sortDetectionsByArea,
     pickBestDetection,
+    getDetectionIndexAtPoint,
     drawDetection,
+    drawDetections,
     cropFaceDataUrl,
     loadRepoLibrary,
     loadLocalLibrary,

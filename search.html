@@ -57,15 +57,25 @@
         minScoreOutput.textContent = `${minScoreInput.value}%`;
         minScoreInput.addEventListener('input', () => {
           minScoreOutput.textContent = `${minScoreInput.value}%`;
+          if (currentDetections.length) applySelectedFace(selectedDetectionIndex);
         });
 
         await loadModels(statusEl);
         const mergedLibrary = await getMergedLibrary();
-        libraryStatsEl.textContent = formatEntryCount(mergedLibrary.length);
+
+        const facePickerEl = document.getElementById('face-picker');
+        const facePickerTitleEl = document.getElementById('face-picker-title');
+        const facePickerHelpEl = document.getElementById('face-picker-help');
+        const selectedFaceLabelEl = document.getElementById('selected-face-label');
+        const runSelectedBtn = document.getElementById('run-selected-btn');
 
         let currentPreviewImage = null;
-        let currentPreviewDetection = null;
+        let currentDetections = [];
+        let selectedDetectionIndex = 0;
+        let currentLibrary = mergedLibrary;
         let geoState = { lat: null, lng: null };
+
+        libraryStatsEl.textContent = formatEntryCount(mergedLibrary.length);
 
         function redrawPreview() {
           if (!currentPreviewImage) {
@@ -73,8 +83,107 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             return;
           }
-          drawDetection(canvas, currentPreviewImage, currentPreviewDetection, { showBox: showBoxInput.checked });
+          drawDetections(canvas, currentPreviewImage, currentDetections, {
+            showBox: showBoxInput.checked,
+            selectedIndex: selectedDetectionIndex,
+          });
         }
+
+        function clearFacePicker() {
+          facePickerEl.innerHTML = '<div class="empty">עדיין לא נסרקה תמונה.</div>';
+          facePickerTitleEl.textContent = 'בחירת הפנים לחיפוש';
+          facePickerHelpEl.textContent = 'אם יש כמה פנים בתמונה, אפשר לבחור ידנית באילו פנים להשתמש לחיפוש.';
+          selectedFaceLabelEl.textContent = 'עדיין לא נבחרו פנים.';
+          runSelectedBtn.disabled = true;
+        }
+
+        function updateSelectedFacePreview() {
+          if (!currentPreviewImage || !currentDetections.length) {
+            cropImg.classList.add('hidden');
+            selectedFaceLabelEl.textContent = 'עדיין לא נבחרו פנים.';
+            runSelectedBtn.disabled = true;
+            redrawPreview();
+            return;
+          }
+          const detection = currentDetections[selectedDetectionIndex];
+          redrawPreview();
+          cropImg.src = cropFaceDataUrl(currentPreviewImage, detection);
+          cropImg.classList.remove('hidden');
+          selectedFaceLabelEl.textContent = currentDetections.length > 1
+            ? `נבחרו פנים ${selectedDetectionIndex + 1} מתוך ${currentDetections.length}. לחצי על הכפתור כדי לחפש לפי הפנים האלה.`
+            : 'נבחרו הפנים היחידים שבתמונה.';
+          runSelectedBtn.disabled = false;
+        }
+
+        function computeMatchesForDetection(detection) {
+          const queryDescriptor = Array.from(detection.descriptor);
+          const minScore = Math.max(0, Math.min(100, Number(minScoreInput.value || 55))) / 100;
+          return currentLibrary
+            .map((entry) => {
+              const bestDistance = Math.min(...entry.descriptors.map((d) => descriptorDistance(queryDescriptor, d)));
+              const score = distanceToScore(bestDistance);
+              return {
+                ...entry,
+                bestDistance,
+                score,
+                confidence: scoreLabel(bestDistance),
+              };
+            })
+            .filter((entry) => entry.score >= minScore)
+            .sort((a, b) => a.bestDistance - b.bestDistance)
+            .slice(0, 18);
+        }
+
+        function applySelectedFace(index) {
+          if (!currentPreviewImage || !currentDetections.length) return;
+          selectedDetectionIndex = Math.max(0, Math.min(index, currentDetections.length - 1));
+          const detection = currentDetections[selectedDetectionIndex];
+          updateSelectedFacePreview();
+          renderFacePicker();
+          const matches = computeMatchesForDetection(detection);
+          renderSummary(matches);
+          renderResults(matches);
+          const label = currentDetections.length > 1
+            ? `נבחרו פנים ${selectedDetectionIndex + 1} מתוך ${currentDetections.length}.`
+            : 'התמונה נסרקה והפנים שנמצאו נבחרו אוטומטית.';
+          setStatus(statusEl, matches.length ? `${label} התוצאות עודכנו למטה.` : `${label} לא נמצאו התאמות מעל הסף שנבחר.`, { tone: matches.length ? 'success' : 'warn' });
+          resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderFacePicker() {
+          if (!currentPreviewImage || !currentDetections.length) {
+            clearFacePicker();
+            return;
+          }
+          facePickerTitleEl.textContent = currentDetections.length > 1
+            ? `נמצאו ${currentDetections.length} פנים — בחרי את הפנים לחיפוש`
+            : 'נמצאו פנים לחיפוש';
+          facePickerHelpEl.textContent = currentDetections.length > 1
+            ? 'אפשר ללחוץ על המסגרת בתמונה או על אחד הכרטיסים למטה כדי להחליף את הפנים שנבחרו.'
+            : 'בתמונה הזו זוהו פנים אחד. אין צורך לבחור ידנית.';
+          facePickerEl.innerHTML = currentDetections.map((detection, index) => {
+            const selectedClass = index === selectedDetectionIndex ? ' selected' : '';
+            const thumb = cropFaceDataUrl(currentPreviewImage, detection, 0.25);
+            const area = Math.round(detection.detection.box.width * detection.detection.box.height);
+            return `
+              <button type="button" class="face-choice${selectedClass}" data-face-index="${index}" aria-pressed="${index === selectedDetectionIndex ? 'true' : 'false'}">
+                <img src="${thumb}" alt="פנים ${index + 1}">
+                <span>פנים ${index + 1}</span>
+                <small>${area.toLocaleString('he-IL')} פיקסלים</small>
+              </button>
+            `;
+          }).join('');
+          facePickerEl.querySelectorAll('[data-face-index]').forEach((button) => {
+            button.addEventListener('click', () => {
+              selectedDetectionIndex = Number(button.dataset.faceIndex);
+              renderFacePicker();
+              updateSelectedFacePreview();
+              setStatus(statusEl, `נבחרו פנים ${selectedDetectionIndex + 1} מתוך ${currentDetections.length}. עכשיו לחצי על "חיפוש לפי הפנים שנבחרו".`, { tone: 'success' });
+            });
+          });
+        }
+
+        clearFacePicker();
 
         function renderResults(matches) {
           if (!matches.length) {
@@ -169,6 +278,27 @@
 
         showBoxInput.addEventListener('change', redrawPreview);
 
+        canvas.addEventListener('click', (event) => {
+          if (!currentPreviewImage || currentDetections.length < 2) return;
+          const rect = canvas.getBoundingClientRect();
+          const scaleX = canvas.width / rect.width;
+          const scaleY = canvas.height / rect.height;
+          const pointX = (event.clientX - rect.left) * scaleX;
+          const pointY = (event.clientY - rect.top) * scaleY;
+          const ratio = canvas.width / currentPreviewImage.width;
+          const imageX = pointX / ratio;
+          const imageY = pointY / ratio;
+          const index = getDetectionIndexAtPoint(currentDetections, imageX, imageY);
+          if (index >= 0) {
+            selectedDetectionIndex = index;
+            renderFacePicker();
+            updateSelectedFacePreview();
+            setStatus(statusEl, `נבחרו פנים ${selectedDetectionIndex + 1} מתוך ${currentDetections.length}. עכשיו לחצי על "חיפוש לפי הפנים שנבחרו".`, { tone: 'success' });
+          }
+        });
+
+        runSelectedBtn.addEventListener('click', () => applySelectedFace(selectedDetectionIndex));
+
         locateBtn.addEventListener('click', async () => {
           if (!navigator.geolocation) {
             locationStatusEl.textContent = 'הדפדפן הזה לא תומך בגישה למיקום.';
@@ -205,6 +335,7 @@
           }
           saveImportedLibrary(sanitizedEntries);
           const updated = await getMergedLibrary();
+          currentLibrary = updated;
           libraryStatsEl.textContent = formatEntryCount(updated.length);
           setStatus(statusEl, 'המאגר המיובא נוסף לדפדפן עבור הסשן הנוכחי.', { tone: 'success' });
         });
@@ -212,6 +343,7 @@
         clearImportedBtn.addEventListener('click', async () => {
           saveImportedLibrary([]);
           const updated = await getMergedLibrary();
+          currentLibrary = updated;
           libraryStatsEl.textContent = formatEntryCount(updated.length);
           setStatus(statusEl, 'המאגר המיובא של הסשן נוקה.', { tone: 'success' });
         });
@@ -225,6 +357,7 @@
 
           const file = fileInput.files?.[0];
           const library = await getMergedLibrary();
+          currentLibrary = library;
           if (!library.length) {
             setStatus(statusEl, 'המאגר שלך ריק. פרסמי רשומות בתוך data/library.json או הוסיפי רשומות מקומיות דרך עמוד בניית המאגר.', { tone: 'warn' });
             return;
@@ -236,9 +369,11 @@
           summaryEl.classList.add('hidden');
           try {
             currentPreviewImage = null;
-            currentPreviewDetection = null;
+            currentDetections = [];
+            selectedDetectionIndex = 0;
             redrawPreview();
             cropImg.classList.add('hidden');
+            clearFacePicker();
             prepNoteEl.textContent = '';
 
             setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
@@ -251,41 +386,29 @@
               }
 
               setStatus(statusEl, 'סורק פנים ומתאים למאגר…', { busy: true });
-              const detections = await detectFaces(prepared.img, statusEl);
-              const best = pickBestDetection(detections);
+              const detections = sortDetectionsByArea(await detectFaces(prepared.img, statusEl));
               currentPreviewImage = prepared.img;
-              currentPreviewDetection = best;
+              currentDetections = detections;
+              selectedDetectionIndex = 0;
               redrawPreview();
 
-              if (!best) {
+              if (!currentDetections.length) {
+                clearFacePicker();
                 setStatus(statusEl, 'לא נמצאו פנים ברורות בתמונה הזאת. נסי תמונה קרובה יותר, עם פנים גדולות יותר בפריים ואם אפשר עם עיניים גלויות.', { tone: 'warn' });
                 return;
               }
 
-              cropImg.src = cropFaceDataUrl(prepared.img, best);
-              cropImg.classList.remove('hidden');
-              const queryDescriptor = Array.from(best.descriptor);
-
-              const minScore = Math.max(0, Math.min(100, Number(minScoreInput.value || 55))) / 100;
-              const matches = library
-                .map((entry) => {
-                  const bestDistance = Math.min(...entry.descriptors.map((d) => descriptorDistance(queryDescriptor, d)));
-                  const score = distanceToScore(bestDistance);
-                  return {
-                    ...entry,
-                    bestDistance,
-                    score,
-                    confidence: scoreLabel(bestDistance),
-                  };
-                })
-                .filter((entry) => entry.score >= minScore)
-                .sort((a, b) => a.bestDistance - b.bestDistance)
-                .slice(0, 18);
-
-              renderSummary(matches);
-              renderResults(matches);
-              setStatus(statusEl, matches.length ? 'הסריקה הסתיימה. התוצאות מוכנות מתחת.' : 'הסריקה הסתיימה, אך לא נמצאו התאמות מעל הסף שבחרת.', { tone: matches.length ? 'success' : 'warn' });
-              resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              renderFacePicker();
+              updateSelectedFacePreview();
+              if (currentDetections.length === 1) {
+                applySelectedFace(0);
+              } else {
+                summaryEl.innerHTML = '';
+                summaryEl.classList.add('hidden');
+                resultsEl.innerHTML = '<div class="empty">בחרי את הפנים הרצויים ולחצי על כפתור החיפוש שמתחת לאזור הבחירה.</div>';
+                setStatus(statusEl, `נמצאו ${currentDetections.length} פנים. בחרי את הפנים הרצויים ואז לחצי על "חיפוש לפי הפנים שנבחרו".`, { tone: 'success' });
+                document.getElementById('face-picker-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
             } finally {
               prepared.cleanup();
             }
@@ -357,12 +480,26 @@
           </div>
           <canvas id="preview-canvas" class="preview"></canvas>
           <div class="small">אפשר להסיר את מסגרת הזיהוי מהתצוגה המקדימה מתי שתרצי.</div>
+          <div class="small">אם יש כמה פנים, לחצי על אחת המסגרות בתמונה כדי לבחור פנים אחרות.</div>
         </article>
         <article class="card stack">
           <h2 class="section-title">חיתוך הפנים ששימש להתאמה</h2>
           <img id="query-crop" class="hidden" alt="תצוגת חיתוך פנים">
-          <div class="small">אם יש כמה פנים בתמונה, המערכת תשתמש בפנים הגדולות והברורות ביותר.</div>
+          <div class="small">אם יש כמה פנים בתמונה, אפשר לבחור ידנית אילו פנים ישמשו לחיפוש.</div>
         </article>
+      </section>
+
+      <section id="face-picker-section" class="card stack" style="margin-top:16px;">
+        <div class="space-between">
+          <h2 id="face-picker-title" class="section-title" style="margin:0;">בחירת הפנים לחיפוש</h2>
+          <div class="small">אפשר לבחור ידנית כשיש יותר מפנים אחד בתמונה.</div>
+        </div>
+        <div id="face-picker-help" class="small">אם יש כמה פנים בתמונה, אפשר לבחור ידנית באילו פנים להשתמש לחיפוש.</div>
+        <div id="face-picker" class="face-picker empty">עדיין לא נסרקה תמונה.</div>
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <div id="selected-face-label" class="small">עדיין לא נבחרו פנים.</div>
+          <button id="run-selected-btn" type="button" class="secondary" disabled>חיפוש לפי הפנים שנבחרו</button>
+        </div>
       </section>
 
       <section class="card stack" style="margin-top:16px;">

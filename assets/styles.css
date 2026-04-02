@@ -277,3 +277,39 @@ pre {
   .grid-2, .grid-3, .field-grid { grid-template-columns: 1fr; }
   .page { width: min(100% - 20px, 1100px); }
 }
+
+.face-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 12px;
+}
+.face-choice {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--line);
+  box-shadow: none;
+  border-radius: 18px;
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+  justify-items: stretch;
+}
+.face-choice img {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.face-choice span {
+  font-weight: 700;
+  color: var(--text);
+}
+.face-choice small {
+  color: var(--muted);
+}
+.face-choice.selected {
+  border-color: rgba(139,92,246,0.75);
+  background: rgba(139,92,246,0.18);
+  box-shadow: 0 0 0 1px rgba(139,92,246,0.2);
+}
