@@ -102,25 +102,25 @@ function isSafeProfileHref(value) {
 
 async function loadModels(statusEl) {
   if (!window.faceapi) {
-    throw new Error('face-api.js did not load. Check your internet connection or CDN blocking settings.');
+    throw new Error('הספרייה face-api.js לא נטענה. בדקי את חיבור האינטרנט או חסימת ה-CDN.');
   }
   if (window.__petconnectModelsReady) {
-    if (statusEl) statusEl.textContent = 'Models ready.';
+    if (statusEl) statusEl.textContent = 'המודלים מוכנים.';
     return;
   }
-  if (statusEl) statusEl.textContent = 'Loading face models… first load can take a little while.';
+  if (statusEl) statusEl.textContent = 'טוען מודלי זיהוי פנים… בטעינה הראשונה זה עשוי לקחת רגע.';
   await Promise.all([
     faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URIS.tiny),
     faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URIS.landmarks),
     faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URIS.recognition),
   ]);
   window.__petconnectModelsReady = true;
-  if (statusEl) statusEl.textContent = 'Models ready.';
+  if (statusEl) statusEl.textContent = 'המודלים מוכנים.';
 }
 
 async function ensureSsdModel(statusEl) {
   if (window.__petconnectSsdReady) return;
-  if (statusEl) statusEl.textContent = 'Trying a stronger face detector for harder photos…';
+  if (statusEl) statusEl.textContent = 'מנסה גלאי פנים חזק יותר לתמונות קשות…';
   await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URIS.ssd);
   window.__petconnectSsdReady = true;
 }
@@ -346,8 +346,8 @@ function normalizeEntry(entry) {
     ? entry.descriptors.map((descriptor) => normalizeDescriptorArray(descriptor)).filter((descriptor) => descriptor.length)
     : [];
   return {
-    id: entry.id || slugify(entry.label || 'entry'),
-    label: String(entry.label || 'Unnamed').trim() || 'Unnamed',
+    id: entry.id || slugify(entry.label || 'רשומה'),
+    label: String(entry.label || 'ללא שם').trim() || 'ללא שם',
     href: isSafeProfileHref(entry.href) ? (String(entry.href || '').trim() || '#') : '#',
     thumb: String(entry.thumb || '').trim(),
     notes: String(entry.notes || '').trim(),
@@ -373,4 +373,26 @@ function exportJson(filename, data) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+
+function formatEntryCount(count) {
+  return `ספריית החיפוש נטענה: ${count} ${count === 1 ? 'רשומה' : 'רשומות'}.`;
+}
+
+function formatSampleCount(count) {
+  return `${count} ${count === 1 ? 'דוגמה' : 'דוגמאות'}`;
+}
+
+function formatDescriptorCount(count) {
+  return `${count} ${count === 1 ? 'וקטור' : 'וקטורים'}`;
+}
+
+function sourceLabel(source) {
+  const map = {
+    repo: 'מהמאגר',
+    local: 'מקומי',
+    imported: 'מיובא',
+  };
+  return map[source] || source || 'לא ידוע';
 }

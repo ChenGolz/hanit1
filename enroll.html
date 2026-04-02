@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Build Library · PetConnect Pages</title>
+    <title>בניית מאגר · פאטקונקט</title>
     <link rel="stylesheet" href="./assets/styles.css">
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script defer src="./assets/common.js"></script>
@@ -28,22 +28,22 @@
         function render() {
           const entries = loadLocalLibrary();
           if (!entries.length) {
-            libraryEl.innerHTML = '<div class="empty">No local entries yet.</div>';
+            libraryEl.innerHTML = '<div class="empty">עדיין אין רשומות מקומיות.</div>';
             outputEl.textContent = JSON.stringify({ version: 1, updated_at: new Date().toISOString().slice(0, 10), entries: [] }, null, 2);
             return;
           }
           const cards = entries.map((entry, idx) => {
             const safeLabel = escapeHtml(entry.label);
             const safeNotes = escapeHtml(entry.notes || '');
-            const thumb = entry.thumb ? `<div class="thumb-wrap"><img src="${entry.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">No thumb</div></div>';
+            const thumb = entry.thumb ? `<div class="thumb-wrap"><img src="${entry.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
             return `
               <article class="library-card">
                 ${thumb}
                 <div class="body">
                   <strong>${safeLabel}</strong>
-                  <div class="small">${entry.descriptors.length} descriptor${entry.descriptors.length === 1 ? '' : 's'}</div>
+                  <div class="small">${formatDescriptorCount(entry.descriptors.length)}</div>
                   <div class="small">${safeNotes}</div>
-                  <button class="bad" type="button" data-remove="${idx}">Remove</button>
+                  <button class="bad" type="button" data-remove="${idx}">הסרה</button>
                 </div>
               </article>
             `;
@@ -62,12 +62,12 @@
 
         createForm.addEventListener('submit', async (event) => {
           event.preventDefault();
-          if (!setRequiredValidity(labelInput, 'Person name is required.')) {
-            statusEl.textContent = 'Enter a label first.';
+          if (!setRequiredValidity(labelInput, 'שם האדם הוא שדה חובה.')) {
+            statusEl.textContent = 'יש להזין שם קודם.';
             return;
           }
-          if (!setRequiredValidity(fileInput, 'Please choose at least one image.')) {
-            statusEl.textContent = 'Choose at least one image.';
+          if (!setRequiredValidity(fileInput, 'נא לבחור לפחות תמונה אחת.')) {
+            statusEl.textContent = 'יש לבחור לפחות תמונה אחת.';
             return;
           }
 
@@ -75,9 +75,9 @@
           const href = hrefInput.value.trim();
           const files = Array.from(fileInput.files || []);
           if (href && !isSafeProfileHref(href)) {
-            hrefInput.setCustomValidity('Use a relative path like ./profiles/jane.html, a site path, or a full http(s) URL.');
+            hrefInput.setCustomValidity('יש להזין נתיב יחסי כמו ./profiles/jane.html, נתיב אתר, או כתובת http(s) מלאה.');
             hrefInput.reportValidity();
-            statusEl.textContent = 'Please fix the profile link field.';
+            statusEl.textContent = 'נא לתקן את שדה קישור הפרופיל.';
             return;
           }
 
@@ -86,7 +86,7 @@
             const descriptors = [];
             let thumb = '';
             let usable = 0;
-            statusEl.textContent = `Processing ${files.length} image${files.length === 1 ? '' : 's'}…`;
+            statusEl.textContent = `מעבד ${files.length} תמונות…`;
             for (const file of files) {
               const { img, url } = await fileToImage(file);
               try {
@@ -102,7 +102,7 @@
             }
 
             if (!descriptors.length) {
-              statusEl.textContent = 'No usable faces were found in those files. Try a closer photo, less distance, and eyes visible if possible.';
+              statusEl.textContent = 'לא נמצאו פנים שימושיות בקבצים האלה. נסי תמונה קרובה יותר, פחות מרחוק, ואם אפשר עם עיניים גלויות.';
               return;
             }
 
@@ -134,10 +134,10 @@
             saveLocalLibrary(entries.map((item) => normalizeEntry({ ...item, source: 'local' })));
             render();
             createForm.reset();
-            statusEl.textContent = `${existingIndex >= 0 ? 'Updated' : 'Added'} ${label} with ${usable} usable sample${usable === 1 ? '' : 's'}.`;
+            statusEl.textContent = `${existingIndex >= 0 ? 'עודכן' : 'נוסף'} ${label} עם ${usable} ${usable === 1 ? 'דוגמה תקינה אחת' : 'דוגמאות תקינות'}.`;
           } catch (error) {
             console.error(error);
-            statusEl.textContent = `Could not build entry: ${error.message}`;
+            statusEl.textContent = `לא ניתן היה ליצור את הרשומה: ${error.message}`;
           } finally {
             addBtn.disabled = false;
           }
@@ -146,17 +146,17 @@
         exportBtn.addEventListener('click', () => {
           const entries = loadLocalLibrary().map((entry) => normalizeEntry({ ...entry, source: 'local' })).filter((entry) => entry.descriptors.length);
           if (!entries.length) {
-            statusEl.textContent = 'Add at least one valid entry before exporting library.json.';
+            statusEl.textContent = 'יש להוסיף לפחות רשומה תקינה אחת לפני ייצוא library.json.';
             return;
           }
           exportJson('library.json', { version: 1, updated_at: new Date().toISOString().slice(0, 10), entries });
-          statusEl.textContent = 'library.json exported.';
+          statusEl.textContent = 'הקובץ library.json יוצא בהצלחה.';
         });
 
         clearBtn.addEventListener('click', () => {
           saveLocalLibrary([]);
           render();
-          statusEl.textContent = 'Local browser library cleared.';
+          statusEl.textContent = 'המאגר המקומי בדפדפן נוקה.';
         });
 
         render();
@@ -164,65 +164,65 @@
       window.addEventListener('DOMContentLoaded', () => { runEnrollPage().catch((error) => {
         console.error(error);
         const statusEl = document.getElementById('status');
-        statusEl.textContent = `Startup failed: ${error.message}`;
+        statusEl.textContent = `הטעינה נכשלה: ${error.message}`;
       });});
     </script>
   </head>
   <body>
     <main class="page">
       <nav class="nav">
-        <div><strong>PetConnect Pages</strong></div>
+        <div><strong>פאטקונקט</strong></div>
         <div class="links">
-          <a class="link" href="./index.html">Home</a>
-          <a class="link" href="./search.html">Search by photo</a>
-          <a class="link" href="./enroll.html">Build library</a>
+          <a class="link" href="./index.html">דף הבית</a>
+          <a class="link" href="./search.html">חיפוש לפי תמונה</a>
+          <a class="link" href="./enroll.html">בניית מאגר</a>
         </div>
       </nav>
 
       <section class="card stack">
-        <div class="chip">Admin helper</div>
-        <h1 style="margin:0;">Build library entries in the browser</h1>
-        <p class="meta">This page is for you, not public visitors. Upload sample photos for one person, compute descriptors in the browser, then export JSON for <code>data/library.json</code>.</p>
-        <div id="status" class="notice">Loading…</div>
+        <div class="chip">כלי ניהול</div>
+        <h1 style="margin:0;">בניית רשומות מאגר בתוך הדפדפן</h1>
+        <p class="meta">העמוד הזה מיועד לך ולא למבקרים. מעלים תמונות דוגמה של אדם אחד, מחשבים תיאורי פנים בדפדפן, ואז מייצאים JSON עבור <code>data/library.json</code>.</p>
+        <div id="status" class="notice">טוען…</div>
       </section>
 
       <section class="grid grid-2" style="margin-top:16px;">
         <article class="card stack">
-          <h2 class="section-title">Create one entry</h2>
+          <h2 class="section-title">יצירת רשומה אחת</h2>
           <form id="create-entry-form" class="stack" novalidate>
-            <input id="person-label" type="text" placeholder="Person name" required aria-label="Person name" />
-            <input id="person-href" type="text" placeholder="Optional profile link, e.g. ./profiles/jane.html" aria-label="Optional profile link" />
-            <textarea id="person-notes" placeholder="Optional notes shown on search results" aria-label="Optional notes"></textarea>
-            <input id="person-files" type="file" accept="image/*" multiple required aria-label="Choose one or more face photos" />
-            <div class="small">Required fields: person name and at least one image.</div>
+            <input id="person-label" type="text" placeholder="שם האדם" required aria-label="שם האדם" />
+            <input id="person-href" type="text" placeholder="קישור פרופיל אופציונלי, למשל ./profiles/jane.html" aria-label="קישור פרופיל אופציונלי" />
+            <textarea id="person-notes" placeholder="הערות אופציונליות שיופיעו בתוצאות החיפוש" aria-label="הערות אופציונליות"></textarea>
+            <input id="person-files" type="file" accept="image/*" multiple required aria-label="בחירת תמונת פנים אחת או יותר" />
+            <div class="small">שדות חובה: שם האדם ולפחות תמונה אחת.</div>
             <div class="row">
-              <button id="add-btn" type="submit">Add to local library</button>
-              <button id="export-btn" class="good" type="button">Export library.json</button>
-              <button id="clear-btn" class="secondary" type="button">Clear local library</button>
+              <button id="add-btn" type="submit">הוספה למאגר המקומי</button>
+              <button id="export-btn" class="good" type="button">ייצוא library.json</button>
+              <button id="clear-btn" class="secondary" type="button">ניקוי המאגר המקומי</button>
             </div>
           </form>
-          <div class="notice warn">Entries created here live only in this browser until you export them. To make them public for everyone, commit the exported JSON into the repo.</div>
+          <div class="notice warn">הרשומות שנוצרות כאן נשמרות רק בדפדפן הזה עד שמייצאים אותן. כדי לפרסם אותן לכולם צריך לעשות commit לקובץ ה-JSON המיוצא בתוך הריפו.</div>
         </article>
 
         <article class="card stack">
-          <h2 class="section-title">Publish it for everyone</h2>
-          <div class="small">1. Export the JSON file from this page.</div>
-          <div class="small">2. Replace <code>data/library.json</code> in the repo with that export.</div>
-          <div class="small">3. Push the repo to GitHub Pages.</div>
-          <div class="small">4. Share <code>search.html</code>.</div>
-          <div class="notice success">For a polished public library, also add your own thumbnail image files to the repo and change each entry’s <code>thumb</code> path from a browser data URL to a normal repo file path.</div>
+          <h2 class="section-title">איך לפרסם לכולם</h2>
+          <div class="small">1. ייצאי את קובץ ה-JSON מהעמוד הזה.</div>
+          <div class="small">2. החליפי את <code>data/library.json</code> בריפו בקובץ שייצאת.</div>
+          <div class="small">3. דחפי את הריפו ל-GitHub Pages.</div>
+          <div class="small">4. שתפי את <code>search.html</code>.</div>
+          <div class="notice success">לספרייה ציבורית מלוטשת יותר, כדאי להוסיף גם קבצי תמונות ממוזערות משלך לריפו ולשנות את השדה <code>thumb</code> מנתיב data URL לנתיב רגיל של קובץ בריפו.</div>
         </article>
       </section>
 
       <section class="card stack" style="margin-top:16px;">
-        <h2 class="section-title">Current local library</h2>
+        <h2 class="section-title">המאגר המקומי הנוכחי</h2>
         <div id="library-list"></div>
       </section>
 
       <section class="card stack" style="margin-top:16px;">
         <div class="space-between">
-          <h2 class="section-title" style="margin:0;">JSON output</h2>
-          <div class="small">Paste into <code>data/library.json</code></div>
+          <h2 class="section-title" style="margin:0;">פלט JSON</h2>
+          <div class="small">יש להדביק לתוך <code>data/library.json</code></div>
         </div>
         <pre id="output-json"></pre>
       </section>

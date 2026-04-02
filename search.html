@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="he" dir="rtl">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Search by Photo · PetConnect Pages</title>
+    <title>חיפוש לפי תמונה · פאטקונקט</title>
     <link rel="stylesheet" href="./assets/styles.css">
     <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <script defer src="./assets/common.js"></script>
@@ -24,7 +24,7 @@
 
         await loadModels(statusEl);
         const mergedLibrary = await getMergedLibrary();
-        libraryStatsEl.textContent = `Search library loaded: ${mergedLibrary.length} entr${mergedLibrary.length === 1 ? 'y' : 'ies'}.`;
+        libraryStatsEl.textContent = formatEntryCount(mergedLibrary.length);
 
         importInput.addEventListener('change', async () => {
           const file = importInput.files?.[0];
@@ -32,45 +32,45 @@
           const text = await file.text();
           const parsed = safeJsonParse(text, null);
           if (!parsed || !Array.isArray(parsed.entries)) {
-            statusEl.textContent = 'That JSON file does not look like a library export.';
+            statusEl.textContent = 'קובץ ה-JSON הזה לא נראה כמו ייצוא תקין של המאגר.';
             return;
           }
           const sanitizedEntries = parsed.entries.map((entry) => normalizeEntry({ ...entry, source: 'imported' })).filter((entry) => entry.descriptors.length);
           if (!sanitizedEntries.length) {
-            statusEl.textContent = 'That library file does not contain any usable face entries yet.';
+            statusEl.textContent = 'בקובץ המאגר הזה עדיין אין רשומות פנים תקינות לשימוש.';
             return;
           }
           saveImportedLibrary(sanitizedEntries);
           const updated = await getMergedLibrary();
-          libraryStatsEl.textContent = `Search library loaded: ${updated.length} entr${updated.length === 1 ? 'y' : 'ies'}.`;
-          statusEl.textContent = 'Imported library added for this browser session.';
+          libraryStatsEl.textContent = formatEntryCount(updated.length);
+          statusEl.textContent = 'המאגר המיובא נוסף לדפדפן עבור הסשן הנוכחי.';
         });
 
         clearImportedBtn.addEventListener('click', async () => {
           saveImportedLibrary([]);
           const updated = await getMergedLibrary();
-          libraryStatsEl.textContent = `Search library loaded: ${updated.length} entr${updated.length === 1 ? 'y' : 'ies'}.`;
-          statusEl.textContent = 'Imported session library cleared.';
+          libraryStatsEl.textContent = formatEntryCount(updated.length);
+          statusEl.textContent = 'המאגר המיובא של הסשן נוקה.';
         });
 
         searchForm.addEventListener('submit', async (event) => {
           event.preventDefault();
-          if (!setRequiredValidity(fileInput, 'Please choose a photo to search with.')) {
-            statusEl.textContent = 'Choose an image first.';
+          if (!setRequiredValidity(fileInput, 'נא לבחור תמונה לחיפוש.')) {
+            statusEl.textContent = 'בחרי תמונה כדי להתחיל.';
             return;
           }
 
           const file = fileInput.files?.[0];
           const library = await getMergedLibrary();
           if (!library.length) {
-            statusEl.textContent = 'Your library is empty. Publish entries in data/library.json or add local ones from Build library.';
+            statusEl.textContent = 'המאגר שלך ריק. פרסמי רשומות בתוך data/library.json או הוסיפי רשומות מקומיות דרך עמוד בניית המאגר.';
             return;
           }
 
           searchBtn.disabled = true;
           resultsEl.innerHTML = '';
           try {
-            statusEl.textContent = 'Reading photo and detecting faces…';
+            statusEl.textContent = 'קורא את התמונה ומאתר פנים…';
             const { img, url } = await fileToImage(file);
             try {
               const detections = await detectFaces(img, statusEl);
@@ -78,7 +78,7 @@
               drawDetection(canvas, img, best);
               if (!best) {
                 cropImg.classList.add('hidden');
-                statusEl.textContent = 'No clear face was found in that image. Try a closer photo with the face larger in frame and eyes visible if possible.';
+                statusEl.textContent = 'לא נמצאו פנים ברורות בתמונה הזאת. נסי תמונה קרובה יותר, עם פנים גדולות יותר בפריים ואם אפשר עם עיניים גלויות.';
                 return;
               }
 
@@ -86,7 +86,7 @@
               cropImg.classList.remove('hidden');
               const queryDescriptor = Array.from(best.descriptor);
 
-              statusEl.textContent = `Found ${detections.length} usable face${detections.length === 1 ? '' : 's'}. Ranking matches…`;
+              statusEl.textContent = `נמצאו ${detections.length} פנים שימושיות. מדרג התאמות…`;
               const matches = library
                 .map((entry) => {
                   const bestDistance = Math.min(...entry.descriptors.map((d) => descriptorDistance(queryDescriptor, d)));
@@ -102,8 +102,8 @@
                 .slice(0, 18);
 
               if (!matches.length) {
-                resultsEl.innerHTML = '<div class="empty">No matches found.</div>';
-                statusEl.textContent = 'Finished.';
+                resultsEl.innerHTML = '<div class="empty">לא נמצאו התאמות.</div>';
+                statusEl.textContent = 'החיפוש הסתיים.';
                 return;
               }
 
@@ -113,7 +113,7 @@
                 const safeNotes = escapeHtml(match.notes);
                 const safeTarget = escapeHtml(target);
                 const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
-                const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">No thumb</div></div>';
+                const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
                 return `
                   <article class="result-card">
                     ${thumb}
@@ -122,26 +122,26 @@
                         <strong>${safeLabel}</strong>
                         <span class="score ${match.confidence}">${formatPct(match.score)}</span>
                       </div>
-                      <div class="small">Distance: ${match.bestDistance.toFixed(3)}</div>
+                      <div class="small">מרחק: ${match.bestDistance.toFixed(3)}</div>
                       <div class="row">
-                        <span class="badge">${match.source}</span>
-                        <span class="badge">${match.descriptors.length} sample${match.descriptors.length === 1 ? '' : 's'}</span>
+                        <span class="badge">${sourceLabel(match.source)}</span>
+                        <span class="badge">${formatSampleCount(match.descriptors.length)}</span>
                       </div>
                       ${notes}
-                      <a href="${safeTarget}">Open profile</a>
+                      <a href="${safeTarget}">פתיחת פרופיל</a>
                     </div>
                   </article>
                 `;
               }).join('');
 
               resultsEl.innerHTML = `<div class="result-grid">${cards}</div>`;
-              statusEl.textContent = 'Finished.';
+              statusEl.textContent = 'החיפוש הסתיים.';
             } finally {
               URL.revokeObjectURL(url);
             }
           } catch (error) {
             console.error(error);
-            statusEl.textContent = `Search failed: ${error.message}`;
+            statusEl.textContent = `החיפוש נכשל: ${error.message}`;
           } finally {
             searchBtn.disabled = false;
           }
@@ -150,57 +150,57 @@
       window.addEventListener('DOMContentLoaded', () => { runSearchPage().catch((error) => {
         console.error(error);
         const statusEl = document.getElementById('status');
-        statusEl.textContent = `Startup failed: ${error.message}`;
+        statusEl.textContent = `הטעינה נכשלה: ${error.message}`;
       });});
     </script>
   </head>
   <body>
     <main class="page">
       <nav class="nav">
-        <div><strong>PetConnect Pages</strong></div>
+        <div><strong>פאטקונקט</strong></div>
         <div class="links">
-          <a class="link" href="./index.html">Home</a>
-          <a class="link" href="./search.html">Search by photo</a>
-          <a class="link" href="./enroll.html">Build library</a>
+          <a class="link" href="./index.html">דף הבית</a>
+          <a class="link" href="./search.html">חיפוש לפי תמונה</a>
+          <a class="link" href="./enroll.html">בניית מאגר</a>
         </div>
       </nav>
 
       <section class="card stack">
-        <div class="chip">Public search</div>
-        <h1 style="margin:0;">Upload one face photo</h1>
-        <p class="meta">The uploaded image stays in the browser. The page computes a face descriptor locally and compares it to your published library.</p>
-        <div id="status" class="notice">Loading…</div>
+        <div class="chip">חיפוש ציבורי</div>
+        <h1 style="margin:0;">העלאת תמונת פנים אחת</h1>
+        <p class="meta">התמונה שאת מעלה נשארת בדפדפן. העמוד מחשב תיאור פנים מקומי ומשווה אותו למאגר שפרסמת.</p>
+        <div id="status" class="notice">טוען…</div>
         <form id="search-form" class="row" novalidate>
-          <input id="query-file" type="file" accept="image/*" required aria-label="Choose a face photo">
-          <button id="search-btn" type="submit">Search library</button>
+          <input id="query-file" type="file" accept="image/*" required aria-label="בחירת תמונת פנים">
+          <button id="search-btn" type="submit">חיפוש במאגר</button>
         </form>
         <div id="library-stats" class="small"></div>
       </section>
 
       <section class="grid grid-2" style="margin-top:16px;">
         <article class="card stack">
-          <h2 class="section-title">Preview</h2>
+          <h2 class="section-title">תצוגה מקדימה</h2>
           <canvas id="preview-canvas" class="preview"></canvas>
         </article>
         <article class="card stack">
-          <h2 class="section-title">Face crop used for matching</h2>
-          <img id="query-crop" class="hidden" alt="Face crop preview">
-          <div class="small">If there are multiple faces, the largest clear face is used.</div>
+          <h2 class="section-title">חיתוך הפנים ששימש להתאמה</h2>
+          <img id="query-crop" class="hidden" alt="תצוגת חיתוך פנים">
+          <div class="small">אם יש כמה פנים בתמונה, המערכת תשתמש בפנים הגדולות והברורות ביותר.</div>
         </article>
       </section>
 
       <section class="card stack" style="margin-top:16px;">
         <div class="space-between">
-          <h2 class="section-title" style="margin:0;">Optional: add a temporary library JSON file</h2>
-          <button id="clear-imported" class="secondary" type="button">Clear imported</button>
+          <h2 class="section-title" style="margin:0;">אופציונלי: הוספת קובץ JSON זמני של המאגר</h2>
+          <button id="clear-imported" class="secondary" type="button">ניקוי המיובא</button>
         </div>
-        <div class="small">This is handy before you commit a new library to the repo.</div>
+        <div class="small">זה שימושי לפני שמבצעים commit למאגר חדש בריפו.</div>
         <input id="import-json" type="file" accept="application/json,.json">
       </section>
 
       <section class="card stack" style="margin-top:16px;">
-        <h2 class="section-title">Matches</h2>
-        <div id="results" class="empty">Your results will appear here.</div>
+        <h2 class="section-title">התאמות</h2>
+        <div id="results" class="empty">התוצאות שלך יופיעו כאן.</div>
       </section>
     </main>
   </body>
