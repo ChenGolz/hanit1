@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v10';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v10';
+const STATIC_CACHE = 'petconnect-animal-static-v11';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v11';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -11,6 +11,7 @@ const ASSETS_TO_CACHE = [
   './icon-512.png',
   './assets/styles.css',
   './assets/common.js',
+  './assets/app.js',
   './assets/i18n.js',
   './search.inline.js',
   './enroll.inline.js',
@@ -20,6 +21,7 @@ const RUNTIME_HOSTS = new Set([
   'cdn.jsdelivr.net',
   'fonts.googleapis.com',
   'fonts.gstatic.com',
+  'unpkg.com',
 ]);
 
 self.addEventListener('install', (event) => {

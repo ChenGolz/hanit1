@@ -43,3 +43,9 @@ This GitHub Pages build still does not ship a live Leaflet map, but `assets/comm
 - client-side image downsampling tuned to ~1024px / 80% JPEG for weaker mobile networks
 - result cards now show a stronger score pill and immediate share / WhatsApp / 106 actions
 - 106 and share flows now use privacy-blurred coordinates by default
+
+
+## עדכון v4
+- נוסף `assets/app.js` כקובץ תאימות לשיטות `shrinkImage`, `displayMatches`, `postMultipart`.
+- דף הבית משתמש כעת ב-`match-results-container` מפורש לגלריית ההתאמות האחרונות.
+- `sw.js` שודרג ל-v11 ומקדים גם את `assets/app.js`.

@@ -37,3 +37,6 @@
 - separate `assets/i18n.js` translation helper scaffold
 - recent top-3 match gallery on the home page, fed by the last search
 - privacy helper groundwork for approximate location display in a future hosted map flow
+
+
+עדכון v4: נוספה גם שכבת תאימות `assets/app.js` עם `shrinkImage`, `displayMatches` ו-`postMultipart` כדי ליישר קו עם דפוסי Frontend נפוצים יותר.

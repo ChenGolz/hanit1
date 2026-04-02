@@ -35,7 +35,7 @@ async function runSearchPage() {
   const cropImg = document.getElementById('query-crop');
   const cropMetaEl = document.getElementById('crop-meta');
   const showBoxInput = document.getElementById('show-box');
-  const resultsEl = document.getElementById('results');
+  const resultsEl = document.getElementById('match-results-container');
   const summaryEl = document.getElementById('summary');
   const libraryStatsEl = document.getElementById('library-stats');
   const importInput = document.getElementById('import-json');
@@ -407,7 +407,7 @@ async function runSearchPage() {
 
       setSearchProgress(8, 'מכין את התמונה לסריקה…');
       setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
-      const prepared = await fileToPreparedImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.80 });
+      const prepared = await shrinkImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.80 });
       try {
         currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
         currentSelection = defaultSelectionRect(currentPreviewImage);

@@ -442,3 +442,18 @@ canvas.preview {
 .score-pill.low { background: rgba(239,68,68,0.18); color: #fecaca; }
 .disabled-link { opacity: 0.55; pointer-events: none; }
 .privacy-note { border-top: 1px dashed var(--line); padding-top: 10px; }
+
+
+.match-scroller {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(220px, 300px);
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x proximity;
+}
+
+.match-scroller .match-card {
+  scroll-snap-align: start;
+}

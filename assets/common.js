@@ -844,6 +844,71 @@ function privacyBlurCoordinates(lat, lng, radiusMeters = 100) {
   };
 }
 
+
+function shrinkImage(file, options = {}) {
+  return fileToPreparedImage(file, {
+    maxWidth: Number(options.maxWidth || 1024),
+    maxHeight: Number(options.maxHeight || 1024),
+    quality: Number(options.quality || 0.80),
+    type: options.type || 'image/jpeg',
+  });
+}
+
+function renderMatchCards(matches = [], options = {}) {
+  const kind = options.kind || 'visual';
+  return matches.map((match) => {
+    const target = match.href && match.href !== '#' ? match.href : '';
+    const safeLabel = escapeHtml(String(match.label || 'ללא שם'));
+    const safeNotes = escapeHtml(String(match.notes || ''));
+    const animalType = match.animalType ? `<span class="badge">${escapeHtml(match.animalType)}</span>` : '';
+    const colors = match.colors ? `<span class="badge">${escapeHtml(match.colors)}</span>` : (match.colorName ? `<span class="badge">${escapeHtml(match.colorName)}</span>` : '');
+    const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
+    const thumb = match.thumb ? `<div class="thumb-wrap"><img src="${match.thumb}" alt="${safeLabel}"></div>` : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
+    const score = kind === 'visual' ? Number(match.score || 0) : Number(match.colorScore || match.score || 0);
+    const scoreText = kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
+    const reason = kind === 'visual' ? 'התאמה מיידית מהסריקה' : 'תוצאת גיבוי לפי צבעים דומים';
+    const profileButton = target ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>` : '<span class="badge">אין קישור פרופיל</span>';
+    return `
+      <article class="match-card result-card">
+        ${thumb}
+        <div class="body">
+          <div class="space-between">
+            <strong>${safeLabel}</strong>
+            <span class="score-pill ${escapeHtml(String(match.confidence || 'low'))}">${scoreText}</span>
+          </div>
+          <div class="row">
+            ${animalType}
+            ${colors}
+            ${match.source ? `<span class="badge">${sourceLabel(match.source)}</span>` : ''}
+          </div>
+          <div class="small">${reason}</div>
+          ${notes}
+          <div class="card-actions">${profileButton}</div>
+        </div>
+      </article>`;
+  }).join('');
+}
+
+function displayMatches(matches = [], options = {}) {
+  const container = options.container || document.getElementById('match-results-container') || document.getElementById('results');
+  if (!container) return false;
+  if (!Array.isArray(matches) || !matches.length) {
+    container.innerHTML = '<div class="empty">אין כרגע התאמות להצגה.</div>';
+    return false;
+  }
+  const heading = options.heading || 'נמצאו התאמות אפשריות!';
+  const kind = options.kind || 'visual';
+  const wrapperClass = options.wrapperClass || 'match-scroller';
+  container.innerHTML = `
+    <div class="stack" style="gap:12px;">
+      <h3 class="match-title" style="margin:0;">${escapeHtml(heading)}</h3>
+      <div class="${wrapperClass}">
+        ${renderMatchCards(matches, { kind })}
+      </div>
+    </div>`;
+  return true;
+}
+
 function registerServiceWorker() {
   if (window.__petconnectSwRegistered) return;
   if (!('serviceWorker' in navigator)) return;
@@ -872,6 +937,7 @@ if (typeof window !== 'undefined') {
     fileToImage,
     canvasToBlob,
     fileToPreparedImage,
+    shrinkImage,
     createCropCanvas,
     makeSquareThumb,
     fullImageRect,
@@ -916,6 +982,8 @@ if (typeof window !== 'undefined') {
     loadLastMatchGallery,
     clearLastMatchGallery,
     privacyBlurCoordinates,
+    displayMatches,
+    renderMatchCards,
     registerServiceWorker,
   });
 }
