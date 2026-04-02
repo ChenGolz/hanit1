@@ -1,14 +1,4 @@
-<!doctype html>
-<html lang="he" dir="rtl">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>בניית מאגר חיות · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/common.js"></script>
-    <script defer>
+
       function fallbackSetStatus(element, text, options = {}) {
         if (!element) return;
         const { tone = 'default', busy = false } = options;
@@ -230,70 +220,4 @@
           (window.setStatus || fallbackSetStatus)(statusEl, `הטעינה נכשלה: ${error.message}`, { tone: 'warn' });
         });
       });
-    </script>
-  </head>
-  <body>
-    <main class="page">
-      <nav class="nav">
-        <div><strong>פאטקונקט</strong></div>
-        <div class="links">
-          <a class="link" href="./index.html">דף הבית</a>
-          <a class="link" href="./search.html">חיפוש חיה</a>
-          <a class="link" href="./enroll.html">בניית מאגר</a>
-        </div>
-      </nav>
-
-      <section class="card stack">
-        <div class="chip">כלי ניהול</div>
-        <h1 style="margin:0;">בניית מאגר חיות בתוך הדפדפן</h1>
-        <p class="meta">העמוד הזה מיועד לך ולא למבקרים. מעלים תמונות דוגמה של חיה אחת, מחשבים מאפיינים ויזואליים בדפדפן, ואז מייצאים JSON עבור <code>data/library.json</code>. המערכת תומכת בחיות בלבד ולא בזיהוי אנשים.</p>
-        <div id="status" class="notice">טוען…</div>
-        <div id="prep-note" class="small"></div>
-      </section>
-
-      <section class="grid grid-2" style="margin-top:16px;">
-        <article class="card stack">
-          <h2 class="section-title">יצירת רשומה אחת</h2>
-          <form id="create-entry-form" class="stack" novalidate>
-            <input id="animal-label" type="text" placeholder="שם החיה או מזהה" required aria-label="שם החיה או מזהה" />
-            <div class="field-grid">
-              <input id="animal-type" type="text" placeholder="סוג חיה, למשל כלב / חתול / סוס" aria-label="סוג החיה" />
-              <input id="animal-colors" type="text" placeholder="צבעים, למשל חום-לבן / שחור" aria-label="צבעי החיה" />
-            </div>
-            <input id="animal-href" type="text" placeholder="קישור פרופיל אופציונלי, למשל ./profiles/max.html" aria-label="קישור פרופיל אופציונלי" />
-            <textarea id="animal-notes" placeholder="הערות אופציונליות שיופיעו בתוצאות החיפוש" aria-label="הערות אופציונליות"></textarea>
-            <input id="animal-files" type="file" accept="image/*" multiple required aria-label="בחירת תמונה אחת או יותר של החיה" />
-            <div class="small">שדות חובה: שם החיה ולפחות תמונה אחת. לקבלת תוצאות טובות, העלי תמונות שבהן החיה תופסת חלק גדול מהפריים ועדיף בלי אנשים לצידה.</div>
-            <div class="row">
-              <button id="add-btn" type="submit">הוספה למאגר המקומי</button>
-              <button id="export-btn" class="good" type="button">ייצוא library.json</button>
-              <button id="clear-btn" class="secondary" type="button">ניקוי המאגר המקומי</button>
-            </div>
-          </form>
-          <div class="notice warn">הרשומות שנוצרות כאן נשמרות רק בדפדפן הזה עד שמייצאים אותן. כדי לפרסם אותן לכולם צריך לעשות commit לקובץ ה-JSON המיוצא בתוך הריפו.</div>
-        </article>
-
-        <article class="card stack">
-          <h2 class="section-title">איך החיפוש עובד עכשיו</h2>
-          <div class="small">1. במקום זיהוי אנשים, המערכת משתמשת במאפיינים ויזואליים של בעלי חיים.</div>
-          <div class="small">2. בזמן חיפוש אפשר לסמן ידנית את אזור החיה כדי להתעלם מאנשים או רקע.</div>
-          <div class="small">3. אם אין התאמה ויזואלית חזקה, עמוד החיפוש יציג רשומות עם צבעים דומים.</div>
-          <div class="notice success">אחרי ייצוא הקובץ, החליפי את <code>data/library.json</code> בריפו ועשי commit כדי לפרסם את המאגר החדש.</div>
-        </article>
-      </section>
-
-      <section class="card stack" style="margin-top:16px;">
-        <h2 class="section-title">המאגר המקומי הנוכחי</h2>
-        <div id="library-list"></div>
-      </section>
-
-      <section class="card stack" style="margin-top:16px;">
-        <div class="space-between">
-          <h2 class="section-title" style="margin:0;">פלט JSON</h2>
-          <div class="small">יש להדביק לתוך <code>data/library.json</code></div>
-        </div>
-        <pre id="output-json"></pre>
-      </section>
-    </main>
-  </body>
-</html>
+    

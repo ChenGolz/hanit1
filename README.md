@@ -1,29 +1,23 @@
-# פאטקונקט — גרסת GitHub Pages בעברית
+# PetConnect GH Pages - בעלי חיים בלבד
 
-זו גרסה סטטית של האתר עבור GitHub Pages, עם ממשק בעברית וחיפוש פנים בדפדפן.
+זו גרסה סטטית ל-GitHub Pages שמיועדת **לחיפוש בעלי חיים בלבד**.
 
-הקבצים החשובים לפרסום:
+## מה חדש
 
-- index.html
-- search.html
-- enroll.html
-- assets/
-- data/library.json
-- .nojekyll
+- אין זיהוי אנשים
+- בחירת אזור חיה ידנית בתוך התמונה
+- חיפוש ויזואלי לחיות בעזרת MobileNet בדפדפן
+- אם אין התאמה חזקה, מוצגות חיות עם צבעים דומים
+- בניית מאגר חיות בדפדפן וייצוא ל-`data/library.json`
 
-כדי לעדכן את המאגר:
+## פרסום
 
-1. פתחי את `enroll.html`.
-2. הוסיפי אנשים ותמונות.
-3. ייצאי `library.json`.
-4. החליפי את `data/library.json` בריפו.
-5. בצעי commit + push ורענני את האתר.
+1. מעלים תמונות ב-`enroll.html`
+2. מייצאים `library.json`
+3. מחליפים את `data/library.json` בריפו
+4. עושים commit + push
+5. משתמשים ב-`search.html`
 
+## הערה חשובה
 
-## UX upgrades added
-
-- Immediate result gallery with high-confidence summary banner
-- Local image resizing before processing
-- Optional city + location capture for quick 106 email reports
-- Service Worker with network-first / cache-fallback
-- Hebrew font stack and polished RTL UI
+זו עדיין מערכת סטטית. היא טובה לדמו, חיפוש ציבורי בסיסי, ומאגר שמתפרסם דרך הריפו — אבל לא למאגר משותף עם העלאות חיות בזמן אמת.
