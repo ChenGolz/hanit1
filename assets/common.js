@@ -427,18 +427,75 @@ function predictionToRect(source, prediction, paddingRatio = 0.1) {
   });
 }
 
+function expandRectAroundCenter(img, rect, scaleX = 1.0, scaleY = 1.0, minWidthRatio = 0, minHeightRatio = 0) {
+  if (!img || !rect) return null;
+  const targetWidth = Math.max(rect.width * scaleX, img.width * minWidthRatio, 1);
+  const targetHeight = Math.max(rect.height * scaleY, img.height * minHeightRatio, 1);
+  const cx = rect.x + (rect.width / 2);
+  const cy = rect.y + (rect.height / 2);
+  return clampRectToImage(img, {
+    x: cx - (targetWidth / 2),
+    y: cy - (targetHeight / 2),
+    width: targetWidth,
+    height: targetHeight,
+  });
+}
+
+function normalizeAnimalDetectionRect(source, prediction) {
+  const className = String(prediction?.class || '').toLowerCase();
+  const baseRect = predictionToRect(source, prediction, 0.12);
+  if (!baseRect) return null;
+  const imageArea = Math.max(1, (source?.width || 1) * (source?.height || 1));
+  const rectArea = Math.max(1, baseRect.width * baseRect.height);
+  const areaRatio = rectArea / imageArea;
+  const tiny = areaRatio < 0.012 || baseRect.width < (source.width * 0.08) || baseRect.height < (source.height * 0.08);
+
+  let rect = baseRect;
+  let autoExpanded = false;
+  if (className === 'dog' || className === 'cat') {
+    if (tiny) {
+      rect = expandRectAroundCenter(source, rect, 4.8, 4.8, 0.22, 0.22);
+      autoExpanded = true;
+    } else {
+      rect = expandRectAroundCenter(source, rect, 1.5, 1.6, 0, 0);
+      autoExpanded = rect.width > baseRect.width * 1.1 || rect.height > baseRect.height * 1.1;
+    }
+  } else if (ANIMAL_CLASSES.has(className)) {
+    rect = tiny
+      ? expandRectAroundCenter(source, rect, 3.8, 3.8, 0.18, 0.18)
+      : expandRectAroundCenter(source, rect, 1.35, 1.4, 0, 0);
+    autoExpanded = rect.width > baseRect.width * 1.1 || rect.height > baseRect.height * 1.1;
+  }
+
+  return {
+    rect,
+    areaRatio,
+    tiny,
+    autoExpanded,
+    originalRect: baseRect,
+  };
+}
+
 async function detectSubjects(source, options = {}) {
   const { minScore = 0.35 } = options;
   const model = await loadAnimalDetector();
   const predictions = await model.detect(source);
   const mapped = predictions
     .filter((item) => Number(item.score || 0) >= minScore)
-    .map((item) => ({
-      class: String(item.class || '').toLowerCase(),
-      score: Number(item.score || 0),
-      bbox: item.bbox || [0, 0, 0, 0],
-      rect: predictionToRect(source, item),
-    }))
+    .map((item) => {
+      const className = String(item.class || '').toLowerCase();
+      const normalized = normalizeAnimalDetectionRect(source, { ...item, class: className });
+      return {
+        class: className,
+        score: Number(item.score || 0),
+        bbox: item.bbox || [0, 0, 0, 0],
+        rect: normalized?.rect || predictionToRect(source, item),
+        areaRatio: normalized?.areaRatio || 0,
+        tiny: Boolean(normalized?.tiny),
+        autoExpanded: Boolean(normalized?.autoExpanded),
+        originalRect: normalized?.originalRect || null,
+      };
+    })
     .filter((item) => item.rect);
   return {
     raw: mapped,
@@ -451,9 +508,11 @@ function pickBestAnimalDetection(detections) {
   const animals = Array.isArray(detections?.animals) ? detections.animals : [];
   if (!animals.length) return null;
   return [...animals].sort((a, b) => {
+    const aTinyPenalty = a.tiny ? 1 : 0;
+    const bTinyPenalty = b.tiny ? 1 : 0;
     const areaA = (a.rect?.width || 0) * (a.rect?.height || 0);
     const areaB = (b.rect?.width || 0) * (b.rect?.height || 0);
-    return areaB - areaA || (b.score - a.score);
+    return aTinyPenalty - bTinyPenalty || areaB - areaA || (b.score - a.score);
   })[0];
 }
 

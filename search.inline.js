@@ -160,10 +160,15 @@ async function runSearchPage() {
     currentDetections = detections;
     const bestAnimal = pickBestAnimalDetection(detections);
     if (bestAnimal?.rect) {
-      setSelection(bestAnimal.rect, `✅ זוהתה חיה מסוג ${bestAnimal.class === 'dog' ? 'כלב' : bestAnimal.class === 'cat' ? 'חתול' : bestAnimal.class}. האזור עודכן אוטומטית.`);
+      const label = bestAnimal.class === 'dog' ? 'כלב' : bestAnimal.class === 'cat' ? 'חתול' : bestAnimal.class;
+      const expandedNote = bestAnimal.autoExpanded ? ' האזור הורחב אוטומטית כדי לכלול יותר מגוף החיה.' : '';
+      setSelection(bestAnimal.rect, `✅ זוהתה חיה מסוג ${label}.${expandedNote}`);
       const peopleCount = detections.people?.length || 0;
-      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יתעלמו מהחיפוש` : ''}.`, 'success');
-      selectionHintEl.textContent = 'הסריקה החכמה בחרה אזור סביב החיה. אפשר עדיין לגרור ידנית אם צריך לתקן.';
+      const tinyNote = bestAnimal.tiny ? ' הזיהוי הראשוני היה קטן, לכן הרחבנו את האזור סביב החיה.' : '';
+      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יתעלמו מהחיפוש` : ''}.${tinyNote}`, 'success');
+      selectionHintEl.textContent = bestAnimal.tiny
+        ? 'הסריקה החכמה מצאה את החיה אבל הרחיבה את האזור אוטומטית. אפשר עדיין לגרור ידנית אם צריך לכלול יותר מהגוף.'
+        : 'הסריקה החכמה בחרה אזור סביב החיה. אפשר עדיין לגרור ידנית אם צריך לתקן.';
       return true;
     }
     if ((detections.people?.length || 0) && !(detections.animals?.length || 0)) {
