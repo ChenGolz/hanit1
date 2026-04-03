@@ -687,3 +687,22 @@ button[aria-busy="true"]::after {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+
+.compact-row { gap: 10px; align-items: center; }
+.detection-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #2a3174;
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  font-size: .92rem;
+}
+.detection-pill.success { background: #ecfdf3; color: #17603a; border-color: rgba(16, 185, 129, 0.26); }
+.detection-pill.warn { background: #fff7ed; color: #9a3412; border-color: rgba(249, 115, 22, 0.25); }
+.checkbox-inline { display:inline-flex; align-items:center; gap:8px; }
+.row.wrap { flex-wrap: wrap; }
+#query-crop { background: #f7f4ff; border-radius: 20px; padding: 10px; }

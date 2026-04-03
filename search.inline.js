@@ -20,6 +20,11 @@ async function waitForCommonHelpers() {
     'renderMatchCards',
     'buildCommunityWatchHref',
     'verifyChallengeAnswer',
+    'loadAnimalDetector',
+    'detectSubjects',
+    'pickBestAnimalDetection',
+    'applyCircleMask',
+    'cropRectToDataUrlMasked',
   ];
   const start = Date.now();
   while (Date.now() - start < 8000) {
@@ -41,6 +46,7 @@ async function runSearchPage() {
   const fileInput = document.getElementById('query-file');
   const loadBtn = document.getElementById('search-btn');
   const runSelectedBtn = document.getElementById('run-selected-btn');
+  const smartScanBtn = document.getElementById('smart-scan-btn');
   const useWholeBtn = document.getElementById('use-whole-btn');
   const canvas = document.getElementById('preview-canvas');
   const cropImg = document.getElementById('query-crop');
@@ -66,6 +72,9 @@ async function runSearchPage() {
   const locationStatusEl = document.getElementById('location-status');
   const resultsSection = document.getElementById('results-section');
   const selectionHintEl = document.getElementById('selection-hint');
+  const detectionStatusEl = document.getElementById('detection-status');
+  const subjectOnlyToggle = document.getElementById('subject-only-toggle');
+  const circleMaskToggle = document.getElementById('circle-mask-toggle');
   const filterAnimalTypeEl = document.getElementById('filter-animal-type');
   const filterBreedEl = document.getElementById('filter-breed');
   const breedQuickFiltersEl = document.getElementById('breed-quick-filters');
@@ -96,6 +105,7 @@ async function runSearchPage() {
   let currentLibrary = [];
   let currentResultBundle = null;
   let currentQueryFeatures = null;
+  let currentDetections = { animals: [], people: [], raw: [] };
   let geoState = { lat: null, lng: null };
   let dragState = { active: false, startX: 0, startY: 0 };
   let currentReportTimestamp = '';
@@ -135,6 +145,34 @@ async function runSearchPage() {
   function updateRadiusNote() {
     if (!radiusNoteEl || !radiusInput) return;
     radiusNoteEl.textContent = `רדיוס החיפוש כרגע מוגדר ל-${radiusInput.value} ק"מ. בגרסת שרת+מפה הוא יוכל לשמש גם לציור מעגל Leaflet סביב הדיווח.`;
+  }
+  function updateDetectionStatus(message, tone = 'default') {
+    if (!detectionStatusEl) return;
+    detectionStatusEl.textContent = message;
+    detectionStatusEl.classList.remove('success', 'warn');
+    if (tone === 'success') detectionStatusEl.classList.add('success');
+    if (tone === 'warn') detectionStatusEl.classList.add('warn');
+  }
+
+  async function runSmartAnimalScan(source, options = {}) {
+    updateDetectionStatus('מנסה לזהות את החיה אוטומטית…');
+    const detections = await detectSubjects(source, { minScore: 0.28 });
+    currentDetections = detections;
+    const bestAnimal = pickBestAnimalDetection(detections);
+    if (bestAnimal?.rect) {
+      setSelection(bestAnimal.rect, `✅ זוהתה חיה מסוג ${bestAnimal.class === 'dog' ? 'כלב' : bestAnimal.class === 'cat' ? 'חתול' : bestAnimal.class}. האזור עודכן אוטומטית.`);
+      const peopleCount = detections.people?.length || 0;
+      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יתעלמו מהחיפוש` : ''}.`, 'success');
+      selectionHintEl.textContent = 'הסריקה החכמה בחרה אזור סביב החיה. אפשר עדיין לגרור ידנית אם צריך לתקן.';
+      return true;
+    }
+    if ((detections.people?.length || 0) && !(detections.animals?.length || 0)) {
+      updateDetectionStatus('❌ זוהה אדם אבל לא זוהתה חיה. נסי תמונה שבה החיה גדולה וברורה יותר, או סמני ידנית את החיה.', 'warn');
+      selectionHintEl.textContent = 'לא נמצאה חיה אוטומטית. אפשר עדיין לגרור ידנית אזור סביב החיה ולחפש.';
+      return false;
+    }
+    updateDetectionStatus('❌ לא זוהתה חיה אוטומטית. אפשר לגרור ידנית את אזור החיה ולהמשיך.', 'warn');
+    return false;
   }
 
   function openVerificationModal(match) {
@@ -278,10 +316,13 @@ async function runSearchPage() {
       return;
     }
     const rect = currentSelection || fullImageRect(currentPreviewImage);
-    cropImg.src = cropRectToDataUrl(currentPreviewImage, rect, 320);
+    const maskShape = circleMaskToggle?.checked ? 'circle' : 'rect';
+    cropImg.src = cropRectToDataUrlMasked(currentPreviewImage, rect, 320, maskShape);
     cropImg.classList.remove('hidden');
-    const colorProfile = extractColorProfile(cropRectToCanvas(currentPreviewImage, rect));
-    cropMetaEl.innerHTML = `האזור שנבחר: ${Math.round(rect.width)}×${Math.round(rect.height)} פיקסלים · צבע דומיננטי משוער: <span class="color-chip"><span class="swatch" style="background:${colorProfile.avgHex};"></span>${escapeHtml(colorProfile.colorName)}</span>`;
+    const previewCanvas = cropRectToCanvas(currentPreviewImage, rect);
+    const featureCanvas = circleMaskToggle?.checked ? applyCircleMask(previewCanvas) : previewCanvas;
+    const colorProfile = extractColorProfile(featureCanvas);
+    cropMetaEl.innerHTML = `האזור שנבחר: ${Math.round(rect.width)}×${Math.round(rect.height)} פיקסלים · צבע דומיננטי משוער: <span class="color-chip"><span class="swatch" style="background:${colorProfile.avgHex};"></span>${escapeHtml(colorProfile.colorName)}</span>${circleMaskToggle?.checked ? ' · מסכה עגולה פעילה' : ''}`;
   }
 
   function setSelection(rect, message = '') {
@@ -391,7 +432,8 @@ async function runSearchPage() {
     setSearchButtonsBusy(true, 'מנתח תמונה…');
     setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
     setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
-    const queryCanvas = cropRectToCanvas(currentPreviewImage, currentSelection);
+    const queryCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
+    const queryCanvas = circleMaskToggle?.checked ? applyCircleMask(queryCanvasRaw) : queryCanvasRaw;
     setSearchProgress(62, 'מפיק מאפיינים ויזואליים…');
     currentQueryFeatures = await extractAnimalFeatures(queryCanvas);
     setSearchProgress(84, 'משווה מול המאגר ומסנן תוצאות…');
@@ -421,6 +463,7 @@ async function runSearchPage() {
   }
 
   await loadModels(statusEl);
+  await loadAnimalDetector(statusEl).catch((error) => { console.warn('animal detector unavailable', error); updateDetectionStatus('הסריקה החכמה לא נטענה עדיין. אפשר להמשיך גם בלי זה.', 'warn'); });
   currentLibrary = await getMergedLibrary();
   libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
   resetSearchProgress();
@@ -437,6 +480,7 @@ async function runSearchPage() {
     updateTopActions(applyResultFilters(currentResultBundle));
   });
   showBoxInput.addEventListener('change', redrawPreview);
+  circleMaskToggle?.addEventListener('change', updateSelectionPreview);
   queryAnimalTypeEl.addEventListener('input', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
   queryAnimalTypeEl.addEventListener('change', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
   breedInput.addEventListener('input', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
@@ -444,8 +488,26 @@ async function runSearchPage() {
     if (fileInput.files?.length) {
       setAutoTimestamp(new Date());
       setStatus(statusEl, 'התמונה נבחרה. זמן הדיווח נשמר אוטומטית.', { tone: 'success' });
+      updateDetectionStatus('מוכן לסריקה חכמה של החיה.');
     }
   });
+  smartScanBtn?.addEventListener('click', async () => {
+    if (!currentPreviewImage) {
+      setStatus(statusEl, 'צריך קודם להעלות תמונה כדי לבצע סריקה חכמה.', { tone: 'warn' });
+      return;
+    }
+    setButtonBusy?.(smartScanBtn, true, 'סורק…');
+    try {
+      const ok = await runSmartAnimalScan(currentPreviewImage);
+      if (!ok) setStatus(statusEl, 'לא נמצאה חיה אוטומטית. אפשר לגרור ידנית את אזור החיה.', { tone: 'warn' });
+    } catch (error) {
+      console.error(error);
+      updateDetectionStatus(`❌ הסריקה החכמה נכשלה: ${error.message}`, 'warn');
+    } finally {
+      setButtonBusy?.(smartScanBtn, false);
+    }
+  });
+
   useWholeBtn.addEventListener('click', () => {
     if (!currentPreviewImage) return;
     setSelection(fullImageRect(currentPreviewImage), 'נבחרה כל התמונה. אם יש גם אנשים בפריים, עדיף לסמן רק את החיה.');
@@ -597,6 +659,14 @@ async function runSearchPage() {
       try {
         currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
         currentSelection = defaultSelectionRect(currentPreviewImage);
+        if (subjectOnlyToggle?.checked) {
+          try {
+            await runSmartAnimalScan(currentPreviewImage);
+          } catch (smartError) {
+            console.warn('Smart scan failed:', smartError);
+            updateDetectionStatus('❌ הסריקה החכמה לא הצליחה. אפשר להמשיך עם סימון ידני.', 'warn');
+          }
+        }
         redrawPreview();
         updateSelectionPreview();
         runSelectedBtn.disabled = false;
@@ -604,8 +674,8 @@ async function runSearchPage() {
         prepNoteEl.textContent = prepared.wasResized
           ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height}. בנוסף, מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור כדי לייצב את ההשוואה.`
           : 'התמונה נשמרה בגודל המקורי להצגה, אך מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור.';
-        selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה.';
-        setStatus(statusEl, 'התמונה נטענה. סמני את אזור החיה או השאירי את ברירת המחדל, ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
+        selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה. אפשר גם ללחוץ על סריקה חכמה של החיה.';
+        setStatus(statusEl, 'התמונה נטענה. אם צריך, תקני את אזור החיה ידנית ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
         await runSearch();
       } finally {
         prepared.cleanup();
@@ -654,7 +724,8 @@ async function runSearchPage() {
       currentSelection = defaultSelectionRect(currentPreviewImage);
     }
     updateSelectionPreview();
-    setStatus(statusEl, 'אזור החיה עודכן. אפשר עכשיו ללחוץ על "חיפוש לפי האזור שסומן".', { tone: 'success' });
+    setStatus(statusEl, 'אזור החיה עודכן ידנית. אפשר עכשיו ללחוץ על "חיפוש לפי האזור שסומן".', { tone: 'success' });
+    updateDetectionStatus('הבחירה הידנית פעילה. אפשר לחפש לפי האזור שסומן.', 'success');
   }
   canvas.addEventListener('pointerup', finishDrag);
   canvas.addEventListener('pointercancel', finishDrag);

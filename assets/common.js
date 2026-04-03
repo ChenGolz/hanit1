@@ -401,6 +401,61 @@ async function loadModels(statusEl) {
   window.__petconnectAnimalModel = model;
   setStatus(statusEl, 'מודל החיפוש של בעלי החיים מוכן.', { tone: 'success' });
 }
+async function loadAnimalDetector(statusEl) {
+  if (!window.cocoSsd) {
+    throw new Error('ספריית הזיהוי coco-ssd לא נטענה. בדקי חיבור אינטרנט או חסימת CDN.');
+  }
+  if (window.__petconnectAnimalDetector) return window.__petconnectAnimalDetector;
+  if (statusEl) setStatus(statusEl, 'טוען מנוע סריקה חכמה של חיות…', { busy: true });
+  const model = await window.cocoSsd.load({ base: 'lite_mobilenet_v2' });
+  window.__petconnectAnimalDetector = model;
+  if (statusEl) setStatus(statusEl, 'מנוע הסריקה החכמה מוכן.', { tone: 'success' });
+  return model;
+}
+
+const ANIMAL_CLASSES = new Set(['dog', 'cat', 'bird', 'horse', 'sheep', 'cow']);
+
+function predictionToRect(source, prediction, paddingRatio = 0.1) {
+  const [x, y, width, height] = Array.isArray(prediction?.bbox) ? prediction.bbox : [0, 0, 0, 0];
+  const padX = width * paddingRatio;
+  const padY = height * paddingRatio;
+  return clampRectToImage(source, {
+    x: x - padX,
+    y: y - padY,
+    width: width + (padX * 2),
+    height: height + (padY * 2),
+  });
+}
+
+async function detectSubjects(source, options = {}) {
+  const { minScore = 0.35 } = options;
+  const model = await loadAnimalDetector();
+  const predictions = await model.detect(source);
+  const mapped = predictions
+    .filter((item) => Number(item.score || 0) >= minScore)
+    .map((item) => ({
+      class: String(item.class || '').toLowerCase(),
+      score: Number(item.score || 0),
+      bbox: item.bbox || [0, 0, 0, 0],
+      rect: predictionToRect(source, item),
+    }))
+    .filter((item) => item.rect);
+  return {
+    raw: mapped,
+    animals: mapped.filter((item) => ANIMAL_CLASSES.has(item.class)),
+    people: mapped.filter((item) => item.class === 'person'),
+  };
+}
+
+function pickBestAnimalDetection(detections) {
+  const animals = Array.isArray(detections?.animals) ? detections.animals : [];
+  if (!animals.length) return null;
+  return [...animals].sort((a, b) => {
+    const areaA = (a.rect?.width || 0) * (a.rect?.height || 0);
+    const areaB = (b.rect?.width || 0) * (b.rect?.height || 0);
+    return areaB - areaA || (b.score - a.score);
+  })[0];
+}
 
 async function blobToImage(blob) {
   const url = URL.createObjectURL(blob);
@@ -656,6 +711,42 @@ function cropRectToDataUrl(img, rect = null, size = 320) {
   const dy = (size - drawH) / 2;
   ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height, dx, dy, drawW, drawH);
   return thumb.toDataURL('image/jpeg', 0.9);
+}
+function applyCircleMask(sourceCanvas, options = {}) {
+  const { background = '#ffffff' } = options;
+  const canvas = document.createElement('canvas');
+  canvas.width = sourceCanvas.width;
+  canvas.height = sourceCanvas.height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = background;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+  const radius = Math.max(10, Math.min(canvas.width, canvas.height) / 2);
+  ctx.beginPath();
+  ctx.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(sourceCanvas, 0, 0);
+  ctx.restore();
+  return canvas;
+}
+
+function cropRectToDataUrlMasked(img, rect = null, size = 320, maskShape = 'rect') {
+  const canvas = cropRectToCanvas(img, rect);
+  const working = maskShape === 'circle' ? applyCircleMask(canvas) : canvas;
+  const thumb = document.createElement('canvas');
+  thumb.width = size;
+  thumb.height = size;
+  const ctx = thumb.getContext('2d');
+  ctx.fillStyle = '#f6f3ff';
+  ctx.fillRect(0, 0, size, size);
+  const scale = Math.min(size / working.width, size / working.height);
+  const drawW = working.width * scale;
+  const drawH = working.height * scale;
+  const dx = (size - drawW) / 2;
+  const dy = (size - drawH) / 2;
+  ctx.drawImage(working, 0, 0, working.width, working.height, dx, dy, drawW, drawH);
+  return thumb.toDataURL('image/jpeg', 0.92);
 }
 
 function formatPct(value) {
@@ -1349,6 +1440,11 @@ if (typeof window !== 'undefined') {
     imagePointFromEvent,
     cropRectToCanvas,
     cropRectToDataUrl,
+    cropRectToDataUrlMasked,
+    applyCircleMask,
+    loadAnimalDetector,
+    detectSubjects,
+    pickBestAnimalDetection,
     formatPct,
     cosineSimilarity,
     histogramSimilarity,

@@ -98,3 +98,18 @@ The verification flow works fully in the browser only for hashes stored in the p
 ## Accuracy note
 
 There is no honest way to claim a current global "accuracy score" from this static bundle without a labeled test set. Measure accuracy only after you benchmark on a held-out dataset of real missing/found animal photos.
+
+
+## Animal-only preprocessing roadmap
+
+The GitHub Pages build now includes **browser-side smart scan** using TensorFlow.js COCO-SSD so the UI can auto-focus on a dog/cat/bird/horse before searching. This is useful for the public demo, but the strongest version belongs in the hosted backend:
+
+- run **YOLOv8** or a similar detector first,
+- crop tightly to the detected animal with ~10% padding,
+- blur any detected **human faces** before saving or exposing an image,
+- optionally run **background removal** (for example with `rembg`) before embedding extraction,
+- then compute the animal embedding on the cleaned crop only.
+
+Included scaffold file: `app/animal_preprocess.py`
+
+That file is not wired into the static GitHub Pages flow. It is the next hosted step so the system can ignore people, clothes and busy backgrounds more consistently.
