@@ -37,6 +37,7 @@ async function runReportFoundPage() {
   const submitBtn = document.getElementById('submit-report-btn');
   const shareBtn = document.getElementById('share-report-btn');
   const whatsappBtn = document.getElementById('whatsapp-report-btn');
+  const posterBtn = document.getElementById('poster-report-btn');
   const clearBtn = document.getElementById('clear-draft-btn');
   const backBtn = document.getElementById('back-to-search-btn');
   const successEl = document.getElementById('report-success');
@@ -254,6 +255,17 @@ async function startVoiceRecording() {
     successEl.querySelector('#success-106-btn')?.setAttribute('href', m106);
   }
 
+
+  async function openPosterWindow(report) {
+    const win = window.open('', '_blank', 'noopener,noreferrer');
+    if (!win) return false;
+    const title = `חיה שנמצאה${report.city ? ' · ' + report.city : ''}`;
+    const subtitle = [report.animalType || '', report.breed || '', report.colorName || report.colors || '', report.locationText || report.city || ''].filter(Boolean).join(' • ');
+    win.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Assistant,Arial,sans-serif;background:#f8f9fc;margin:0;padding:24px;color:#1c1c1e} .poster{max-width:820px;margin:0 auto;background:#fff;border-radius:28px;box-shadow:0 18px 50px rgba(0,0,0,.08);overflow:hidden;border:1px solid rgba(0,0,0,.04)} .hero{padding:22px 24px;background:linear-gradient(135deg,#007AFF,#0051FF);color:#fff} h1{margin:0;font-size:44px} .sub{opacity:.92;margin-top:8px;font-size:18px} .body{padding:24px;display:grid;gap:18px} img{width:100%;max-height:560px;object-fit:contain;background:#eef3fb;border-radius:22px} .meta{display:grid;gap:10px;font-size:18px} .qr{margin-top:10px;padding:14px 16px;border-radius:18px;background:#f8f9fc;border:1px dashed rgba(0,0,0,.12)} .print{position:fixed;left:18px;top:18px;padding:12px 16px;border-radius:14px;border:0;background:#FF9500;color:#fff;font-weight:700;cursor:pointer} @media print {.print{display:none} body{padding:0;background:#fff} .poster{box-shadow:none;border:0;max-width:none;border-radius:0}}</style></head><body><button class="print" onclick="window.print()">הדפסה / שמירה כ-PDF</button><div class="poster"><div class="hero"><h1>נמצאה חיה</h1><div class="sub">${subtitle || 'סרקי את הקוד או צרי קשר דרך הקישור'}</div></div><div class="body"><img src="${report.imageData}" alt="תמונת החיה"><div class="meta"><div><strong>עיר:</strong> ${report.city || 'לא צוין'}</div><div><strong>מיקום:</strong> ${report.locationText || 'לא צוין'}</div><div><strong>זמן:</strong> ${formatReportedAt(report.reportedAt) || ''}</div><div><strong>פרטים:</strong> ${report.notes || 'לא נוספו פרטים נוספים.'}</div></div><div class="qr"><strong>פתיחה מהירה:</strong><br><img alt="QR" style="width:160px;height:160px" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(location.href)}"><div style="font-size:14px;margin-top:8px;opacity:.8">אפשר לסרוק כדי לפתוח את הדף במכשיר אחר.</div></div></div></div></body></html>`);
+    win.document.close();
+    return true;
+  }
+
   fileEl.addEventListener('change', async () => {
     const file = fileEl.files?.[0];
     if (!file) return;
@@ -290,6 +302,7 @@ async function startVoiceRecording() {
       savePendingFoundReportDraft(payload);
       shareBtn.disabled = false;
       whatsappBtn.disabled = false;
+      if (posterBtn) posterBtn.disabled = false;
       await showSuccess(report);
       setStatus(statusEl, 'הדיווח נשמר מקומית בהצלחה.', { tone: 'success' });
       renderLocalReports();
@@ -312,6 +325,13 @@ async function startVoiceRecording() {
     const payload = await buildReportPayload().catch(() => null);
     if (!payload) return;
     window.open(buildFoundReportWhatsAppHref(payload), '_blank', 'noopener');
+  });
+
+
+  posterBtn?.addEventListener('click', async () => {
+    const payload = await buildReportPayload().catch(() => null);
+    if (!payload) return;
+    await openPosterWindow(payload);
   });
 
   voiceStartBtn?.addEventListener('click', async () => { try { await startVoiceRecording(); } catch (error) { console.error(error); setStatus(statusEl, 'לא הצלחנו להתחיל הקלטה.', { tone: 'warn' }); } });
