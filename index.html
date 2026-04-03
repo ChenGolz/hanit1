@@ -4,13 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v14">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v14">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v15">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v15">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/i18n.js?v=20260403v14"></script>
-    <script defer src="./assets/common.js?v=20260403v14"></script>
-    <script defer src="./assets/app.js?v=20260403v14"></script>
+    <script defer src="./assets/i18n.js?v=20260403v15"></script>
+    <script defer src="./assets/common.js?v=20260403v15"></script>
+    <script defer src="./assets/app.js?v=20260403v15"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -23,6 +23,14 @@
     <main class="page">
       <nav class="nav">
         <div><strong>פאטקונקט</strong></div>
+        <div class="nav-actions">
+          <div class="lang-switcher" aria-label="בחירת שפה">
+            <button type="button" data-lang="he" class="active">עב</button>
+            <button type="button" data-lang="ar">عر</button>
+            <button type="button" data-lang="en">EN</button>
+          </div>
+          <a class="button-link secondary small" href="./search.html">התחברות מתנדב</a>
+        </div>
         <div class="links">
           <a class="link" href="./index.html">דף הבית</a>
           <a class="link" href="./search.html">חיפוש חיה</a>
@@ -30,15 +38,23 @@
           <a class="link" href="./report-found.html">דיווח חיה שנמצאה</a>
         </div>
       </nav>
+      <input id="home-camera-input" class="camera-direct-input" type="file" accept="image/*" capture="environment">
 
-      <section class="hero stack">
-        <div class="chip">מוכן ל-GitHub Pages</div>
-        <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.4rem);">חיפוש בעלי חיים באתר סטטי, בלי שרת.</h1>
-        <p class="meta" style="font-size:1.08rem; max-width: 760px;">הגרסה הזאת מיועדת לבעלי חיים בלבד — לא לאנשים. מעלים תמונה, מסמנים את אזור החיה ידנית, והאתר משווה אותה למאגר שפרסמת. אם אין התאמה ויזואלית חזקה, מוצגות חיות בצבעים דומים כדי לעזור לא לפספס.</p>
-        <div class="row wrap compact-row">
-          <a class="button-link" href="./search.html">חיפוש בעלים</a>
-          <a class="button-link success" href="./report-found.html">דיווח כחיה שנמצאה</a>
+      <section class="hero stack high-contrast-card">
+        <div class="chip">עזרה מהירה מהשטח</div>
+        <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.5rem);">לעזור לחיות לחזור הביתה — מהר, ברור, ובשפה שלך.</h1>
+        <p class="meta" style="font-size:1.08rem; max-width: 760px;">העמוד הראשי עכשיו בנוי ל-CTA מהיר: צילום מהמצלמה, חיפוש בעלים, או דיווח מיידי על חיה שנמצאה — עם הפרדה ברורה בין חיה שאבדה לבין חיה שנמצאה.</p>
+        <div class="cta-note"><strong>זמן הוא קריטי.</strong> אם ראית עכשיו חיה משוטטת, אפשר לפתוח את המצלמה מיד, לשמור את זמן ומיקום הדיווח אוטומטית, ולהמשיך למסלול קצר של חיפוש או דיווח.</div>
+        <div class="hero-actions">
+          <button id="hero-found-now" class="emergency" type="button">מצאתי כלב עכשיו!</button>
+          <a class="button-link lost" href="./search.html">איבדתי חיה</a>
+          <a class="button-link found" href="./report-found.html">ראיתי חיה משוטטת</a>
           <a class="button-link secondary" href="./enroll.html">בניית המאגר שלך</a>
+        </div>
+        <div class="hero-subcta small">
+          <span class="badge">חיפוש מיידי עוד לפני שליחת הטופס</span>
+          <span class="badge">מיקום אוטומטי</span>
+          <span class="badge">עובד טוב יותר במובייל</span>
         </div>
         <div class="hero-stats" id="hero-stats">
           <article class="hero-stat-card">
@@ -52,9 +68,7 @@
             <div class="small">מדד מקומי שנותן תחושת התקדמות גם לפני שרת מלא.</div>
           </article>
         </div>
-        <div class="notice warn">
-          GitHub Pages יכול לארח את האתר עצמו, אבל הוא לא מפעיל Backend של FastAPI ולא שומר העלאות ציבוריות משותפות. למאגר חי ומשותף עדיין תצטרכי אחסון אמיתי בהמשך.
-        </div>
+        <div class="notice warn">GitHub Pages יכול לארח את האתר עצמו, אבל הוא לא מפעיל Backend של FastAPI ולא שומר העלאות ציבוריות משותפות. למאגר חי ומשותף עדיין תצטרכי אחסון אמיתי בהמשך.</div>
       </section>
 
       <section class="card stack" style="margin-top:16px;">
@@ -136,6 +150,17 @@
   </div>
 </section>
 
+      <section id="success-stories" class="card stack" style="margin-top:16px;">
+        <div class="space-between">
+          <div>
+            <h2 class="section-title" style="margin:0;">נמצאו לאחרונה / סיפורי תקווה</h2>
+            <div class="small">כרגע זה נשען על דיווחים ותוצאות שנשמרו במכשיר הזה, כדי לתת תחושת קהילה גם לפני חיבור שרת מלא.</div>
+          </div>
+          <span class="chip">Hope Feed</span>
+        </div>
+        <div id="success-stories-list" class="success-feed-grid"></div>
+      </section>
+
       <section id="impact-section" class="card stack" style="margin-top:16px;">
         <div class="space-between">
           <div>
@@ -191,14 +216,52 @@
         <div class="small">אפשר לפרסם את הריפו הזה ישירות מתוך תיקיית השורש ב-GitHub Pages.</div>
       </section>
 
+      <div class="fab-wrap">
+        <div id="home-fab-sheet" class="fab-sheet hidden">
+          <button id="fab-open-camera" class="emergency" type="button">מצאתי חיה עכשיו</button>
+          <a class="button-link lost" href="./search.html">איבדתי חיה</a>
+          <a class="button-link found" href="./report-found.html">דיווח חיה שנמצאה</a>
+        </div>
+        <button id="home-fab-toggle" class="fab-main" type="button" aria-label="פעולות מהירות">+</button>
+      </div>
+
       <div class="footer">תבנית אתר סטטי בעברית לחיפוש בעלי חיים ב-GitHub Pages.</div>
     </main>
   
     <script>
   window.addEventListener('DOMContentLoaded', () => {
+    const STORAGE_KEY = 'petconnect-home-pending-capture-v1';
     window.initLang?.('he');
     window.applyTranslations?.();
     window.registerServiceWorker?.();
+    const currentLang = document.documentElement.lang?.slice(0,2) || 'he';
+    document.querySelectorAll('[data-lang]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lang === currentLang);
+      button.addEventListener('click', () => {
+        try { localStorage.setItem('petconnect-ui-lang-v1', button.dataset.lang || 'he'); } catch (error) {}
+        document.documentElement.lang = button.dataset.lang || 'he';
+        document.documentElement.dir = (button.dataset.lang === 'ar' || button.dataset.lang === 'he') ? 'rtl' : 'ltr';
+        document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
+        window.applyTranslations?.();
+      });
+    });
+    const cameraInput = document.getElementById('home-camera-input');
+    const openCamera = () => cameraInput?.click();
+    document.getElementById('hero-found-now')?.addEventListener('click', openCamera);
+    document.getElementById('fab-open-camera')?.addEventListener('click', openCamera);
+    cameraInput?.addEventListener('change', () => {
+      const file = cameraInput.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try { sessionStorage.setItem(STORAGE_KEY, String(reader.result || '')); } catch (error) {}
+        window.location.href = './search.html';
+      };
+      reader.readAsDataURL(file);
+    });
+    const fabToggle = document.getElementById('home-fab-toggle');
+    const fabSheet = document.getElementById('home-fab-sheet');
+    fabToggle?.addEventListener('click', () => fabSheet?.classList.toggle('hidden'));
 
     const stats = window.loadImpactStats?.() || { searches: 0, strongMatches: 0, librariesExported: 0, localAnimals: 0 };
     document.getElementById('impact-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
@@ -254,6 +317,36 @@ document.getElementById('nearby-context-btn')?.addEventListener('click', () => {
     if (nearbyText) nearbyText.textContent = 'לא הצלחנו לגשת למיקום. אפשר עדיין לבדוק חיפוש או לפרסם דיווח.';
   }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 180000 });
 });
+
+    const storiesHost = document.getElementById('success-stories-list');
+    if (storiesHost) {
+      const localReports = (window.loadFoundReports?.() || []).slice(0, 4);
+      const recentMatches = (window.loadLastMatchGallery?.()?.matches || []).slice(0, 2);
+      const storyCards = [];
+      localReports.forEach((report) => {
+        storyCards.push(`
+          <article class="story-card">
+            ${report.imageData ? `<img class="story-thumb blur-up" src="${report.imageData}" alt="${window.escapeHtml?.(report.animalType || 'חיה') || 'חיה'}">` : ''}
+            <div class="body">
+              <strong>${window.escapeHtml?.(report.animalType || 'חיה שנמצאה') || 'חיה שנמצאה'}</strong>
+              <div class="small">${window.escapeHtml?.(report.locationText || report.city || 'דיווח מקומי שנשמר במכשיר') || ''}</div>
+              <div class="row">${report.breed ? `<span class="badge">${window.escapeHtml?.(report.breed) || report.breed}</span>` : ''}${report.colors ? `<span class="badge">${window.escapeHtml?.(report.colors) || report.colors}</span>` : ''}</div>
+            </div>
+          </article>`);
+      });
+      recentMatches.forEach((match) => {
+        storyCards.push(`
+          <article class="story-card">
+            ${match.thumb ? `<img class="story-thumb blur-up" src="${match.thumb}" alt="${window.escapeHtml?.(match.label || 'התאמה') || 'התאמה'}">` : ''}
+            <div class="body">
+              <strong>${window.escapeHtml?.(match.label || 'התאמה אחרונה') || 'התאמה אחרונה'}</strong>
+              <div class="small">${window.escapeHtml?.(match.city || match.locationText || 'תוצאה שנשמרה מהחיפוש האחרון') || ''}</div>
+              <div class="row"><span class="score-pill ${Number(match.score||0) >= 0.9 ? 'high' : Number(match.score||0) >= 0.6 ? 'medium' : 'low'}">${Math.round(Number(match.score||0) * 100)}%</span></div>
+            </div>
+          </article>`);
+      });
+      storiesHost.innerHTML = storyCards.length ? storyCards.join('') : '<div class="empty">כאן יופיעו סיפורי תקווה, דיווחים אחרונים והתאמות חדשות מהמכשיר הזה.</div>';
+    }
 
     const badgeHost = document.getElementById('impact-badges');
     if (badgeHost) {

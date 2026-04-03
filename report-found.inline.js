@@ -17,6 +17,7 @@ async function runReportFoundPage() {
   await waitForReportHelpers();
   window.initLang?.('he');
   window.applyTranslations?.();
+  window.mountLanguageSwitcher?.();
   window.registerServiceWorker?.();
 
   const statusEl = document.getElementById('report-status');
@@ -25,6 +26,7 @@ async function runReportFoundPage() {
   const fileEl = document.getElementById('report-image-file');
   const animalTypeEl = document.getElementById('report-animal-type');
   const breedEl = document.getElementById('report-breed');
+  const breedChipEl = document.getElementById('report-breed-chips');
   const colorEl = document.getElementById('report-color');
   const sizeEl = document.getElementById('report-size');
   const cityEl = document.getElementById('report-city');
@@ -42,12 +44,43 @@ async function runReportFoundPage() {
   const voiceStartBtn = document.getElementById('voice-start-btn');
   const voiceStopBtn = document.getElementById('voice-stop-btn');
   const voiceClearBtn = document.getElementById('voice-clear-btn');
+  const step1El = document.getElementById('report-step-1');
+  const step2El = document.getElementById('report-step-2');
+  const step3El = document.getElementById('report-step-3');
   const voiceStatusEl = document.getElementById('voice-status');
   const voiceAudioEl = document.getElementById('voice-audio');
 
   [animalTypeEl, breedEl, colorEl, cityEl].forEach(clearValidityOnInput);
   attachCityAutocomplete?.(cityEl);
   attachBreedAutocomplete?.(breedEl, animalTypeEl);
+
+  function renderBreedChips(type = '', preferredBreed = '') {
+    if (!breedChipEl) return;
+    const breeds = getBreedsForType?.(type) || [];
+    if (!breeds.length) {
+      breedChipEl.innerHTML = '<div class="small">אפשר להשאיר את שדה הגזע פתוח או לבחור אחת מההצעות אחרי שהתמונה נטענה.</div>';
+      return;
+    }
+    const icons = { 'לברדור':'🦮', 'גולדן רטריבר':'🐕', 'רועה גרמני':'🐕‍🦺', 'האסקי סיבירי':'🐺', 'פומרניאן':'🐶', 'שיצו':'🐶', 'בוקסר':'🐕', 'כנעני':'🐕', 'מלינואה':'🐕‍🦺', 'יורקשייר טרייר':'🐾', 'אירופאי קצר-שיער':'🐈', 'חתול רחוב':'🐈', 'פרסי':'😺', 'סיאמי':'🐱' };
+    breedChipEl.innerHTML = breeds.map((breed) => `<button class="chip-btn ${breed === preferredBreed ? 'active' : ''}" type="button" data-breed="${escapeHtml(breed)}">${icons[breed] || '🐾'} ${escapeHtml(breed)}</button>`).join('');
+    breedChipEl.querySelectorAll('[data-breed]').forEach((button) => {
+      button.addEventListener('click', () => {
+        breedEl.value = button.dataset.breed || '';
+        renderBreedChips(animalTypeEl.value, breedEl.value.trim());
+        updateFormProgress();
+      });
+    });
+  }
+
+  function updateFormProgress() {
+    const hasImage = Boolean(currentImageData);
+    const hasCore = Boolean((animalTypeEl.value || '').trim() || (breedEl.value || '').trim() || (colorEl.value || '').trim());
+    const hasSubmitReady = hasImage && (Boolean((cityEl.value || '').trim()) || Boolean((locationEl.value || '').trim()) || Number.isFinite(currentLat));
+    [step1El, step2El, step3El].forEach((el) => el?.classList.remove('active', 'done'));
+    if (step1El) step1El.classList.add(hasImage ? 'done' : 'active');
+    if (step2El) step2El.classList.add(hasCore ? 'done' : hasImage ? 'active' : '');
+    if (step3El) step3El.classList.add(hasSubmitReady ? 'active' : '');
+  }
 
   let draft = loadPendingFoundReportDraft() || null;
   let currentImageData = draft?.imageData || '';
@@ -72,6 +105,7 @@ async function runReportFoundPage() {
       imgEl.classList.add('hidden');
       imgEmptyEl.classList.remove('hidden');
     }
+    updateFormProgress();
   }
 
 
@@ -83,6 +117,7 @@ function setAudioData(dataUrl) {
   }
   if (voiceClearBtn) voiceClearBtn.disabled = !currentAudioData;
   if (voiceStatusEl) voiceStatusEl.textContent = currentAudioData ? 'נשמרה הקלטה קולית מקומית.' : 'עדיין אין הקלטה.';
+  updateFormProgress();
 }
 
 async function startVoiceRecording() {
@@ -127,6 +162,8 @@ async function startVoiceRecording() {
     if (!draft) {
       setStatus(statusEl, 'אין כרגע טיוטה שהועברה מהחיפוש. אפשר לבחור תמונה ידנית ולמלא כמה פרטים.', { tone: 'warn' });
       timeEl.value = formatReportedAt(new Date()) || '';
+      renderBreedChips(animalTypeEl.value, breedEl.value.trim());
+      updateFormProgress();
       renderLocalReports();
       return;
     }
@@ -141,6 +178,8 @@ async function startVoiceRecording() {
     detailsEl.value = draft.notes || '';
     setAudioData(draft.audioData || '');
     await maybeAutofillImageTraits(draft.imageData || '');
+    renderBreedChips(animalTypeEl.value, breedEl.value.trim());
+    updateFormProgress();
     if (draft.quickPost) {
       setStatus(statusEl, 'הפרטים מהחיפוש הועברו לכאן. נשאר רק להוסיף פרטים נוספים ולשמור דיווח.', { tone: 'success' });
     } else {
@@ -271,6 +310,16 @@ async function startVoiceRecording() {
   voiceStartBtn?.addEventListener('click', async () => { try { await startVoiceRecording(); } catch (error) { console.error(error); setStatus(statusEl, 'לא הצלחנו להתחיל הקלטה.', { tone: 'warn' }); } });
   voiceStopBtn?.addEventListener('click', () => { try { recorder?.stop(); } catch (error) { console.warn(error); } });
   voiceClearBtn?.addEventListener('click', () => setAudioData(''));
+  [animalTypeEl, breedEl, colorEl, sizeEl, cityEl, locationEl, detailsEl].forEach((el) => {
+    el?.addEventListener('input', () => {
+      if (el === animalTypeEl || el === breedEl) renderBreedChips(animalTypeEl.value, breedEl.value.trim());
+      updateFormProgress();
+    });
+    el?.addEventListener('change', () => {
+      if (el === animalTypeEl || el === breedEl) renderBreedChips(animalTypeEl.value, breedEl.value.trim());
+      updateFormProgress();
+    });
+  });
 
   await hydrateFromDraft();
 }

@@ -1874,6 +1874,24 @@ function registerServiceWorker() {
   });
 }
 
+
+function mountLanguageSwitcher(root = document) {
+  const current = document.documentElement.lang?.slice(0,2).toLowerCase() || 'he';
+  root.querySelectorAll('[data-lang]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.lang === current);
+    if (button.__langBound) return;
+    button.__langBound = true;
+    button.addEventListener('click', () => {
+      const next = button.dataset.lang || 'he';
+      try { localStorage.setItem('petconnect-ui-lang-v1', next); } catch (error) {}
+      document.documentElement.lang = next;
+      document.documentElement.dir = (next === 'ar' || next === 'he') ? 'rtl' : 'ltr';
+      root.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
+      applyTranslations(document);
+    });
+  });
+}
+
 if (typeof window !== 'undefined') {
   Object.assign(window, {
     hashString,
@@ -1966,5 +1984,6 @@ if (typeof window !== 'undefined') {
     buildFoundReportWhatsAppHref,
     estimateAnimalSizeLabel,
     renderFoundReportCards,
+    mountLanguageSwitcher,
   });
 }

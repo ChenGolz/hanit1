@@ -4,22 +4,29 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>חיפוש חיה לפי תמונה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v14">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v14">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v15">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v15">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-    <script defer src="./assets/i18n.js?v=20260403v14"></script>
-    <script defer src="./assets/common.js?v=20260403v14"></script>
-    <script defer src="./assets/app.js?v=20260403v14"></script>
-    <script defer src="./search.inline.js?v=20260403v14"></script>
+    <script defer src="./assets/i18n.js?v=20260403v15"></script>
+    <script defer src="./assets/common.js?v=20260403v15"></script>
+    <script defer src="./assets/app.js?v=20260403v15"></script>
+    <script defer src="./search.inline.js?v=20260403v15"></script>
   </head>
   <body>
     <main class="page">
       <nav class="nav">
         <div><strong>פאטקונקט</strong></div>
+        <div class="nav-actions">
+          <div class="lang-switcher" aria-label="בחירת שפה">
+            <button type="button" data-lang="he" class="active">עב</button>
+            <button type="button" data-lang="ar">عر</button>
+            <button type="button" data-lang="en">EN</button>
+          </div>
+        </div>
         <div class="links">
           <a class="link" href="./index.html">דף הבית</a>
           <a class="link" href="./search.html">חיפוש חיה</a>
@@ -35,7 +42,10 @@
         <div id="status" class="notice">טוען…</div>
         <form id="search-form" class="stack" novalidate>
           <div class="field-grid">
-            <input id="query-file" type="file" accept="image/*" required aria-label="בחירת תמונת חיה">
+            <div class="stack" style="gap:8px;">
+              <input id="query-file" type="file" accept="image/*" capture="environment" required aria-label="בחירת תמונת חיה">
+              <div class="tip-bubble small"><strong>טיפ לצילום:</strong> נסי לצלם מגובה החיה, באור יום, וכמה שפחות רקע מסביב — זה משפר גם את החיפוש המיידי וגם את הדיווח.</div>
+            </div>
             <div class="stack" style="gap:8px;">
               <div class="inline-meter">
                 <label for="min-score">סף התאמה מינימלי</label>
@@ -75,8 +85,8 @@
           </div>
           <div id="breed-suggestion-chips" class="suggestion-chips"></div>
           <div class="row wrap compact-row">
-            <button id="search-btn" type="submit">חיפוש בעלים</button>
-            <button id="report-direct-btn" class="secondary" type="button">דיווח כחיה שנמצאה</button>
+            <button id="search-btn" class="lost" type="submit">חיפוש בעלים</button>
+            <button id="report-direct-btn" class="found" type="button">דיווח כחיה שנמצאה</button>
           </div>
         </form>
         <div id="library-stats" class="small"></div>
@@ -177,6 +187,19 @@
         <div id="report-cta-container" class="hidden"></div>
         <div id="match-results-container" class="empty" aria-live="polite">התוצאות שלך יופיעו כאן.</div>
       </section>
+
+      <div id="sticky-report-bar" class="sticky-report-bar hidden">
+        <div class="row wrap compact-row">
+          <div class="stack" style="gap:6px;">
+            <strong>עדיין בלי התאמה חזקה?</strong>
+            <div class="small">אפשר להפוך את התמונה שכבר נטענה לדיווח על חיה שנמצאה — בלי להעלות מחדש.</div>
+          </div>
+          <div class="row wrap compact-row">
+            <button id="sticky-report-btn" class="found small" type="button">פרסמי כחיה שנמצאה</button>
+            <button id="sticky-quick-btn" class="secondary small" type="button">דיווח מהיר מהמיקום הזה</button>
+          </div>
+        </div>
+      </div>
           <dialog id="verification-modal" class="verify-modal">
         <form method="dialog" class="verify-modal-card stack">
           <div class="space-between">

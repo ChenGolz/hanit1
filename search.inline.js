@@ -44,6 +44,7 @@ async function runSearchPage() {
   await waitForCommonHelpers();
   window.initLang?.('he');
   window.applyTranslations?.();
+  window.mountLanguageSwitcher?.();
   window.registerServiceWorker?.();
   window.flushQueuedBackgroundReports?.().catch(() => {});
 
@@ -97,6 +98,9 @@ async function runSearchPage() {
   const reportTopBtn = document.getElementById('report-top-btn');
   const reportDirectBtn = document.getElementById('report-direct-btn');
   const reportCtaContainer = document.getElementById('report-cta-container');
+  const stickyReportBar = document.getElementById('sticky-report-bar');
+  const stickyReportBtn = document.getElementById('sticky-report-btn');
+  const stickyQuickBtn = document.getElementById('sticky-quick-btn');
   const privacyNoteEl = document.getElementById('privacy-note');
   const smartHintEl = document.getElementById('smart-hint');
   const radiusInput = document.getElementById('search-radius');
@@ -127,6 +131,88 @@ async function runSearchPage() {
   let dragState = { active: false, startX: 0, startY: 0 };
   let currentReportTimestamp = '';
   let currentVerificationMatch = null;
+  const PENDING_CAPTURE_KEY = 'petconnect-home-pending-capture-v1';
+
+  async function processInputImageBlob(fileOrBlob, sourceLabel = 'מכין את התמונה לסריקה…') {
+    if (!fileOrBlob) return false;
+    if (!currentReportTimestamp) setAutoTimestamp(new Date());
+    setSearchButtonsBusy(true, 'מכין תמונה…');
+    resultsEl.innerHTML = '';
+    summaryEl.innerHTML = '';
+    summaryEl.classList.add('hidden');
+    currentResultBundle = null;
+    updateTopActions(null);
+    renderReportCta(null);
+    clearLastMatchGallery();
+    resetSearchProgress();
+
+    try {
+      currentPreviewImage = null;
+      currentSelection = null;
+      currentQueryFeatures = null;
+      redrawPreview();
+      cropImg.classList.add('hidden');
+      cropMetaEl.textContent = 'עדיין לא נבחר אזור חיה.';
+      prepNoteEl.textContent = '';
+
+      setSearchProgress(8, 'מכין את התמונה לסריקה…');
+      setStatus(statusEl, sourceLabel, { busy: true });
+      const connectionBase = getConnectionProfile?.() || {};
+      const connectionProfile = { ...connectionBase, weak: Boolean(lowDataToggle?.checked) || Boolean(connectionBase.weak) };
+      const prepared = await shrinkImage(fileOrBlob, {
+        connectionProfile,
+        maxWidth: connectionProfile.weak ? 224 : 1200,
+        maxHeight: connectionProfile.weak ? 224 : 1200,
+        quality: connectionProfile.weak ? 0.72 : 0.82,
+      });
+      try {
+        currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
+        currentSelection = defaultSelectionRect(currentPreviewImage);
+        if (subjectOnlyToggle?.checked) {
+          try {
+            await runSmartAnimalScan(currentPreviewImage);
+          } catch (smartError) {
+            console.warn('Smart scan failed:', smartError);
+            updateDetectionStatus('❌ הסריקה החכמה לא הצליחה. אפשר להמשיך עם סימון ידני.', 'warn');
+          }
+        }
+        redrawPreview();
+        updateSelectionPreview();
+        runSelectedBtn.disabled = false;
+        setSearchProgress(24, 'התמונה נדחסה ומוכנה להצגה.');
+        prepNoteEl.textContent = prepared.wasResized
+          ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height}. בנוסף, מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור כדי לייצב את ההשוואה.${(lowDataToggle?.checked || connectionProfile.weak) ? ' כרגע מופעל מצב חסכוני כדי לעבוד גם עם קליטה חלשה.' : ''}`
+          : `התמונה נשמרה בגודל המקורי להצגה, אך מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור.${(lowDataToggle?.checked || connectionProfile.weak) ? ' כרגע מופעל מצב חסכוני כדי לעבוד גם עם קליטה חלשה.' : ''}`;
+        selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה. אפשר גם ללחוץ על סריקה חכמה של החיה.';
+        setStatus(statusEl, 'התמונה נטענה. אם צריך, תקני את אזור החיה ידנית ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
+        await runSearch();
+      } finally {
+        prepared.cleanup();
+      }
+      return true;
+    } catch (error) {
+      console.error(error);
+      setSearchProgress(0, 'הסריקה נעצרה.');
+      setStatus(statusEl, `החיפוש נכשל: ${error.message}`, { tone: 'warn' });
+      return false;
+    } finally {
+      setButtonBusy?.(loadBtn, false);
+      setButtonBusy?.(runSelectedBtn, !currentPreviewImage, 'חיפוש לפי האזור שסומן');
+      if (!currentPreviewImage) runSelectedBtn.disabled = true;
+    }
+  }
+
+  async function hydratePendingCaptureFromHome() {
+    try {
+      const pending = sessionStorage.getItem(PENDING_CAPTURE_KEY);
+      if (!pending) return;
+      sessionStorage.removeItem(PENDING_CAPTURE_KEY);
+      const blob = await (await fetch(pending)).blob();
+      await processInputImageBlob(blob, 'התמונה מהמצלמה הועברה אוטומטית מדף הבית.');
+    } catch (error) {
+      console.warn('Pending home capture failed:', error);
+    }
+  }
 
   function setSearchProgress(percent = 0, label = '') {
     const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
@@ -546,6 +632,7 @@ function renderReportCta(bundle) {
     </div>`;
   reportCtaContainer.querySelector('#cta-report-btn')?.addEventListener('click', () => goToFoundReport());
   reportCtaContainer.querySelector('#cta-quick-post-btn')?.addEventListener('click', () => goToFoundReport({ quickPost: true }));
+  if (stickyReportBar) stickyReportBar.classList.toggle('hidden', !(showProminent || state.band === 'empty'));
 }
 
   function rerenderResults() {
@@ -838,68 +925,7 @@ function renderReportCta(bundle) {
       return;
     }
     const file = fileInput.files?.[0];
-    if (!currentReportTimestamp) setAutoTimestamp(new Date());
-    setSearchButtonsBusy(true, 'מכין תמונה…');
-    resultsEl.innerHTML = '';
-    summaryEl.innerHTML = '';
-    summaryEl.classList.add('hidden');
-    currentResultBundle = null;
-    updateTopActions(null);
-  renderReportCta(null);
-    clearLastMatchGallery();
-    resetSearchProgress();
-
-    try {
-      currentPreviewImage = null;
-      currentSelection = null;
-      currentQueryFeatures = null;
-      redrawPreview();
-      cropImg.classList.add('hidden');
-      cropMetaEl.textContent = 'עדיין לא נבחר אזור חיה.';
-      prepNoteEl.textContent = '';
-
-      setSearchProgress(8, 'מכין את התמונה לסריקה…');
-      setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
-      const connectionProfile = { ...(getConnectionProfile?.() || {}), weak: Boolean(lowDataToggle?.checked) || Boolean(getConnectionProfile?.().weak) };
-      const prepared = await shrinkImage(file, {
-        connectionProfile,
-        maxWidth: connectionProfile.weak ? 224 : 1200,
-        maxHeight: connectionProfile.weak ? 224 : 1200,
-        quality: connectionProfile.weak ? 0.72 : 0.82,
-      });
-      try {
-        currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
-        currentSelection = defaultSelectionRect(currentPreviewImage);
-        if (subjectOnlyToggle?.checked) {
-          try {
-            await runSmartAnimalScan(currentPreviewImage);
-          } catch (smartError) {
-            console.warn('Smart scan failed:', smartError);
-            updateDetectionStatus('❌ הסריקה החכמה לא הצליחה. אפשר להמשיך עם סימון ידני.', 'warn');
-          }
-        }
-        redrawPreview();
-        updateSelectionPreview();
-        runSelectedBtn.disabled = false;
-        setSearchProgress(24, 'התמונה נדחסה ומוכנה להצגה.');
-        prepNoteEl.textContent = prepared.wasResized
-          ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height}. בנוסף, מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור כדי לייצב את ההשוואה.${(lowDataToggle?.checked || connectionProfile.weak) ? ' כרגע מופעל מצב חסכוני כדי לעבוד גם עם קליטה חלשה.' : ''}`
-          : `התמונה נשמרה בגודל המקורי להצגה, אך מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור.${(lowDataToggle?.checked || connectionProfile.weak) ? ' כרגע מופעל מצב חסכוני כדי לעבוד גם עם קליטה חלשה.' : ''}`;
-        selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה. אפשר גם ללחוץ על סריקה חכמה של החיה.';
-        setStatus(statusEl, 'התמונה נטענה. אם צריך, תקני את אזור החיה ידנית ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
-        await runSearch();
-      } finally {
-        prepared.cleanup();
-      }
-    } catch (error) {
-      console.error(error);
-      setSearchProgress(0, 'הסריקה נעצרה.');
-      setStatus(statusEl, `החיפוש נכשל: ${error.message}`, { tone: 'warn' });
-    } finally {
-      setButtonBusy?.(loadBtn, false);
-      setButtonBusy?.(runSelectedBtn, !currentPreviewImage, 'חיפוש לפי האזור שסומן');
-      if (!currentPreviewImage) runSelectedBtn.disabled = true;
-    }
+    await processInputImageBlob(file, 'מכין את התמונה לסריקה…');
   });
 
   runSelectedBtn.addEventListener('click', async () => {
@@ -938,6 +964,10 @@ function renderReportCta(bundle) {
     setStatus(statusEl, 'אזור החיה עודכן ידנית. אפשר עכשיו ללחוץ על "חיפוש לפי האזור שסומן".', { tone: 'success' });
     updateDetectionStatus('הבחירה הידנית פעילה. אפשר לחפש לפי האזור שסומן.', 'success');
   }
+  stickyReportBtn?.addEventListener('click', () => goToFoundReport());
+  stickyQuickBtn?.addEventListener('click', () => goToFoundReport({ quickPost: true }));
+  hydratePendingCaptureFromHome().catch(() => {});
+
   canvas.addEventListener('pointerup', finishDrag);
   canvas.addEventListener('pointercancel', finishDrag);
 }
