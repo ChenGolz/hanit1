@@ -2,6 +2,9 @@ const STORAGE_KEY = 'petconnect-ghpages-animal-library-v2';
 const SEARCH_IMPORT_KEY = 'petconnect-ghpages-animal-imported-library-v2';
 const LAST_MATCH_GALLERY_KEY = 'petconnect-ghpages-last-matches-v1';
 const IMPACT_STATS_KEY = 'petconnect-ghpages-impact-stats-v1';
+const FOUND_REPORTS_KEY = 'petconnect-ghpages-found-reports-v1';
+const PENDING_FOUND_REPORT_KEY = 'petconnect-ghpages-pending-found-report-v1';
+const STATS_SUMMARY_CACHE_KEY = 'petconnect-ghpages-stats-summary-cache-v1';
 const DEFAULT_BREEDS = Object.freeze({
   'כלב': ['לברדור', 'גולדן רטריבר', 'רועה גרמני', 'האסקי סיבירי', 'פומרניאן', 'שיצו', 'בוקסר', 'כנעני', 'מלינואה', 'יורקשייר טרייר'],
   'חתול': ['אירופאי קצר-שיער', 'חתול רחוב', 'פרסי', 'בריטי קצר-שיער', 'סיאמי', 'מיין קון', 'רגדול'],
