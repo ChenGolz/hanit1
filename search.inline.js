@@ -133,6 +133,39 @@ async function runSearchPage() {
   let currentVerificationMatch = null;
   const PENDING_CAPTURE_KEY = 'petconnect-home-pending-capture-v1';
 
+
+  function animateReportTransition() {
+    const source = cropImg && !cropImg.classList.contains('hidden') ? cropImg : canvas;
+    if (!source || typeof document === 'undefined') return Promise.resolve();
+    let src = '';
+    if (source.tagName === 'IMG' && source.src) src = source.src;
+    if (!src && currentPreviewImage && currentSelection) {
+      try { src = cropRectToDataUrlMasked(currentPreviewImage, currentSelection, 420, circleMaskToggle?.checked ? 'circle' : 'rect'); } catch (error) { console.warn(error); }
+    }
+    if (!src) return Promise.resolve();
+    const rect = source.getBoundingClientRect();
+    const ghost = document.createElement('img');
+    ghost.src = src;
+    ghost.className = 'flying-report-image';
+    ghost.style.top = `${rect.top}px`;
+    ghost.style.left = `${rect.left}px`;
+    ghost.style.width = `${Math.max(88, rect.width)}px`;
+    ghost.style.height = `${Math.max(88, rect.height)}px`;
+    document.body.appendChild(ghost);
+    const targetX = window.innerWidth - 88;
+    const targetY = window.innerHeight - 124;
+    requestAnimationFrame(() => {
+      ghost.style.transform = `translate(${targetX - rect.left}px, ${targetY - rect.top}px) scale(0.2) rotate(-8deg)`;
+      ghost.style.opacity = '0';
+    });
+    return new Promise((resolve) => {
+      window.setTimeout(() => {
+        ghost.remove();
+        resolve();
+      }, 280);
+    });
+  }
+
   async function processInputImageBlob(fileOrBlob, sourceLabel = 'מכין את התמונה לסריקה…') {
     if (!fileOrBlob) return false;
     if (!currentReportTimestamp) setAutoTimestamp(new Date());
@@ -611,6 +644,8 @@ async function goToFoundReport(overrides = {}) {
     return;
   }
   buildCurrentReportDraft(overrides);
+  try { sessionStorage.setItem('petconnect-report-arrival-v1', '1'); } catch (error) { console.warn(error); }
+  await animateReportTransition();
   window.location.href = './report-found.html';
 }
 

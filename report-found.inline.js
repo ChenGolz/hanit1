@@ -100,6 +100,13 @@ async function runReportFoundPage() {
       imgEl.src = currentImageData;
       imgEl.classList.remove('hidden');
       imgEmptyEl.classList.add('hidden');
+      try {
+        if (sessionStorage.getItem('petconnect-report-arrival-v1') === '1') {
+          sessionStorage.removeItem('petconnect-report-arrival-v1');
+          imgEl.classList.remove('arrival-pop');
+          requestAnimationFrame(() => imgEl.classList.add('arrival-pop'));
+        }
+      } catch (error) { console.warn(error); }
     } else {
       imgEl.src = '';
       imgEl.classList.add('hidden');
