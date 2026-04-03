@@ -92,3 +92,16 @@ def rank_candidate_vectors(query_vector: Sequence[float], candidates: Iterable[t
 # 2. Resize each crop to a stable square input (for example 512x512).
 # 3. Extract one normalized feature vector per image with MobileNetV3/ResNet.
 # 4. Store vectors in PostgreSQL with pgvector + HNSW for fast nearest-neighbor search.
+
+
+def composite_match_score(*, vector_score: float, color_score: float, breed_score: float = 0.0, has_breed: bool = False) -> dict[str, float]:
+    vector_weight = 0.72 if has_breed else 0.80
+    color_weight = 0.18 if has_breed else 0.20
+    breed_weight = 0.10 if has_breed else 0.0
+    score = (vector_score * vector_weight) + (color_score * color_weight) + (breed_score * breed_weight)
+    return {
+        'score': float(np.clip(score, 0.0, 1.0)),
+        'vector_weight': vector_weight,
+        'color_weight': color_weight,
+        'breed_weight': breed_weight,
+    }

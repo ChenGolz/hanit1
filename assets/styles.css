@@ -718,3 +718,6 @@ button[aria-busy="true"]::after {
   gap: 16px;
   padding-bottom: 4px;
 }
+
+
+.print-note{font-size:.92rem;color:#9aa4d8;}

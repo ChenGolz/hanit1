@@ -121,3 +121,10 @@ That file is not wired into the static GitHub Pages flow. It is the next hosted 
 - Added community flyer generation as a PNG for sharing in WhatsApp and neighborhood groups.
 - Current GitHub Pages build already combines visual embedding similarity, color histogram similarity, and breed/type boosts into one score. This is not a benchmarked accuracy metric.
 - For a hosted phase, add real push subscriptions, a heatmap layer, a poster/PDF endpoint, and chip-scanner directories by municipality.
+
+
+## v12 additions
+- Frontend smart scan now prefers larger animal detections and penalizes heavy overlap with people.
+- Visual matching now uses a clearer composite score: embedding/structure + fur-color histogram + breed similarity.
+- Added a printable poster flow that opens a print-friendly page and supports saving as PDF from the browser.
+- Marker clustering is still not live in this static build because there is no full Leaflet results map here yet; it remains a hosted-phase task.

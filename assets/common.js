@@ -518,6 +518,30 @@ async function shareCommunityFlyer(payload = {}) {
   return { shared: false, dataUrl };
 }
 
+async function openPrintablePoster(payload = {}) {
+  const dataUrl = await createCommunityFlyerDataUrl(payload);
+  const title = payload?.bestMatch?.label ? `פוסטר: ${payload.bestMatch.label}` : 'פוסטר חיה לאיתור';
+  const details = [
+    payload?.bestMatch?.animalType || '',
+    payload?.bestMatch?.breed || '',
+    payload?.bestMatch?.colors || payload?.bestMatch?.colorName || '',
+    payload?.locationText || '',
+  ].filter(Boolean).join(' · ');
+  const html = `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title><style>body{font-family:Assistant,Heebo,Arial,sans-serif;margin:0;padding:24px;background:#f4f5fb;color:#111}main{max-width:820px;margin:0 auto;background:#fff;border-radius:18px;padding:24px;box-shadow:0 18px 40px rgba(0,0,0,.12)}img{display:block;width:100%;max-width:760px;margin:0 auto 18px;border-radius:16px;border:1px solid #e5e7eb}h1{margin:0 0 8px;font-size:32px}p{margin:0 0 10px;line-height:1.6}.muted{color:#556}.bar{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.btn{border:0;border-radius:999px;padding:12px 18px;background:#6d4aff;color:#fff;font-weight:700;cursor:pointer}.btn.secondary{background:#e8eaf9;color:#1c2450}@media print{body{background:#fff;padding:0}main{box-shadow:none;border-radius:0;padding:0}.bar{display:none}}</style></head><body><main><h1>פוסטר איתור חיה</h1><p class="muted">${escapeHtml(details || 'שיתוף מהיר לקבוצות שכונתיות ולהדפסה')}</p><img src="${dataUrl}" alt="פוסטר"><div class="bar"><button class="btn" onclick="window.print()">הדפסה / שמירה כ-PDF</button><button class="btn secondary" onclick="window.close()">סגירה</button></div></main></body></html>`;
+  const win = window.open('', '_blank', 'noopener');
+  if (!win) {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'petconnect-poster.png';
+    a.click();
+    return false;
+  }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  return true;
+}
+
 async function fetchSummaryStats(endpoint = './api/stats/summary') {
   const impact = loadImpactStats();
   if (/github\.io$/i.test(location.hostname) && (!endpoint || endpoint === './api/stats/summary')) {
@@ -680,15 +704,35 @@ async function detectSubjects(source, options = {}) {
   };
 }
 
+function rectIntersectionArea(left = null, right = null) {
+  if (!left || !right) return 0;
+  const x1 = Math.max(Number(left.x || 0), Number(right.x || 0));
+  const y1 = Math.max(Number(left.y || 0), Number(right.y || 0));
+  const x2 = Math.min(Number(left.x || 0) + Number(left.width || 0), Number(right.x || 0) + Number(right.width || 0));
+  const y2 = Math.min(Number(left.y || 0) + Number(left.height || 0), Number(right.y || 0) + Number(right.height || 0));
+  return Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+}
+
+function rectIoU(left = null, right = null) {
+  const overlap = rectIntersectionArea(left, right);
+  if (!overlap) return 0;
+  const areaLeft = Math.max(1, Number(left.width || 0) * Number(left.height || 0));
+  const areaRight = Math.max(1, Number(right.width || 0) * Number(right.height || 0));
+  return overlap / Math.max(1, areaLeft + areaRight - overlap);
+}
+
 function pickBestAnimalDetection(detections) {
   const animals = Array.isArray(detections?.animals) ? detections.animals : [];
+  const people = Array.isArray(detections?.people) ? detections.people : [];
   if (!animals.length) return null;
   return [...animals].sort((a, b) => {
-    const aTinyPenalty = a.tiny ? 1 : 0;
-    const bTinyPenalty = b.tiny ? 1 : 0;
     const areaA = (a.rect?.width || 0) * (a.rect?.height || 0);
     const areaB = (b.rect?.width || 0) * (b.rect?.height || 0);
-    return aTinyPenalty - bTinyPenalty || areaB - areaA || (b.score - a.score);
+    const personOverlapA = people.reduce((max, person) => Math.max(max, rectIoU(a.rect, person.rect)), 0);
+    const personOverlapB = people.reduce((max, person) => Math.max(max, rectIoU(b.rect, person.rect)), 0);
+    const qualityA = (a.score || 0) + Math.min(0.35, areaA / 120000) - (a.tiny ? 0.45 : 0) - (personOverlapA * 0.18);
+    const qualityB = (b.score || 0) + Math.min(0.35, areaB / 120000) - (b.tiny ? 0.45 : 0) - (personOverlapB * 0.18);
+    return qualityB - qualityA || areaB - areaA || (b.score - a.score);
   })[0];
 }
 
@@ -1234,23 +1278,33 @@ function normalizeEntry(entry) {
 function bestEntryMatch(queryFeatures, entry) {
   const descriptors = entry.descriptors || [];
   const colorHistograms = entry.colorHistograms || entry.color_histograms || entry.colorHistograms || [];
-  let bestVisualScore = 0;
+  let bestEmbeddingScore = 0;
   let bestColorScore = 0;
   for (let i = 0; i < descriptors.length; i += 1) {
-    const visual = cosineSimilarity(queryFeatures.embedding, descriptors[i]);
-    const color = histogramSimilarity(queryFeatures.colorHistogram, colorHistograms[i] || colorHistograms[0] || []);
-    const combined = (visual * 0.78) + (color * 0.22);
-    if (combined > bestVisualScore) {
-      bestVisualScore = combined;
-      bestColorScore = color;
+    const embeddingScore = cosineSimilarity(queryFeatures.embedding, descriptors[i]);
+    const colorScore = histogramSimilarity(queryFeatures.colorHistogram, colorHistograms[i] || colorHistograms[0] || []);
+    if (embeddingScore > bestEmbeddingScore || (Math.abs(embeddingScore - bestEmbeddingScore) < 0.0001 && colorScore > bestColorScore)) {
+      bestEmbeddingScore = embeddingScore;
+      bestColorScore = colorScore;
     }
   }
   if (!descriptors.length) {
     bestColorScore = histogramSimilarity(queryFeatures.colorHistogram, colorHistograms[0] || []);
   }
   return {
-    visualScore: bestVisualScore,
+    embeddingScore: bestEmbeddingScore,
     colorScore: bestColorScore,
+  };
+}
+
+function composeVisualScore({ embeddingScore = 0, colorScore = 0, breedScore = 0, typeBoost = 0, hasBreed = false } = {}) {
+  const vectorWeight = hasBreed ? 0.72 : 0.8;
+  const colorWeight = hasBreed ? 0.18 : 0.2;
+  const breedWeight = hasBreed ? 0.10 : 0.0;
+  const compositeBase = (embeddingScore * vectorWeight) + (colorScore * colorWeight) + (breedScore * breedWeight);
+  return {
+    compositeBase,
+    score: Math.min(0.999, compositeBase + typeBoost),
   };
 }
 
@@ -1263,27 +1317,29 @@ function computeSearchResults(queryFeatures, library, options = {}) {
   const visualMatches = library
     .map((entry) => {
       const match = bestEntryMatch(queryFeatures, entry);
-      let boostedScore = match.visualScore;
       const entryBreed = String(entry.breed || '').trim();
-      const typeBoost = queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType ? 0.06 : 0;
-      let breedBoost = 0;
-      boostedScore += typeBoost;
-      if (normalizedQueryBreed) {
-        const breedSimilarity = fuzzySimilarity(normalizedQueryBreed, entryBreed);
-        if (breedSimilarity >= 0.98) breedBoost = 0.08;
-        else if (breedSimilarity >= 0.8) breedBoost = 0.05;
-        else if (breedSimilarity >= 0.62) breedBoost = 0.025;
-        boostedScore += breedBoost;
-      }
-      boostedScore = Math.min(0.999, boostedScore);
+      const breedScore = normalizedQueryBreed ? fuzzySimilarity(normalizedQueryBreed, entryBreed) : 0;
+      const typeBoost = queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType ? 0.04 : 0;
+      const composed = composeVisualScore({
+        embeddingScore: match.embeddingScore,
+        colorScore: match.colorScore,
+        breedScore,
+        typeBoost,
+        hasBreed: Boolean(normalizedQueryBreed),
+      });
       return {
         ...entry,
-        score: boostedScore,
-        rawScore: match.visualScore,
+        score: composed.score,
+        compositeScore: composed.score,
+        compositeBase: composed.compositeBase,
+        embeddingScore: match.embeddingScore,
+        rawScore: match.embeddingScore,
+        structureScore: match.embeddingScore,
         colorScore: match.colorScore,
+        breedScore,
         typeBoost,
-        breedBoost,
-        confidence: similarityLabel(boostedScore),
+        breedBoost: normalizedQueryBreed ? Math.max(0, composed.score - composed.compositeBase - typeBoost) : 0,
+        confidence: similarityLabel(composed.score),
         matchKind: 'visual',
       };
     })
@@ -1300,23 +1356,17 @@ function computeSearchResults(queryFeatures, library, options = {}) {
       const colorCandidates = entry.colorHistograms?.length ? entry.colorHistograms : [[]];
       let colorScore = Math.max(...colorCandidates.map((histogram) => histogramSimilarity(queryFeatures.colorHistogram, histogram)));
       const entryBreed = String(entry.breed || '').trim();
+      const breedScore = normalizedQueryBreed ? fuzzySimilarity(normalizedQueryBreed, entryBreed) : 0;
       const typeBoost = queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType ? 0.05 : 0;
-      let breedBoost = 0;
-      colorScore += typeBoost;
-      if (normalizedQueryBreed) {
-        const breedSimilarity = fuzzySimilarity(normalizedQueryBreed, entryBreed);
-        if (breedSimilarity >= 0.98) breedBoost = 0.07;
-        else if (breedSimilarity >= 0.8) breedBoost = 0.04;
-        else if (breedSimilarity >= 0.62) breedBoost = 0.02;
-        colorScore += breedBoost;
-      }
-      colorScore = Math.min(0.999, colorScore);
+      colorScore = Math.min(0.999, colorScore + typeBoost + (normalizedQueryBreed ? breedScore * 0.08 : 0));
       return {
         ...entry,
         score: colorScore,
+        compositeScore: colorScore,
         colorScore,
+        breedScore,
         typeBoost,
-        breedBoost,
+        breedBoost: normalizedQueryBreed ? breedScore * 0.08 : 0,
         confidence: similarityLabel(colorScore),
         matchKind: 'color',
       };
@@ -1605,7 +1655,7 @@ function renderMatchCards(matches = [], options = {}) {
     const scoreText = kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
     const reason = kind === 'visual' ? 'התאמה מיידית מהסריקה' : 'תוצאת גיבוי לפי צבעים דומים';
     const breakdown = kind === 'visual'
-      ? `<div class="small muted">מאפייני מבנה ${Math.round(Number(match.rawScore || 0) * 100)}% · צבע ${Math.round(Number(match.colorScore || 0) * 100)}%${match.breedBoost ? ` · גזע +${Math.round(Number(match.breedBoost || 0) * 100)}%` : ''}</div>`
+      ? `<div class="small muted">הטמעה/מבנה ${Math.round(Number(match.embeddingScore || match.rawScore || 0) * 100)}% · צבע פרווה ${Math.round(Number(match.colorScore || 0) * 100)}%${Number(match.breedScore || 0) ? ` · גזע ${Math.round(Number(match.breedScore || 0) * 100)}%` : ''}</div>`
       : '';
     const profileButton = target ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>` : '<span class="badge">אין קישור פרופיל</span>';
     const verifyButton = match.verificationPrompt ? `<button class="secondary small" type="button" data-verify-index="${index}">בדיקת סימן זיהוי</button>` : '';
@@ -1741,5 +1791,6 @@ if (typeof window !== 'undefined') {
     displayMatches,
     renderMatchCards,
     registerServiceWorker,
+    openPrintablePoster,
   });
 }

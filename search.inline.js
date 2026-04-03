@@ -177,7 +177,7 @@ async function runSearchPage() {
       setSelection(bestAnimal.rect, `✅ זוהתה חיה מסוג ${label}.${expandedNote}`);
       const peopleCount = detections.people?.length || 0;
       const tinyNote = bestAnimal.tiny ? ' הזיהוי הראשוני היה קטן, לכן הרחבנו את האזור סביב החיה.' : '';
-      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יתעלמו מהחיפוש` : ''}.${tinyNote}`, 'success');
+      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יישארו מחוץ לזום ככל האפשר` : ''}.${tinyNote}`, 'success');
       selectionHintEl.textContent = bestAnimal.tiny
         ? 'הסריקה החכמה מצאה את החיה אבל הרחיבה את האזור אוטומטית. אפשר עדיין לגרור ידנית אם צריך לכלול יותר מהגוף.'
         : 'הסריקה החכמה בחרה אזור סביב החיה. אפשר עדיין לגרור ידנית אם צריך לתקן.';
@@ -294,6 +294,7 @@ async function runSearchPage() {
     whatsappTopBtn.disabled = disabled;
     communityTopBtn.disabled = disabled;
     if (posterTopBtn) posterTopBtn.disabled = disabled;
+    if (printPosterTopBtn) printPosterTopBtn.disabled = disabled;
     reportTopBtn.classList.toggle('disabled-link', disabled);
     reportTopBtn.href = buildMunicipalReportHref({
       city: cityInput.value,
@@ -397,12 +398,13 @@ async function runSearchPage() {
           <div class="summary-hero-meta">${top.animalType ? `${escapeHtml(top.animalType)} · ` : ''}${top.breed ? `${escapeHtml(top.breed)} · ` : ''}${escapeHtml(top.colors || top.colorName || 'צבע מעורב')}</div>
           <div class="score-pill ${escapeHtml(String(top.confidence || 'medium'))}">${scoreLabel}</div>
           <div class="small">${escapeHtml(text)}</div>
-          <div class="small muted">שילוב ציונים: מאפייני מבנה ${Math.round(Number(top.rawScore || 0) * 100)}% · צבע ${Math.round(Number(top.colorScore || 0) * 100)}%${top.breedBoost ? ` · גזע +${Math.round(Number(top.breedBoost || 0) * 100)}%` : ''}</div>
+          <div class="small muted">שילוב ציונים: הטמעה/מבנה ${Math.round(Number(top.embeddingScore || top.rawScore || 0) * 100)}% · צבע פרווה ${Math.round(Number(top.colorScore || 0) * 100)}%${Number(top.breedScore || 0) ? ` · גזע ${Math.round(Number(top.breedScore || 0) * 100)}%` : ''}</div>
           <div class="small">${reportedAtInput.value ? `דווח אוטומטית ב-${escapeHtml(reportedAtInput.value)}.` : ''} ${locationTextInput.value ? `אזור: ${escapeHtml(locationTextInput.value)}.` : ''}</div>
           <div class="summary-actions">
             <button id="share-inline" class="small" type="button">שיתוף עכשיו</button>
             <button id="whatsapp-inline" class="secondary small" type="button">וואטסאפ</button>
             <button id="poster-inline" class="secondary small" type="button">פלייר PNG</button>
+            <button id="print-inline" class="secondary small" type="button">פוסטר להדפסה</button>
             ${state.band === 'low' ? '<button id="retry-search-inline" class="secondary small" type="button">בחירת אזור חדש</button>' : ''}
           </div>
         </div>
@@ -420,6 +422,12 @@ async function runSearchPage() {
       await shareCommunityFlyer(payload);
       recordImpactEvent('poster');
       setStatus(statusEl, 'נוצר פלייר PNG לשיתוף בקבוצות שכונתיות.', { tone: 'success' });
+    });
+    summaryEl.querySelector('#print-inline')?.addEventListener('click', async () => {
+      const payload = { city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top, url: window.location.href, mode: 'lost' };
+      await openPrintablePoster(payload);
+      recordImpactEvent('poster');
+      setStatus(statusEl, 'נפתח פוסטר מוכן להדפסה או שמירה כ-PDF.', { tone: 'success' });
     });
     summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
       document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -603,6 +611,14 @@ async function runSearchPage() {
     await shareCommunityFlyer({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top, url: window.location.href, mode: 'lost' });
     recordImpactEvent('poster');
     setStatus(statusEl, 'נוצר פלייר PNG מוכן לשיתוף.', { tone: 'success' });
+  });
+
+  printPosterTopBtn?.addEventListener('click', async () => {
+    const top = applyResultFilters(currentResultBundle).matches?.[0];
+    if (!top) return;
+    await openPrintablePoster({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top, url: window.location.href, mode: 'lost' });
+    recordImpactEvent('poster');
+    setStatus(statusEl, 'נפתח פוסטר מוכן להדפסה או שמירה כ-PDF.', { tone: 'success' });
   });
 
   alertOptInBtn?.addEventListener('click', async () => {

@@ -151,3 +151,17 @@ def load_image(path: str | Path) -> np.ndarray:
     if image is None:
         raise FileNotFoundError(path)
     return image
+
+
+def best_animal_crop_with_masks(image: np.ndarray, padding_ratio: float = 0.12) -> Optional[ProcessedAnimalImage]:
+    """Convenience helper for hosted FastAPI routes.
+
+    1. Detect the best animal with YOLOv8.
+    2. Crop tightly with padding.
+    3. Blur human faces for privacy.
+    4. Optionally remove the background before vector extraction.
+    """
+    processor = AnimalOnlyPreprocessor()
+    if not processor.available:
+        return None
+    return processor.process(image)
