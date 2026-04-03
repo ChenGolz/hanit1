@@ -280,6 +280,7 @@ async function startVoiceRecording() {
   backBtn.addEventListener('click', () => { window.location.href = './search.html'; });
   clearBtn.addEventListener('click', () => {
     clearPendingFoundReportDraft();
+      try { sessionStorage.removeItem('pendingFoundImage'); sessionStorage.removeItem('pendingReportImage'); sessionStorage.removeItem('pendingImage'); localStorage.removeItem('pendingImage'); } catch (error) {}
     draft = null;
     currentLat = null; currentLng = null;
     setImage('');

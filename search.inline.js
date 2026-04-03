@@ -645,8 +645,12 @@ async function goToFoundReport(overrides = {}) {
   }
   const draft = buildCurrentReportDraft(overrides);
   try {
-    if (draft?.imageData) sessionStorage.setItem('pendingFoundImage', draft.imageData);
-    if (draft?.imageData) sessionStorage.setItem('pendingReportImage', draft.imageData);
+    if (draft?.imageData) {
+      sessionStorage.setItem('pendingFoundImage', draft.imageData);
+      sessionStorage.setItem('pendingReportImage', draft.imageData);
+      sessionStorage.setItem('pendingImage', draft.imageData);
+      try { localStorage.setItem('pendingImage', draft.imageData); } catch (error) {}
+    }
     sessionStorage.setItem('pendingFoundLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
     sessionStorage.setItem('pendingReportLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
     sessionStorage.setItem('petconnect-report-arrival-v1', '1');
@@ -673,7 +677,7 @@ function renderReportCta(bundle) {
         ${showProminent ? '<div class="small">לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.</div>' : ''}
       </div>
       <div class="row wrap compact-row">
-        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small" type="button">לא מצאת התאמה? פרסמי עכשיו</button>
+        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small" type="button">לא נמצאה התאמה? פרסמי את התמונה כדיווח</button>
         <button id="cta-quick-post-btn" class="secondary small" type="button">דיווח מהיר מהמיקום הזה</button>
       </div>
     </div>`;

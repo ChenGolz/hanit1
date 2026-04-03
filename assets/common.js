@@ -2,8 +2,8 @@ const STORAGE_KEY = 'petconnect-ghpages-animal-library-v2';
 const SEARCH_IMPORT_KEY = 'petconnect-ghpages-animal-imported-library-v2';
 const LAST_MATCH_GALLERY_KEY = 'petconnect-ghpages-last-matches-v1';
 const IMPACT_STATS_KEY = 'petconnect-ghpages-impact-stats-v1';
-const FOUND_REPORTS_KEY = 'petconnect-ghpages-found-reports-v1';
-const PENDING_FOUND_REPORT_KEY = 'petconnect-ghpages-pending-found-report-v1';
+const FOUND_REPORTS_KEY = window.FOUND_REPORTS_KEY || 'petconnect-ghpages-found-reports-v1';
+const PENDING_FOUND_REPORT_KEY = window.PENDING_FOUND_REPORT_KEY || 'petconnect-ghpages-pending-found-report-v1';
 const STATS_SUMMARY_CACHE_KEY = 'petconnect-ghpages-stats-summary-cache-v1';
 const LANG_STORAGE_KEY = 'appLanguage';
 const LANG_STORAGE_ALIAS_KEY = 'appLang';
@@ -11,6 +11,7 @@ const LEGACY_LANG_STORAGE_KEY = 'petconnect-ui-lang-v1';
 
 window.FOUND_REPORTS_KEY = window.FOUND_REPORTS_KEY || FOUND_REPORTS_KEY;
 window.PENDING_FOUND_REPORT_KEY = window.PENDING_FOUND_REPORT_KEY || PENDING_FOUND_REPORT_KEY;
+window.PENDING_IMAGE_KEY = window.PENDING_IMAGE_KEY || 'pendingImage';
 window.STATS_SUMMARY_CACHE_KEY = window.STATS_SUMMARY_CACHE_KEY || STATS_SUMMARY_CACHE_KEY;
 const DEFAULT_BREEDS = Object.freeze({
   'כלב': ['לברדור', 'גולדן רטריבר', 'רועה גרמני', 'האסקי סיבירי', 'פומרניאן', 'שיצו', 'בוקסר', 'כנעני', 'מלינואה', 'יורקשייר טרייר'],
@@ -1802,11 +1803,13 @@ function savePendingFoundReportDraft(payload = {}) {
 function loadPendingFoundReportDraft() {
   const parsed = safeJsonParse(sessionStorage.getItem(getPendingFoundReportKey()), null);
   if (parsed && typeof parsed === 'object') return parsed;
-  const legacyImage = sessionStorage.getItem('pendingFoundImage') || sessionStorage.getItem('pendingReportImage') || '';
+  const legacyImage = sessionStorage.getItem('pendingFoundImage') || sessionStorage.getItem('pendingReportImage') || sessionStorage.getItem('pendingImage') || '';
+  const legacyStoredImage = localStorage.getItem('pendingImage') || '';
+  const fallbackImage = legacyImage || legacyStoredImage;
   const legacyLocation = safeJsonParse(sessionStorage.getItem('pendingFoundLocation') || sessionStorage.getItem('pendingReportLocation') || '', null);
-  if (!legacyImage) return null;
+  if (!fallbackImage) return null;
   return buildPendingFoundReportDraft({
-    imageData: legacyImage,
+    imageData: fallbackImage,
     lat: Number.isFinite(Number(legacyLocation?.lat)) ? Number(legacyLocation.lat) : null,
     lng: Number.isFinite(Number(legacyLocation?.lng)) ? Number(legacyLocation.lng) : null,
     locationText: legacyLocation?.label || '',

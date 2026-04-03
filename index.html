@@ -4,20 +4,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v24">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v24">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v26">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v26">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/global.js?v=20260403v24"></script>
-    <script defer src="./assets/i18n.js?v=20260403v24"></script>
-    <script defer src="./assets/common.js?v=20260403v24"></script>
-    <script defer src="./assets/app.js?v=20260403v24"></script>
+    <script defer src="./assets/global.js?v=20260403v26"></script>
+    <script defer src="./assets/init.js?v=20260403v26"></script>
+    <script defer src="./assets/i18n.js?v=20260403v26"></script>
+    <script defer src="./assets/common.js?v=20260403v26"></script>
+    <script defer src="./assets/app.js?v=20260403v26"></script>
   </head>
   <body>
     <main class="page unified-page minimalist-homepage">
       <nav class="nav nav-glass header-modern">
         <div class="brand-block"><strong>פאטקונקט</strong><span class="brand-subtitle">איתור והצלה</span></div>
         <div class="nav-actions">
+          <button id="home-help-toggle" type="button" class="button-link secondary small" aria-label="עזרה">?</button>
           <div class="lang-switcher" aria-label="בחירת שפה">
             <button type="button" data-lang="he" class="active">עב</button>
             <button type="button" data-lang="ar">عر</button>
@@ -35,27 +37,24 @@
 
       <input id="home-camera-input" class="camera-direct-input" type="file" accept="image/*" capture="environment">
 
-      <section class="hero hero-modern hero-home-card stack high-contrast-card section-shell hero-shell">
-        <div class="chip">Emergency mode</div>
-        <h1 style="margin:0; font-size: clamp(2.2rem, 6vw, 4rem);">מחזירים חיות הביתה בעזרת AI.</h1>
-        <p class="meta" style="font-size:1.08rem; max-width: 700px;">כל שנייה חשובה. בחרי מסלול אחד ברור: חיפוש מהיר או דיווח על חיה שנמצאה עכשיו.</p>
-        <div class="hero-actions hero-actions-grid">
-          <a class="action-hero-card lost" href="./search.html">
-            <span class="eyebrow">Lost path</span>
-            <strong>איבדתי חיה</strong>
-            <small>חיפוש לפי תמונה, מיקום ופרטים.</small>
-          </a>
-          <button id="hero-found-now" class="action-hero-card found-now" type="button">
-            <span class="eyebrow">Found path</span>
-            <strong>מצאתי חיה עכשיו</strong>
-            <small>פותח מצלמה מיד ושומר את התמונה למסלול הבא.</small>
-          </button>
+      <section class="hero hero-modern hero-home-card stack high-contrast-card section-shell hero-shell clean-slate-hero">
+        <div class="hero-card-shell">
+          <div class="hero-kicker">PetConnect</div>
+          <h1 class="hero-main-title" data-i18n="homeHeadline">איחוד חיות מחמד עם בינה מלאכותית</h1>
+          <p class="hero-main-subtitle" data-i18n="homeSubheadline">כל שנייה חשובה. התחילי עכשיו חיפוש או דיווח על תצפית.</p>
+          <div class="hero-actions hero-actions-grid big-two-actions">
+            <a class="action-hero-card lost" href="./search.html">
+              <span class="eyebrow">Lost path</span>
+              <strong data-i18n="lostAction">איבדתי חיה</strong>
+              <small data-i18n="lostActionSub">חיפוש מהיר לפי תמונה, עיר ופרטים.</small>
+            </a>
+            <button id="hero-found-now" class="action-hero-card found-now" type="button">
+              <span class="eyebrow">Found path</span>
+              <strong data-i18n="foundNowAction">מצאתי חיה עכשיו</strong>
+              <small data-i18n="foundNowActionSub">פותח מצלמה מיד וממשיך למסלול חיפוש/דיווח.</small>
+            </button>
+          </div>
         </div>
-        <div class="hero-mini-stats row wrap compact-row" id="hero-stats">
-          <span class="badge">איחודים אחרונים: <strong id="impact-counter-value">—</strong></span>
-          <span class="badge">חיפושים מהמכשיר הזה: <strong id="impact-counter-searches">0</strong></span>
-        </div>
-        <div id="impact-counter-note" class="small">אם אין שרת זמין, יוצג גיבוי מקומי.</div>
       </section>
 
       <section class="card stack section-shell live-feed-shell" style="margin-top:16px;">
@@ -87,43 +86,20 @@
         </div>
       </section>
 
-      <details class="card soft-disclosure compact-home-disclosure" style="margin-top:16px;">
-        <summary>עוד פרטים וסטטיסטיקה מקומית</summary>
-        <div class="soft-disclosure-body stack" style="margin-top:12px;">
-          <section id="success-stories" class="stack">
-            <div class="space-between">
-              <div>
-                <h2 class="section-title" style="margin:0;">נמצאו לאחרונה</h2>
-                <div class="small">כמה כרטיסים קטנים שנותנים תקווה ומציגים פעילות מקומית.</div>
-              </div>
-              <span class="chip">Hope Feed</span>
-            </div>
-            <div id="success-stories-list" class="success-feed-grid"></div>
-          </section>
-
-          <section id="impact-section" class="stack">
-            <div class="space-between">
-              <div>
-                <h2 class="section-title" style="margin:0;">השפעה מקומית</h2>
-                <div class="small">נשמר רק בדפדפן הזה.</div>
-              </div>
-              <div class="chip">Local Impact</div>
-            </div>
-            <div class="stat-grid compact-stat-grid">
-              <article class="impact-card"><div class="small">חיפושים</div><strong id="impact-searches">0</strong></article>
-              <article class="impact-card"><div class="small">התאמות חזקות</div><strong id="impact-strong">0</strong></article>
-              <article class="impact-card"><div class="small">ייצוא ספריות</div><strong id="impact-exports">0</strong></article>
-              <article class="impact-card"><div class="small">חיות במאגר</div><strong id="impact-local-animals">0</strong></article>
-              <article class="impact-card"><div class="small">נקודות קהילה</div><strong id="impact-karma">0</strong></article>
-            </div>
-            <div class="row wrap compact-row">
-              <button id="enable-alerts-btn" class="secondary small" type="button">הפעלת התראות שכונתיות</button>
-              <div id="alerts-note" class="small">אפשר לבקש הרשאת התראות מקומית.</div>
-            </div>
-            <div><div class="small" style="margin-bottom:8px;">תגים מקומיים</div><div id="impact-badges" class="badge-list"></div></div>
-          </section>
+      <section class="card compact-home-meta section-shell">
+        <div class="space-between">
+          <div>
+            <h2 class="section-title" style="margin:0;" data-i18n="communityNow">הקהילה פעילה עכשיו</h2>
+            <div class="small" data-i18n="communityNowSub">פיד מקומי קצר ונתוני שימוש בסיסיים מהמכשיר הזה.</div>
+          </div>
+          <span class="chip" id="impact-counter-inline">—</span>
         </div>
-      </details>
+        <div class="compact-home-metrics row wrap compact-row">
+          <span class="badge">חיפושים: <strong id="impact-counter-searches">0</strong></span>
+          <span class="badge">התאמות חזקות: <strong id="impact-strong">0</strong></span>
+          <span class="badge">חיות במאגר: <strong id="impact-local-animals">0</strong></span>
+        </div>
+      </section>
 
       <div class="fab-wrap">
         <div id="home-fab-sheet" class="fab-sheet hidden">
@@ -134,7 +110,19 @@
         <button id="home-fab-toggle" class="fab-main" type="button" aria-label="פעולות מהירות">+</button>
       </div>
 
-      <div class="footer">חיפוש ודיווח מהיר על חיות — פשוט, ברור, ומותאם למובייל.</div>
+      <div class="footer minimalist-footer">© 2026 PetConnect | <a href="mailto:hello@petconnect.local">Contact</a></div>
+    
+      <dialog id="home-help-modal" class="modal-card help-modal">
+        <div class="modal-head">
+          <strong data-i18n="howToUse">איך משתמשים?</strong>
+          <button id="home-help-close" type="button" class="button-link secondary small">סגירה</button>
+        </div>
+        <div class="stack small">
+          <div>1. בחרי אם איבדת חיה או מצאת חיה עכשיו.</div>
+          <div>2. העלי או צלמי תמונה.</div>
+          <div>3. אם אין התאמה — אפשר להפוך את התמונה לדיווח בלחיצה אחת.</div>
+        </div>
+      </dialog>
     </main>
 
     <script>
@@ -164,6 +152,8 @@
 
     const cameraInput = document.getElementById('home-camera-input');
     const openCamera = () => cameraInput?.click();
+    document.getElementById('home-help-toggle')?.addEventListener('click', () => document.getElementById('home-help-modal')?.showModal());
+    document.getElementById('home-help-close')?.addEventListener('click', () => document.getElementById('home-help-modal')?.close());
     document.getElementById('hero-found-now')?.addEventListener('click', openCamera);
     document.getElementById('fab-open-camera')?.addEventListener('click', openCamera);
     cameraInput?.addEventListener('change', () => {
@@ -184,7 +174,7 @@
     document.getElementById('impact-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
     document.getElementById('impact-counter-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
     window.fetchSummaryStats?.().then((summary) => {
-      document.getElementById('impact-counter-value')?.replaceChildren(document.createTextNode(String(summary?.reunitedLast24h ?? 0)));
+      document.getElementById('impact-counter-inline')?.replaceChildren(document.createTextNode(`איחודים: ${String(summary?.reunitedLast24h ?? 0)}`));
       const note = summary?.source === 'api'
         ? 'נטען מ-API חי של סיכום יומי.'
         : summary?.source === 'cache'

@@ -43,3 +43,7 @@
     applyStoredLanguage();
   }
 })();
+
+window.switchLanguage = window.switchLanguage || window.toggleLanguage;
+
+window.__petconnectInitPageLanguage = window.__petconnectInitPageLanguage || applyStoredLanguage;
