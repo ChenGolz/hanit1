@@ -5,16 +5,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>דיווח חיה שנמצאה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v26">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v26">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v27">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v27">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/global.js?v=20260403v26"></script>
-    <script defer src="./assets/init.js?v=20260403v26"></script>
-    <script defer src="./assets/i18n.js?v=20260403v26"></script>
-    <script defer src="./assets/common.js?v=20260403v26"></script>
-    <script defer src="./assets/app.js?v=20260403v26"></script>
-    <script defer src="./report-found.inline.js?v=20260403v26"></script>
+    <script defer src="./assets/global.js?v=20260403v27"></script>
+    <script defer src="./assets/init.js?v=20260403v27"></script>
+    <script defer src="./assets/i18n.js?v=20260403v27"></script>
+    <script defer src="./assets/common.js?v=20260403v27"></script>
+    <script defer src="./assets/app.js?v=20260403v27"></script>
+    <script defer src="./report-found.inline.js?v=20260403v27"></script>
   </head>
   <body>
     <main class="page unified-page">
@@ -31,7 +31,7 @@
           <a class="link" href="./index.html">דף הבית</a>
           <a class="link" href="./search.html">חיפוש חיה</a>
           <a class="link" href="./report-found.html">דיווח חיה שנמצאה</a>
-          <a class="link" href="./enroll.html">בניית מאגר</a>
+          <a class="link" href="./enroll.html">ניהול חיות</a>
         </div>
       </nav>
 
@@ -50,7 +50,7 @@
 
       <section class="grid grid-2 section-grid" style="margin-top:16px;">
         <article class="card stack section-shell">
-          <div class="section-head"><div class="section-kicker">Step 1</div><h2 class="section-title">תצוגה מקדימה</h2><div class="section-subtitle">התמונה שנשמרה מהחיפוש או נבחרה ידנית תלווה את כל תהליך הדיווח.</div></div>
+          <div class="section-head"><div class="section-kicker">שלב 1</div><h2 class="section-title">תצוגה מקדימה</h2><div class="section-subtitle">התמונה שבחרת תלווה את כל תהליך הדיווח.</div></div>
           <img id="report-image" class="report-preview hidden" alt="תמונת הדיווח">
           <div id="report-image-empty" class="empty empty-state">עדיין לא נטענה תמונה. אפשר לחזור לחיפוש או לבחור תמונה ידנית למטה.</div>
           <input id="report-image-file" type="file" accept="image/*" capture="environment">
@@ -93,7 +93,7 @@
           </div>
           <div class="row wrap compact-row">
             <button id="submit-report-btn" type="button">שמירת דיווח</button>
-            <button id="share-report-btn" class="secondary" type="button" disabled>שיתוף מקומי</button>
+            <button id="share-report-btn" class="secondary" type="button" disabled>שיתוף</button>
             <button id="whatsapp-report-btn" class="secondary" type="button" disabled>פוסט לוואטסאפ</button>
             <button id="poster-report-btn" class="secondary poster-btn" type="button" disabled>יצירת פוסטר</button>
           </div>
@@ -104,9 +104,9 @@
 
       <section class="card stack section-shell section-shell--minimal" style="margin-top:16px;">
         <details class="soft-disclosure">
-          <summary>דיווחים מקומיים ששמרת במכשיר הזה</summary>
+          <summary>הדיווחים האחרונים שלך</summary>
           <div class="soft-disclosure-body stack" style="margin-top:12px;">
-            <div class="small">היסטוריה מקומית כדי שתוכלי לחזור לכל דיווח גם בלי שרת מלא.</div>
+            <div class="small">כאן אפשר לחזור לדיווחים האחרונים שיצרת במהירות.</div>
             <div id="local-found-reports" class="result-grid"></div>
           </div>
         </details>

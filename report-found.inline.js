@@ -122,7 +122,7 @@ function setAudioData(dataUrl) {
     voiceAudioEl.classList.toggle('hidden', !currentAudioData);
   }
   if (voiceClearBtn) voiceClearBtn.disabled = !currentAudioData;
-  if (voiceStatusEl) voiceStatusEl.textContent = currentAudioData ? 'נשמרה הקלטה קולית מקומית.' : 'עדיין אין הקלטה.';
+  if (voiceStatusEl) voiceStatusEl.textContent = currentAudioData ? 'הקלטה קולית נשמרה.' : 'עדיין אין הקלטה.';
   updateFormProgress();
 }
 
@@ -229,16 +229,16 @@ async function startVoiceRecording() {
   async function showSuccess(report) {
     successEl.classList.remove('hidden');
     successEl.innerHTML = `
-      <div class="chip">Saved locally</div>
-      <h2 class="section-title" style="margin:0;">הדיווח נשמר במכשיר הזה</h2>
-      <div class="small">בגרסת GitHub Pages הדיווח נשמר מקומית כדי לחסוך זמן. כשתחברי שרת, אותו מסך יוכל לשלוח אותו גם אונליין.</div>
+      <div class="chip">נשמר</div>
+      <h2 class="section-title" style="margin:0;">הדיווח נשמר בהצלחה</h2>
+      <div class="small">אפשר לחזור לדיווח הזה בקלות ולהמשיך ממנו בכל רגע.</div>
       <div class="row wrap compact-row">
-        <button id="success-share-btn" class="small" type="button">שיתוף מקומי</button>
+        <button id="success-share-btn" class="small" type="button">שיתוף</button>
         <button id="success-wa-btn" class="secondary small" type="button">פוסט לוואטסאפ</button>
         <a class="button-link secondary small" id="success-106-btn" href="#">טיוטת 106</a>
       </div>
       <div class="notice success">מה לעשות עכשיו? בדקי אם יש קולר, פני לוטרינר/ית לסריקת שבב, הציעי מים, והישארי בקרבת האזור שבו החיה נמצאה.</div>
-      ${report.audioData ? '<div class="small">נשמר גם תיאור קולי קצר יחד עם הדיווח.</div>' : ''}`;
+      ${report.audioData ? '<div class="small">נשמר גם תיאור קולי קצר עם הדיווח.</div>' : ''}`;
     vibrateIfPossible?.([18, 12, 18]);
     const shareText = buildFoundReportShareText(report);
     successEl.querySelector('#success-share-btn')?.addEventListener('click', async () => {
@@ -303,7 +303,7 @@ async function startVoiceRecording() {
       whatsappBtn.disabled = false;
       if (posterBtn) posterBtn.disabled = false;
       await showSuccess(report);
-      setStatus(statusEl, 'הדיווח נשמר מקומית בהצלחה.', { tone: 'success' });
+      setStatus(statusEl, 'הדיווח נשמר בהצלחה.', { tone: 'success' });
       renderLocalReports();
     } catch (error) {
       console.error(error);

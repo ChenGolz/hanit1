@@ -2042,3 +2042,148 @@ body { background: var(--bg-clean); }
     height: 88px;
   }
 }
+
+
+/* v27 mobile/prod polish */
+@media (max-width: 760px) {
+  .nav.nav-glass.header-modern,
+  .nav.header-modern {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .brand-block {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+
+  .brand-subtitle {
+    display:none;
+  }
+
+  .nav-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #theme-toggle {
+    justify-self: start;
+  }
+
+  .lang-switcher {
+    justify-self: center;
+    display: inline-grid;
+    grid-auto-flow: column;
+    gap: 4px;
+  }
+
+  #home-help-toggle {
+    justify-self: end;
+  }
+
+  .nav .links {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 8px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .nav .links::-webkit-scrollbar { display:none; }
+
+  .nav a.link {
+    flex: 0 0 auto;
+    min-width: max-content;
+    min-height: 40px;
+    padding: 9px 12px;
+    font-size: .9rem;
+  }
+
+  .clean-slate-hero,
+  .hero.hero-modern {
+    padding: 18px 12px 16px;
+    border-radius: 22px;
+  }
+
+  .hero-main-title {
+    font-size: clamp(1.45rem, 7.3vw, 2rem);
+  }
+
+  .hero-main-subtitle {
+    font-size: .9rem;
+    line-height: 1.45;
+    max-width: 24ch;
+  }
+
+  .hero-kicker {
+    margin-bottom: 8px;
+    padding: .38rem .68rem;
+  }
+
+  .action-hero-card,
+  .action-slab {
+    border-radius: 20px;
+    padding: .95rem;
+  }
+
+  .action-hero-card strong,
+  .action-slab strong {
+    font-size: 1.1rem;
+  }
+
+  .action-hero-card small,
+  .action-slab small {
+    font-size: .86rem;
+  }
+
+  .live-feed-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .live-map-card {
+    order: 2;
+  }
+
+  .live-feed-list {
+    order: 1;
+  }
+
+  .compact-home-meta,
+  .live-feed-shell,
+  .section-shell,
+  .card {
+    padding: 12px;
+  }
+
+  .pet-preview,
+  .story-thumb,
+  .report-image-thumb,
+  .pet-card-img {
+    width: 84px;
+    height: 84px;
+    border-width: 3px;
+  }
+
+  .small,
+  .section-subtitle {
+    font-size: .88rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .page { width: min(100%, calc(100% - 12px)); }
+  .nav.nav-glass.header-modern,
+  .nav.header-modern { border-radius: 18px; }
+  .lang-switcher button,
+  #theme-toggle,
+  #home-help-toggle { min-height: 34px; min-width: 34px; font-size: .82rem; padding: .42rem .55rem; }
+  .hero-main-title { font-size: clamp(1.32rem, 7vw, 1.72rem); }
+  .hero-main-subtitle { max-width: none; }
+  .big-two-actions { margin-top: 14px; }
+}

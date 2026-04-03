@@ -77,7 +77,7 @@ async function runEnrollPage() {
   function render() {
     const entries = loadLocalLibrary();
     if (!entries.length) {
-      libraryEl.innerHTML = '<div class="empty">עדיין אין רשומות חיה מקומיות.</div>';
+      libraryEl.innerHTML = '<div class="empty">עדיין אין רשומות להצגה.</div>';
       outputEl.textContent = JSON.stringify({ version: 3, updated_at: new Date().toISOString().slice(0, 10), entries: [] }, null, 2);
       return;
     }
@@ -274,11 +274,11 @@ async function runEnrollPage() {
   clearBtn.addEventListener('click', () => {
     saveLocalLibrary([]);
     render();
-    setProgress(0, 'המאגר המקומי נוקה.');
-    setStatus(statusEl, 'המאגר המקומי בדפדפן נוקה.', { tone: 'success' });
+    setProgress(0, 'הקטלוג נוקה.');
+    setStatus(statusEl, 'הקטלוג נוקה בהצלחה.', { tone: 'success' });
   });
 
-  setProgress(0, 'ממתין לתמונות לבניית המאגר.');
+  setProgress(0, 'ממתין לתמונות.');
   renderBreedChips(typeInput.value, breedInput.value.trim());
   render();
 }

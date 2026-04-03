@@ -360,8 +360,8 @@ function getImpactBadges(stats = loadImpactStats()) {
   if (stats.searches >= 1) badges.push('תצפית ראשונה');
   if (stats.searches >= 5) badges.push('גיבורת שכונה');
   if (stats.strongMatches >= 1) badges.push('זיהוי מהיר');
-  if (stats.strongMatches >= 5) badges.push('5 איחודים מקומיים');
-  if (stats.librariesExported >= 1) badges.push('בונת מאגר');
+  if (stats.strongMatches >= 5) badges.push('5 איחודים');
+  if (stats.librariesExported >= 1) badges.push('מנהלת קטלוג');
   if (stats.karma >= 10) badges.push('לב זהב');
   if (stats.karma >= 25) badges.push('מתנדבת כוח');
   return badges;
@@ -1483,7 +1483,7 @@ function buildMunicipalReportHref({ city = '', locationText = '', reportedAt = '
     lines.push(`מפת גוגל: https://www.google.com/maps?q=${blurred.lat},${blurred.lng}`);
   }
   lines.push(`עמוד החיפוש: ${pageUrl}`);
-  lines.push('הערה: התמונה עצמה נבדקה מקומית בדפדפן ולכן אינה מצורפת אוטומטית.');
+  lines.push('הערה: התמונה עצמה אינה מצורפת אוטומטית להודעה.');
   const params = new URLSearchParams({
     subject: `דיווח על בעל חיים - מוקד 106 - ${subjectCity}`,
     body: lines.join('\n'),
@@ -1884,7 +1884,7 @@ function estimateAnimalSizeLabel(rect = null, image = null) {
 }
 
 function renderFoundReportCards(reports = []) {
-  if (!Array.isArray(reports) || !reports.length) return '<div class="empty">עדיין אין דיווחים מקומיים במכשיר הזה.</div>';
+  if (!Array.isArray(reports) || !reports.length) return '<div class="empty">עדיין אין דיווחים להצגה.</div>';
   return reports.map((report) => `
     <article class="match-card report-card">
       ${report.imageData ? `<div class="thumb-wrap blur-shell"><img class="blur-up" src="${report.imageData}" alt="${escapeHtml(report.animalType || 'חיה שנמצאה')}"></div>` : ''}

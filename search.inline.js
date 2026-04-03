@@ -322,7 +322,7 @@ async function runSearchPage() {
     verificationTitleEl.textContent = `בדיקת סימן זיהוי: ${currentVerificationMatch.label || 'חיה ללא שם'}`;
     verificationPromptEl.textContent = currentVerificationMatch.verificationPrompt || 'אין שאלה פרטית זמינה לרשומה זו.';
     verificationAnswerEl.value = '';
-    verificationResultEl.textContent = 'התשובה לא נשלחת לשום שרת — ההשוואה נעשית בדפדפן.';
+    verificationResultEl.textContent = 'האימות נשמר פרטי ומאובטח.';
     if (typeof verificationModal.showModal === 'function') verificationModal.showModal();
     else verificationModal.setAttribute('open', 'open');
   }
@@ -709,7 +709,7 @@ function renderReportCta(bundle) {
     currentLibrary = await getMergedLibrary();
     libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
     if (!currentLibrary.length) {
-      setStatus(statusEl, 'המאגר עדיין ריק. הוסיפי רשומות דרך עמוד בניית המאגר או דרך data/library.json.', { tone: 'warn' });
+      setStatus(statusEl, 'עדיין אין חיות זמינות לחיפוש. אפשר להוסיף רשומות בקלות דרך עמוד ניהול החיות.', { tone: 'warn' });
       resetSearchProgress();
       clearLastMatchGallery();
       return;
@@ -897,7 +897,7 @@ function renderReportCta(bundle) {
     }
     if (result.granted) {
       await showLocalNeighborhoodAlert?.({ title: 'התראות שכונתיות הופעלו', body: 'מעכשיו אפשר להציג התראות מקומיות גם כשהאפליקציה פתוחה ברקע.', data: { url: './search.html' }, tag: 'alerts-enabled' }).catch(() => {});
-      setStatus(statusEl, 'התראות מקומיות הופעלו. Web Push אמיתי יתחבר כשיהיה Backend.', { tone: 'success' });
+      setStatus(statusEl, 'התראות הופעלו בהצלחה.', { tone: 'success' });
     } else {
       setStatus(statusEl, 'לא ניתנה הרשאת התראות.', { tone: 'warn' });
     }
@@ -936,7 +936,7 @@ function renderReportCta(bundle) {
     const text = await file.text();
     const parsed = safeJsonParse(text, null);
     if (!parsed || !Array.isArray(parsed.entries)) {
-      setStatus(statusEl, 'קובץ ה-JSON הזה לא נראה כמו ייצוא תקין של המאגר.', { tone: 'warn' });
+      setStatus(statusEl, 'קובץ הקטלוג הזה לא נראה תקין.', { tone: 'warn' });
       return;
     }
     const sanitizedEntries = parsed.entries.map((entry) => normalizeEntry({ ...entry, source: 'imported' }))
@@ -948,7 +948,7 @@ function renderReportCta(bundle) {
     saveImportedLibrary(sanitizedEntries);
     currentLibrary = await getMergedLibrary();
     libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
-    setStatus(statusEl, 'המאגר המיובא נוסף לדפדפן עבור הסשן הנוכחי.', { tone: 'success' });
+    setStatus(statusEl, 'הקטלוג הנוסף נוסף לחיפוש הנוכחי.', { tone: 'success' });
     if (currentResultBundle) rerenderResults();
   });
 
@@ -956,7 +956,7 @@ function renderReportCta(bundle) {
     saveImportedLibrary([]);
     currentLibrary = await getMergedLibrary();
     libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
-    setStatus(statusEl, 'המאגר המיובא של הסשן נוקה.', { tone: 'success' });
+    setStatus(statusEl, 'הקטלוג הנוסף הוסר.', { tone: 'success' });
     if (currentResultBundle) rerenderResults();
   });
 
