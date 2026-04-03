@@ -4,13 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v7">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v7">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v8">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v8">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/i18n.js?v=20260403v7"></script>
-    <script defer src="./assets/common.js?v=20260403v7"></script>
-    <script defer src="./assets/app.js?v=20260403v7"></script>
+    <script defer src="./assets/i18n.js?v=20260403v8"></script>
+    <script defer src="./assets/common.js?v=20260403v8"></script>
+    <script defer src="./assets/app.js?v=20260403v8"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -37,6 +37,18 @@
         <div class="row">
           <a class="button-link" href="./search.html">פתיחת חיפוש חיה</a>
           <a class="button-link secondary" href="./enroll.html">בניית המאגר שלך</a>
+        </div>
+        <div class="hero-stats" id="hero-stats">
+          <article class="hero-stat-card">
+            <div class="small">איחודים ב-24 השעות האחרונות</div>
+            <strong id="impact-counter-value">—</strong>
+            <div id="impact-counter-note" class="small">נטען מהשרת, או מגיבוי מקומי אם אין API זמין.</div>
+          </article>
+          <article class="hero-stat-card">
+            <div class="small">חיפושים שבוצעו מהדפדפן הזה</div>
+            <strong id="impact-counter-searches">0</strong>
+            <div class="small">מדד מקומי שנותן תחושת התקדמות גם לפני שרת מלא.</div>
+          </article>
         </div>
         <div class="notice warn">
           GitHub Pages יכול לארח את האתר עצמו, אבל הוא לא מפעיל Backend של FastAPI ולא שומר העלאות ציבוריות משותפות. למאגר חי ומשותף עדיין תצטרכי אחסון אמיתי בהמשך.
@@ -155,6 +167,16 @@
 
     const stats = window.loadImpactStats?.() || { searches: 0, strongMatches: 0, librariesExported: 0, localAnimals: 0 };
     document.getElementById('impact-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
+    document.getElementById('impact-counter-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
+    window.fetchSummaryStats?.().then((summary) => {
+      document.getElementById('impact-counter-value')?.replaceChildren(document.createTextNode(String(summary?.reunitedLast24h ?? 0)));
+      const note = summary?.source === 'api'
+        ? 'נטען מ-API חי של סיכום יומי.'
+        : summary?.source === 'cache'
+          ? 'כרגע מוצג נתון מטמון שנשמר מקודם.'
+          : 'כרגע מוצג גיבוי מקומי עד שיחובר endpoint של שרת.';
+      document.getElementById('impact-counter-note')?.replaceChildren(document.createTextNode(note));
+    }).catch(() => {});
     document.getElementById('impact-strong')?.replaceChildren(document.createTextNode(String(stats.strongMatches || 0)));
     document.getElementById('impact-exports')?.replaceChildren(document.createTextNode(String(stats.librariesExported || 0)));
     document.getElementById('impact-local-animals')?.replaceChildren(document.createTextNode(String(stats.localAnimals || 0)));

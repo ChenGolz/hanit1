@@ -615,3 +615,59 @@ button[aria-busy="true"]::after {
   object-fit: cover;
   border-radius: 18px;
 }
+
+.hero-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.hero-stat-card {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(255,255,255,0.04);
+  display: grid;
+  gap: 8px;
+}
+
+.hero-stat-card strong {
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  line-height: 1;
+}
+
+.verify-modal {
+  width: min(560px, calc(100% - 24px));
+  border: 0;
+  padding: 0;
+  border-radius: 24px;
+  background: transparent;
+  color: var(--text);
+}
+
+.verify-modal::backdrop {
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+}
+
+.verify-modal-card {
+  padding: 20px;
+  background: rgba(17,24,49,0.98);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #080d1a;
+    --panel: #10172d;
+    --panel-2: #16213e;
+    --text: #f3f6ff;
+    --muted: #c0c8e7;
+  }
+  html, body {
+    background: linear-gradient(180deg, #080d1a 0%, #10172d 100%);
+  }
+}

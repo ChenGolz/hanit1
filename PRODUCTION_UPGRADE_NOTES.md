@@ -40,7 +40,7 @@ This GitHub Pages build still does not ship a live Leaflet map, but `assets/comm
 ## Added in v3
 - search page code cleaned into `search.inline.js` instead of a huge inline block
 - cache-first service worker now explicitly pre-caches `search.inline.js` and `enroll.inline.js`
-- client-side image downsampling tuned to ~1024px / 80% JPEG for weaker mobile networks
+- client-side image downsampling tuned to ~1200px / 82% JPEG for weaker mobile networks
 - result cards now show a stronger score pill and immediate share / WhatsApp / 106 actions
 - 106 and share flows now use privacy-blurred coordinates by default
 
@@ -72,3 +72,17 @@ For the hosted backend, expose only the verification prompt publicly. Keep the v
 
 ## What is still static-only here
 The GitHub Pages build still cannot safely expose private owner contact data, proof-of-ownership uploads, or real badge leaderboards. Those features require a hosted backend and authenticated users.
+
+
+## Added in v8
+- homepage hero now tries to fetch `/api/stats/summary` and falls back to cached/local impact data
+- client-side image prep defaults increased to ~1200px / 82% JPEG for better standardization before matching
+- added a community-watch WhatsApp generator for neighborhood groups
+- added breed quick filters on the search results screen
+- added an optional verification-question flow with hashed answers in the exported animal library
+- added a dark-mode media block and stronger modal styling
+- added Background Sync scaffolding in `sw.js` / `assets/app.js` for future hosted JSON submissions
+- added a radius control so future hosted map flows can reuse the same user intent
+
+## Important caveat for v8
+The verification flow works fully in the browser only for hashes stored in the public library JSON. Background Sync is implemented as a scaffold for future JSON report endpoints, but the static GitHub Pages search flow still does not have a live upload API to retry.

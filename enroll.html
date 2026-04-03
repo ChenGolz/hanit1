@@ -4,16 +4,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>בניית מאגר חיות · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v7">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v7">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v8">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v8">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/i18n.js?v=20260403v7"></script>
-    <script defer src="./assets/common.js?v=20260403v7"></script>
-    <script defer src="./assets/app.js?v=20260403v7"></script>
-    <script defer src="./enroll.inline.js?v=20260403v7"></script>
+    <script defer src="./assets/i18n.js?v=20260403v8"></script>
+    <script defer src="./assets/common.js?v=20260403v8"></script>
+    <script defer src="./assets/app.js?v=20260403v8"></script>
+    <script defer src="./enroll.inline.js?v=20260403v8"></script>
   </head>
   <body>
     <main class="page">
@@ -56,6 +56,10 @@
               <input id="animal-href" type="text" placeholder="קישור פרופיל אופציונלי, למשל ./profiles/max.html" aria-label="קישור פרופיל אופציונלי" />
             </div>
             <textarea id="animal-notes" placeholder="הערות אופציונליות שיופיעו בתוצאות החיפוש" aria-label="הערות אופציונליות"></textarea>
+            <div class="field-grid">
+              <input id="verification-prompt-input" type="text" placeholder="שאלת סימן זיהוי אופציונלית, למשל מה צבע הקולר?" aria-label="שאלת סימן זיהוי">
+              <input id="verification-answer-input" type="text" placeholder="התשובה הנכונה (תישמר כהאש בלבד)" aria-label="תשובת סימן זיהוי">
+            </div>
             <input id="animal-files" type="file" accept="image/*" multiple required aria-label="בחירת תמונה אחת או יותר של החיה" />
             <div class="small">שדות חובה: שם החיה ולפחות תמונה אחת. לקבלת תוצאות טובות, העלי תמונות שבהן החיה תופסת חלק גדול מהפריים ועדיף בלי אנשים לצידה. אפשר להוסיף גם גזע כדי לשפר דירוג והתאמות.</div>
             <div class="row">

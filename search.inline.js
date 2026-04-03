@@ -18,6 +18,8 @@ async function waitForCommonHelpers() {
     'reverseGeocodeLatLng',
     'attachBreedAutocomplete',
     'renderMatchCards',
+    'buildCommunityWatchHref',
+    'verifyChallengeAnswer',
   ];
   const start = Date.now();
   while (Date.now() - start < 8000) {
@@ -64,13 +66,24 @@ async function runSearchPage() {
   const resultsSection = document.getElementById('results-section');
   const selectionHintEl = document.getElementById('selection-hint');
   const filterAnimalTypeEl = document.getElementById('filter-animal-type');
+  const filterBreedEl = document.getElementById('filter-breed');
+  const breedQuickFiltersEl = document.getElementById('breed-quick-filters');
   const filterSourceEl = document.getElementById('filter-source');
   const strongOnlyEl = document.getElementById('filter-strong-only');
   const shareTopBtn = document.getElementById('share-top-btn');
   const whatsappTopBtn = document.getElementById('whatsapp-top-btn');
+  const communityTopBtn = document.getElementById('community-top-btn');
   const reportTopBtn = document.getElementById('report-top-btn');
   const privacyNoteEl = document.getElementById('privacy-note');
   const smartHintEl = document.getElementById('smart-hint');
+  const radiusInput = document.getElementById('search-radius');
+  const radiusNoteEl = document.getElementById('search-radius-note');
+  const verificationModal = document.getElementById('verification-modal');
+  const verificationTitleEl = document.getElementById('verification-title');
+  const verificationPromptEl = document.getElementById('verification-prompt');
+  const verificationAnswerEl = document.getElementById('verification-answer');
+  const verificationResultEl = document.getElementById('verification-result');
+  const verificationCheckBtn = document.getElementById('verification-check-btn');
 
   [fileInput, cityInput, queryAnimalTypeEl, breedInput].forEach(clearValidityOnInput);
   attachCityAutocomplete?.(cityInput);
@@ -85,6 +98,7 @@ async function runSearchPage() {
   let geoState = { lat: null, lng: null };
   let dragState = { active: false, startX: 0, startY: 0 };
   let currentReportTimestamp = '';
+  let currentVerificationMatch = null;
 
   function setSearchProgress(percent = 0, label = '') {
     const safePercent = Math.max(0, Math.min(100, Number(percent) || 0));
@@ -115,6 +129,22 @@ async function runSearchPage() {
     } else {
       privacyNoteEl.textContent = 'אם תשתמשי במיקום, בשיתופים ובטיוטת 106 יופיע אזור משוער בלבד כדי לשמור על פרטיות.';
     }
+  }
+
+  function updateRadiusNote() {
+    if (!radiusNoteEl || !radiusInput) return;
+    radiusNoteEl.textContent = `רדיוס החיפוש כרגע מוגדר ל-${radiusInput.value} ק"מ. בגרסת שרת+מפה הוא יוכל לשמש גם לציור מעגל Leaflet סביב הדיווח.`;
+  }
+
+  function openVerificationModal(match) {
+    currentVerificationMatch = match || null;
+    if (!verificationModal || !currentVerificationMatch) return;
+    verificationTitleEl.textContent = `בדיקת סימן זיהוי: ${currentVerificationMatch.label || 'חיה ללא שם'}`;
+    verificationPromptEl.textContent = currentVerificationMatch.verificationPrompt || 'אין שאלה פרטית זמינה לרשומה זו.';
+    verificationAnswerEl.value = '';
+    verificationResultEl.textContent = 'התשובה לא נשלחת לשום שרת — ההשוואה נעשית בדפדפן.';
+    if (typeof verificationModal.showModal === 'function') verificationModal.showModal();
+    else verificationModal.setAttribute('open', 'open');
   }
 
   function renderBreedChips(type = '', preferredBreed = '') {
@@ -165,10 +195,12 @@ async function runSearchPage() {
   function applyResultFilters(bundle) {
     if (!bundle) return { kind: 'visual', matches: [] };
     const selectedType = filterAnimalTypeEl.value;
+    const selectedBreed = filterBreedEl.value;
     const selectedSource = filterSourceEl.value;
     const strongOnly = strongOnlyEl.checked;
     const filtered = (bundle.matches || []).filter((match) => {
       if (selectedType && (match.animalType || '') !== selectedType) return false;
+      if (selectedBreed && (match.breed || '') !== selectedBreed) return false;
       if (selectedSource && (match.source || '') !== selectedSource) return false;
       if (strongOnly && !isStrongMatch(match, bundle.kind)) return false;
       return true;
@@ -178,9 +210,25 @@ async function runSearchPage() {
 
   function refreshResultFilters(bundle) {
     const types = Array.from(new Set((bundle?.matches || []).map((match) => (match.animalType || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'he'));
+    const breeds = Array.from(new Set((bundle?.matches || []).map((match) => (match.breed || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'he'));
     const previous = filterAnimalTypeEl.value;
+    const previousBreed = filterBreedEl.value;
     filterAnimalTypeEl.innerHTML = '<option value="">כל הסוגים</option>' + types.map((type) => `<option value="${escapeHtml(type)}">${escapeHtml(type)}</option>`).join('');
+    filterBreedEl.innerHTML = '<option value="">כל הגזעים</option>' + breeds.map((breed) => `<option value="${escapeHtml(breed)}">${escapeHtml(breed)}</option>`).join('');
     if (types.includes(previous)) filterAnimalTypeEl.value = previous;
+    if (breeds.includes(previousBreed)) filterBreedEl.value = previousBreed;
+    if (breedQuickFiltersEl) {
+      breedQuickFiltersEl.innerHTML = breeds.length
+        ? breeds.slice(0, 10).map((breed) => `<button class="chip-btn ${filterBreedEl.value === breed ? 'active' : ''}" type="button" data-quick-breed="${escapeHtml(breed)}">${escapeHtml(breed)}</button>`).join('')
+        : '';
+      breedQuickFiltersEl.querySelectorAll('[data-quick-breed]').forEach((button) => {
+        button.addEventListener('click', () => {
+          filterBreedEl.value = button.dataset.quickBreed || '';
+          refreshResultFilters(bundle);
+          if (currentResultBundle) rerenderResults();
+        });
+      });
+    }
   }
 
   function updateTopActions(bundle) {
@@ -188,10 +236,11 @@ async function runSearchPage() {
     const disabled = !top;
     shareTopBtn.disabled = disabled;
     whatsappTopBtn.disabled = disabled;
+    communityTopBtn.disabled = disabled;
     reportTopBtn.classList.toggle('disabled-link', disabled);
     reportTopBtn.href = buildMunicipalReportHref({
       city: cityInput.value,
-      locationText: locationTextInput.value,
+      locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(),
       reportedAt: currentReportTimestamp,
       lat: geoState.lat,
       lng: geoState.lng,
@@ -298,11 +347,11 @@ async function runSearchPage() {
       </div>`;
     summaryEl.classList.remove('hidden');
     summaryEl.querySelector('#share-inline')?.addEventListener('click', async () => {
-      const ok = await shareResult({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+      const ok = await shareResult({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
       setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
     });
     summaryEl.querySelector('#whatsapp-inline')?.addEventListener('click', () => {
-      window.open(buildWhatsAppHref({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+      window.open(buildWhatsAppHref({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
     });
     summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
       document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -376,10 +425,15 @@ async function runSearchPage() {
   resetSearchProgress();
   updateTopActions(null);
   updatePrivacyNote();
+  updateRadiusNote();
   renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim());
 
   minScoreInput.addEventListener('input', () => {
     minScoreOutput.textContent = `${minScoreInput.value}%`;
+  });
+  radiusInput?.addEventListener('input', () => {
+    updateRadiusNote();
+    updateTopActions(applyResultFilters(currentResultBundle));
   });
   showBoxInput.addEventListener('change', redrawPreview);
   queryAnimalTypeEl.addEventListener('input', () => renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim()));
@@ -426,21 +480,49 @@ async function runSearchPage() {
     }, { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 });
   });
 
-  [filterAnimalTypeEl, filterSourceEl, strongOnlyEl].forEach((element) => element.addEventListener('change', () => {
+  [filterAnimalTypeEl, filterBreedEl, filterSourceEl, strongOnlyEl].forEach((element) => element.addEventListener('change', () => {
     if (currentResultBundle) rerenderResults();
   }));
 
   shareTopBtn.addEventListener('click', async () => {
     const top = applyResultFilters(currentResultBundle).matches?.[0];
     if (!top) return;
-    const ok = await shareResult({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
+    const ok = await shareResult({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top });
     setStatus(statusEl, ok ? 'קישור ההתאמה הוכן לשיתוף.' : 'לא ניתן היה לשתף ישירות. נסי את כפתור הוואטסאפ או דיווח 106.', { tone: ok ? 'success' : 'warn' });
   });
 
   whatsappTopBtn.addEventListener('click', () => {
     const top = applyResultFilters(currentResultBundle).matches?.[0];
     if (!top) return;
-    window.open(buildWhatsAppHref({ city: cityInput.value, locationText: locationTextInput.value, reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+    window.open(buildWhatsAppHref({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+  });
+
+  communityTopBtn.addEventListener('click', () => {
+    const top = applyResultFilters(currentResultBundle).matches?.[0];
+    if (!top) return;
+    window.open(buildCommunityWatchHref({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+  });
+
+  verificationCheckBtn?.addEventListener('click', async () => {
+    if (!currentVerificationMatch) return;
+    const answer = verificationAnswerEl.value.trim();
+    if (!answer) {
+      verificationResultEl.textContent = 'צריך להזין תשובה כדי לבצע בדיקה.';
+      return;
+    }
+    verificationCheckBtn.disabled = true;
+    try {
+      const ok = await verifyChallengeAnswer(currentVerificationMatch, answer);
+      verificationResultEl.textContent = ok
+        ? 'התשובה מתאימה לסימן הזיהוי. אפשר להמשיך לשיתוף/יצירת קשר.'
+        : 'התשובה לא התאימה. כדאי לבקש עוד פרט מזהה או לנסות מועמד אחר.';
+      verificationResultEl.className = ok ? 'notice success' : 'notice warn';
+    } catch (error) {
+      verificationResultEl.textContent = `הבדיקה נכשלה: ${error.message}`;
+      verificationResultEl.className = 'notice warn';
+    } finally {
+      verificationCheckBtn.disabled = false;
+    }
   });
 
   importInput.addEventListener('change', async () => {
@@ -473,6 +555,15 @@ async function runSearchPage() {
     if (currentResultBundle) rerenderResults();
   });
 
+  resultsEl.addEventListener('click', (event) => {
+    const verifyButton = event.target.closest('[data-verify-index]');
+    if (!verifyButton || !currentResultBundle?.matches?.length) return;
+    const filtered = applyResultFilters(currentResultBundle).matches || [];
+    const match = filtered[Number(verifyButton.dataset.verifyIndex)];
+    if (!match?.verificationPrompt) return;
+    openVerificationModal(match);
+  });
+
   searchForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!setRequiredValidity(fileInput, 'נא לבחור תמונה לחיפוש.')) {
@@ -501,7 +592,7 @@ async function runSearchPage() {
 
       setSearchProgress(8, 'מכין את התמונה לסריקה…');
       setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
-      const prepared = await shrinkImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.80 });
+      const prepared = await shrinkImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
       try {
         currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
         currentSelection = defaultSelectionRect(currentPreviewImage);

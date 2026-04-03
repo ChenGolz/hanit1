@@ -19,11 +19,13 @@ from .pipeline import compute_face_feature_public, extract_best_search_face, pro
 from .reference_sets import get_reference_set, list_reference_sets, remove_reference_set, save_reference_images
 from .search_index import search_matches
 from .storage import list_projects, load_json, new_project_dir, new_search_dir, save_json
+from .stats_summary import router as stats_router
 from .youtube import download_youtube_video
 
 app = FastAPI(title="Kibbutz Face Archive")
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 app.mount("/data", StaticFiles(directory=str(DATA_DIR)), name="data")
+app.include_router(stats_router)
 
 _SAFE_UPLOAD_RE = re.compile(r"[^A-Za-z0-9._-]+")
 

@@ -1,5 +1,7 @@
-const STATIC_CACHE = 'petconnect-animal-static-v14';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v14';
+const STATIC_CACHE = 'petconnect-animal-static-v15';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v15';
+const SYNC_DB_NAME = 'petconnect-sync-db';
+const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -45,6 +47,91 @@ self.addEventListener('activate', (event) => {
     await Promise.all(keys.filter((key) => ![STATIC_CACHE, RUNTIME_CACHE].includes(key)).map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
+});
+
+function openSyncDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(SYNC_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(SYNC_STORE)) {
+        db.createObjectStore(SYNC_STORE, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('indexedDB open failed'));
+  });
+}
+
+async function addPendingJsonPost(payload) {
+  const db = await openSyncDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE, 'readwrite');
+    tx.objectStore(SYNC_STORE).add({
+      createdAt: Date.now(),
+      url: payload.url,
+      method: payload.method || 'POST',
+      headers: payload.headers || { 'Content-Type': 'application/json' },
+      body: payload.body || {},
+    });
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('indexedDB write failed'));
+  });
+  db.close();
+}
+
+async function listPendingJsonPosts() {
+  const db = await openSyncDb();
+  const items = await new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE, 'readonly');
+    const request = tx.objectStore(SYNC_STORE).getAll();
+    request.onsuccess = () => resolve(request.result || []);
+    request.onerror = () => reject(request.error || new Error('indexedDB read failed'));
+  });
+  db.close();
+  return items;
+}
+
+async function deletePendingJsonPost(id) {
+  const db = await openSyncDb();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction(SYNC_STORE, 'readwrite');
+    tx.objectStore(SYNC_STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('indexedDB delete failed'));
+  });
+  db.close();
+}
+
+async function flushPendingJsonPosts() {
+  const pending = await listPendingJsonPosts();
+  for (const item of pending) {
+    try {
+      const response = await fetch(item.url, {
+        method: item.method || 'POST',
+        headers: item.headers || { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item.body || {}),
+      });
+      if (response.ok) {
+        await deletePendingJsonPost(item.id);
+      }
+    } catch (error) {
+      // Keep the item in the queue for the next sync attempt.
+    }
+  }
+}
+
+self.addEventListener('message', (event) => {
+  const data = event.data || {};
+  if (data.type === 'queue-report' && data.payload?.url) {
+    event.waitUntil?.(addPendingJsonPost(data.payload));
+  }
+});
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'send-report') {
+    event.waitUntil(flushPendingJsonPosts());
+  }
 });
 
 async function putResponseInCache(cache, request, response) {

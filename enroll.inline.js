@@ -9,7 +9,7 @@ function fallbackSetStatus(element, text, options = {}) {
 }
 
 async function waitForCommonHelpers() {
-  const needed = ['registerServiceWorker', 'setStatus', 'extractAnimalFeaturesForEnrollment', 'attachBreedAutocomplete'];
+  const needed = ['registerServiceWorker', 'setStatus', 'extractAnimalFeaturesForEnrollment', 'attachBreedAutocomplete', 'sha256Hex'];
   const start = Date.now();
   while (Date.now() - start < 5000) {
     if (needed.every((name) => typeof window[name] === 'function')) return;
@@ -30,6 +30,8 @@ async function runEnrollPage() {
   const colorsInput = document.getElementById('animal-colors');
   const hrefInput = document.getElementById('animal-href');
   const notesInput = document.getElementById('animal-notes');
+  const verificationPromptInput = document.getElementById('verification-prompt-input');
+  const verificationAnswerInput = document.getElementById('verification-answer-input');
   const fileInput = document.getElementById('animal-files');
   const addBtn = document.getElementById('add-btn');
   const exportBtn = document.getElementById('export-btn');
@@ -41,7 +43,7 @@ async function runEnrollPage() {
   const progressFillEl = document.getElementById('enroll-progress-fill');
   const progressLabelEl = document.getElementById('enroll-progress-label');
 
-  [labelInput, typeInput, breedInput, colorsInput, hrefInput, notesInput, fileInput].forEach(clearValidityOnInput);
+  [labelInput, typeInput, breedInput, colorsInput, hrefInput, notesInput, verificationPromptInput, verificationAnswerInput, fileInput].forEach(clearValidityOnInput);
   attachBreedAutocomplete?.(breedInput, typeInput, 'breed-suggestions-enroll');
   await loadModels(statusEl);
 
@@ -92,6 +94,7 @@ async function runEnrollPage() {
               <span class="badge">${safeBreed}</span>
               <span class="badge">${safeColors}</span>
               <span class="badge">${formatSampleCount(entry.descriptors.length)}</span>
+              ${entry.verificationPrompt ? '<span class="badge">כולל סימן זיהוי</span>' : ''}
             </div>
             <div class="small">${safeNotes}</div>
             <button class="bad small" type="button" data-remove="${idx}">הסרה</button>
@@ -136,6 +139,16 @@ async function runEnrollPage() {
       return;
     }
 
+    const verificationPrompt = verificationPromptInput.value.trim();
+    const verificationAnswer = verificationAnswerInput.value.trim();
+    if ((verificationPrompt && !verificationAnswer) || (!verificationPrompt && verificationAnswer)) {
+      const target = verificationPrompt ? verificationAnswerInput : verificationPromptInput;
+      target.setCustomValidity('יש למלא גם שאלה וגם תשובה כדי להפעיל סימן זיהוי.');
+      target.reportValidity();
+      setStatus(statusEl, 'אם מוסיפים סימן זיהוי, צריך למלא גם שאלה וגם תשובה.', { tone: 'warn' });
+      return;
+    }
+
     setButtonBusy?.(addBtn, true, 'מעבד תמונות…');
     setProgress(8, 'בודק את התמונות…');
     try {
@@ -151,7 +164,7 @@ async function runEnrollPage() {
 
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
-        const prepared = await fileToPreparedImage(file, { maxWidth: 1024, maxHeight: 1024, quality: 0.80 });
+        const prepared = await fileToPreparedImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
         try {
           if (prepared.wasResized) resizedCount += 1;
           const features = await extractAnimalFeaturesForEnrollment(prepared.img);
@@ -171,7 +184,7 @@ async function runEnrollPage() {
       }
 
       prepNoteEl.textContent = resizedCount
-        ? `${resizedCount} תמונות כבדות נדחסו מקומית ל-1024px כדי לקצר את זמן העיבוד וההעלאה.`
+        ? `${resizedCount} תמונות כבדות נדחסו מקומית ל-1200px כדי לקצר את זמן העיבוד וההעלאה.`
         : 'לא נדרשה דחיסה מקומית לתמונות שבחרת.';
 
       if (!descriptors.length) {
@@ -180,6 +193,7 @@ async function runEnrollPage() {
         return;
       }
 
+      const verificationAnswerHash = verificationAnswer ? await sha256Hex(verificationAnswer) : '';
       const entry = normalizeEntry({
         id: slugify(label),
         label,
@@ -189,6 +203,8 @@ async function runEnrollPage() {
         href: href || '#',
         thumb,
         notes: notesInput.value.trim(),
+        verificationPrompt,
+        verificationAnswerHash,
         descriptors,
         colorHistograms,
         avgRgb,
@@ -210,6 +226,8 @@ async function runEnrollPage() {
           href: entry.href || existing.href || '#',
           thumb: entry.thumb || existing.thumb || '',
           notes: entry.notes || existing.notes || '',
+          verificationPrompt: entry.verificationPrompt || existing.verificationPrompt || '',
+          verificationAnswerHash: entry.verificationAnswerHash || existing.verificationAnswerHash || '',
           descriptors: [...existing.descriptors, ...entry.descriptors],
           colorHistograms: [...existing.colorHistograms, ...entry.colorHistograms],
           avgRgb: entry.avgRgb || existing.avgRgb,
@@ -223,9 +241,11 @@ async function runEnrollPage() {
       saveLocalLibrary(entries.map((item) => normalizeEntry({ ...item, source: 'local' })));
       render();
       createForm.reset();
+      verificationPromptInput.setCustomValidity('');
+      verificationAnswerInput.setCustomValidity('');
       renderBreedChips('', '');
       setProgress(100, 'הרשומה נשמרה.');
-      setStatus(statusEl, `${existingIndex >= 0 ? 'עודכנה' : 'נוספה'} הרשומה ${label} עם ${usable} ${usable === 1 ? 'תמונה תקינה אחת' : 'תמונות תקינות'}.`, { tone: 'success' });
+      setStatus(statusEl, `${existingIndex >= 0 ? 'עודכנה' : 'נוספה'} הרשומה ${label} עם ${usable} ${usable === 1 ? 'תמונה תקינה אחת' : 'תמונות תקינות'}${verificationPrompt ? ' וגם סימן זיהוי פרטי.' : '.'}`, { tone: 'success' });
     } catch (error) {
       console.error(error);
       setProgress(0, 'העיבוד נכשל.');

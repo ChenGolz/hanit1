@@ -194,6 +194,33 @@ function formatReportedAt(value) {
   }).format(date);
 }
 
+function normalizeAnswerText(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[֑-ׇ]/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function sha256Hex(value = '') {
+  const normalized = normalizeAnswerText(value);
+  if (!normalized) return '';
+  const encoded = new TextEncoder().encode(normalized);
+  const digest = await crypto.subtle.digest('SHA-256', encoded);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function verifyChallengeAnswer(entry = {}, answer = '') {
+  const normalized = normalizeAnswerText(answer);
+  if (!normalized) return false;
+  const expected = String(entry.verificationAnswerHash || entry.verification_answer_hash || '').trim();
+  if (!expected) return false;
+  const actual = await sha256Hex(normalized);
+  return actual === expected;
+}
+
 async function reverseGeocodeLatLng(lat, lng, language = 'he') {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
   const params = new URLSearchParams({
@@ -259,6 +286,34 @@ function getImpactBadges(stats = loadImpactStats()) {
   return badges;
 }
 
+async function fetchSummaryStats(endpoint = './api/stats/summary') {
+  const impact = loadImpactStats();
+  const fallback = {
+    reunitedLast24h: Math.max(Number(impact.strongMatches || 0), Number(loadLastMatchGallery()?.matches?.length || 0)),
+    localAnimals: Number(loadLocalLibrary().length || 0),
+    searches: Number(impact.searches || 0),
+    source: 'local',
+  };
+  try {
+    const response = await fetch(endpoint, { headers: { 'Accept': 'application/json' } });
+    if (!response.ok) throw new Error(`stats ${response.status}`);
+    const payload = await response.json();
+    const summary = {
+      reunitedLast24h: Number(payload.reunited_last_24h ?? payload.reunitedLast24h ?? payload.reunions_last_24h ?? payload.reunions ?? 0),
+      localAnimals: Number(payload.local_animals ?? payload.localAnimals ?? fallback.localAnimals),
+      searches: Number(payload.searches ?? fallback.searches),
+      updatedAt: payload.updated_at || payload.updatedAt || new Date().toISOString(),
+      source: 'api',
+    };
+    localStorage.setItem(STATS_SUMMARY_CACHE_KEY, JSON.stringify(summary));
+    return { ...fallback, ...summary };
+  } catch (error) {
+    const cached = safeJsonParse(localStorage.getItem(STATS_SUMMARY_CACHE_KEY), null);
+    if (cached) return { ...fallback, ...cached, source: 'cache' };
+    return fallback;
+  }
+}
+
 function setStatus(element, text, options = {}) {
   if (!element) return;
   const { tone = 'default', busy = false } = options;
@@ -314,8 +369,8 @@ function canvasToBlob(canvas, type = 'image/jpeg', quality = 0.9) {
 
 async function fileToPreparedImage(file, options = {}) {
   const {
-    maxWidth = 1024,
-    maxHeight = 1024,
+    maxWidth = 1200,
+    maxHeight = 1200,
     type = 'image/jpeg',
     quality = 0.80,
   } = options;
@@ -740,6 +795,8 @@ function normalizeEntry(entry) {
     href: isSafeProfileHref(entry.href) ? (String(entry.href || '').trim() || '#') : '#',
     thumb: String(entry.thumb || '').trim(),
     notes: String(entry.notes || '').trim(),
+    verificationPrompt: String(entry.verification_prompt || entry.verificationPrompt || '').trim(),
+    verificationAnswerHash: String(entry.verification_answer_hash || entry.verificationAnswerHash || '').trim(),
     descriptors,
     colorHistograms,
     avgRgb: avgRgb.length ? avgRgb : [127, 127, 127],
@@ -946,6 +1003,24 @@ function buildWhatsAppHref({ city = '', locationText = '', reportedAt = '', lat 
   return `https://wa.me/?text=${encodeURIComponent(parts.join('\n'))}`;
 }
 
+function buildCommunityWatchHref({ city = '', locationText = '', reportedAt = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
+  const blurred = privacyBlurCoordinates(lat, lng, 120);
+  const parts = ['שלום לכולם, נדרשת עזרה באיתור בעל חיים דרך פאטקונקט.'];
+  if (bestMatch) {
+    parts.push(`נמצאה התאמה אפשרית ל-${bestMatch.label} (${formatPct(bestMatch.score || bestMatch.colorScore || 0)}).`);
+    if (bestMatch.animalType) parts.push(`סוג: ${bestMatch.animalType}.`);
+    if (bestMatch.breed) parts.push(`גזע: ${bestMatch.breed}.`);
+    if (bestMatch.colors || bestMatch.colorName) parts.push(`צבעים בולטים: ${bestMatch.colors || bestMatch.colorName}.`);
+  }
+  if (city) parts.push(`עיר: ${city}.`);
+  if (locationText) parts.push(`אזור: ${locationText}.`);
+  if (reportedAt) parts.push(`זמן דיווח: ${formatReportedAt(reportedAt)}.`);
+  if (Number.isFinite(blurred.lat) && Number.isFinite(blurred.lng)) parts.push(`אזור משוער במפה: ${formatCoordinates(blurred.lat, blurred.lng)}.`);
+  parts.push(`עמוד החיפוש/הדיווח: ${pageUrl}`);
+  parts.push('מי שמזהה — שיצור קשר דרך הקישור או דרך בעלת החיה. תודה!');
+  return `https://wa.me/?text=${encodeURIComponent(parts.join('\n'))}`;
+}
+
 async function shareResult({ city = '', locationText = '', reportedAt = '', lat = null, lng = null, bestMatch = null, pageUrl = window.location.href } = {}) {
   const blurred = privacyBlurCoordinates(lat, lng, 100);
   const shareUrl = bestMatch?.href && bestMatch.href !== '#'
@@ -1055,8 +1130,8 @@ function privacyBlurCoordinates(lat, lng, radiusMeters = 100) {
 
 function shrinkImage(file, options = {}) {
   return fileToPreparedImage(file, {
-    maxWidth: Number(options.maxWidth || 1024),
-    maxHeight: Number(options.maxHeight || 1024),
+    maxWidth: Number(options.maxWidth || 1200),
+    maxHeight: Number(options.maxHeight || 1200),
     quality: Number(options.quality || 0.80),
     type: options.type || 'image/jpeg',
   });
@@ -1079,6 +1154,7 @@ function renderMatchCards(matches = [], options = {}) {
     const scoreText = kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
     const reason = kind === 'visual' ? 'התאמה מיידית מהסריקה' : 'תוצאת גיבוי לפי צבעים דומים';
     const profileButton = target ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>` : '<span class="badge">אין קישור פרופיל</span>';
+    const verifyButton = match.verificationPrompt ? `<button class="secondary small" type="button" data-verify-index="${index}">בדיקת סימן זיהוי</button>` : '';
     return `
       <article class="match-card result-card" data-match-index="${index}">
         ${thumb}
@@ -1092,10 +1168,11 @@ function renderMatchCards(matches = [], options = {}) {
             ${breed}
             ${colors}
             ${match.source ? `<span class="badge">${sourceLabel(match.source)}</span>` : ''}
+            ${match.verificationPrompt ? '<span class="badge">כולל סימן זיהוי</span>' : ''}
           </div>
           <div class="small">${reason}</div>
           ${notes}
-          <div class="card-actions">${profileButton}</div>
+          <div class="card-actions">${profileButton}${verifyButton}</div>
         </div>
       </article>`;
   }).join('');
@@ -1188,6 +1265,7 @@ if (typeof window !== 'undefined') {
     formatCoordinates,
     buildMunicipalReportHref,
     buildWhatsAppHref,
+    buildCommunityWatchHref,
     shareResult,
   setButtonBusy,
   attachCityAutocomplete,
