@@ -1703,6 +1703,126 @@ function displayMatches(matches = [], options = {}) {
   return true;
 }
 
+
+
+function buildPendingFoundReportDraft(payload = {}) {
+  const imageData = String(payload.imageData || '').trim();
+  const reportedAt = String(payload.reportedAt || new Date().toISOString()).trim();
+  const animalType = inferAnimalTypeLabel(payload.animalType || '');
+  const sizeLabel = String(payload.sizeLabel || '').trim();
+  const colorName = String(payload.colorName || payload.colors || '').trim();
+  return {
+    id: payload.id || `draft-${Date.now()}`,
+    imageData,
+    animalType,
+    breed: String(payload.breed || '').trim(),
+    colorName,
+    colors: String(payload.colors || colorName || '').trim(),
+    city: String(payload.city || '').trim(),
+    locationText: String(payload.locationText || '').trim(),
+    reportedAt,
+    lat: Number.isFinite(payload.lat) ? Number(payload.lat) : null,
+    lng: Number.isFinite(payload.lng) ? Number(payload.lng) : null,
+    sizeLabel,
+    notes: String(payload.notes || '').trim(),
+    searchRadiusKm: Number(payload.searchRadiusKm || 0) || 0,
+    sourcePage: String(payload.sourcePage || window.location.href).trim(),
+    quickPost: Boolean(payload.quickPost),
+    querySummary: String(payload.querySummary || '').trim(),
+  };
+}
+
+function savePendingFoundReportDraft(payload = {}) {
+  const draft = buildPendingFoundReportDraft(payload);
+  sessionStorage.setItem(PENDING_FOUND_REPORT_KEY, JSON.stringify(draft));
+  return draft;
+}
+
+function loadPendingFoundReportDraft() {
+  const parsed = safeJsonParse(sessionStorage.getItem(PENDING_FOUND_REPORT_KEY), null);
+  return parsed && typeof parsed === 'object' ? parsed : null;
+}
+
+function clearPendingFoundReportDraft() {
+  try { sessionStorage.removeItem(PENDING_FOUND_REPORT_KEY); } catch (error) { console.warn('pending report clear failed', error); }
+}
+
+function loadFoundReports() {
+  const parsed = safeJsonParse(localStorage.getItem(FOUND_REPORTS_KEY), []);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function saveFoundReports(reports = []) {
+  localStorage.setItem(FOUND_REPORTS_KEY, JSON.stringify(Array.isArray(reports) ? reports : []));
+}
+
+function saveFoundReport(report = {}) {
+  const reports = loadFoundReports();
+  const saved = {
+    id: report.id || `found-${Date.now()}`,
+    imageData: String(report.imageData || '').trim(),
+    animalType: inferAnimalTypeLabel(report.animalType || ''),
+    breed: String(report.breed || '').trim(),
+    colorName: String(report.colorName || report.colors || '').trim(),
+    colors: String(report.colors || report.colorName || '').trim(),
+    city: String(report.city || '').trim(),
+    locationText: String(report.locationText || '').trim(),
+    reportedAt: String(report.reportedAt || new Date().toISOString()).trim(),
+    lat: Number.isFinite(report.lat) ? Number(report.lat) : null,
+    lng: Number.isFinite(report.lng) ? Number(report.lng) : null,
+    sizeLabel: String(report.sizeLabel || '').trim(),
+    notes: String(report.notes || '').trim(),
+    verificationPrompt: String(report.verificationPrompt || '').trim(),
+    verificationAnswerHash: String(report.verificationAnswerHash || '').trim(),
+    sourcePage: String(report.sourcePage || '').trim(),
+    createdAt: new Date().toISOString(),
+    status: 'local',
+  };
+  reports.unshift(saved);
+  saveFoundReports(reports.slice(0, 50));
+  return saved;
+}
+
+function buildFoundReportShareText(report = {}, options = {}) {
+  const lines = ['נמצאה חיה דרך פאטקונקט'];
+  if (report.animalType) lines.push(`סוג: ${report.animalType}`);
+  if (report.breed) lines.push(`גזע: ${report.breed}`);
+  if (report.colors || report.colorName) lines.push(`צבע: ${report.colors || report.colorName}`);
+  if (report.city) lines.push(`עיר: ${report.city}`);
+  if (report.locationText) lines.push(`אזור: ${report.locationText}`);
+  if (report.reportedAt) lines.push(`זמן: ${formatReportedAt(report.reportedAt)}`);
+  if (report.notes) lines.push(`פרטים נוספים: ${report.notes}`);
+  if (options.includeGuide !== false) lines.push('מה לעשות עכשיו: לבדוק קולר, לגשת לסריקת שבב, ולהציע מים בזהירות.');
+  return lines.join('\n');
+}
+
+function buildFoundReportWhatsAppHref(report = {}, options = {}) {
+  const text = buildFoundReportShareText(report, options);
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
+function estimateAnimalSizeLabel(rect = null, image = null) {
+  if (!rect || !image || !image.width || !image.height) return '';
+  const ratio = (rect.width * rect.height) / (image.width * image.height);
+  if (ratio < 0.08) return 'קטן';
+  if (ratio < 0.22) return 'בינוני';
+  return 'גדול';
+}
+
+function renderFoundReportCards(reports = []) {
+  if (!Array.isArray(reports) || !reports.length) return '<div class="empty">עדיין אין דיווחים מקומיים במכשיר הזה.</div>';
+  return reports.map((report) => `
+    <article class="match-card report-card">
+      ${report.imageData ? `<div class="thumb-wrap blur-shell"><img class="blur-up" src="${report.imageData}" alt="${escapeHtml(report.animalType || 'חיה שנמצאה')}"></div>` : ''}
+      <div class="body stack">
+        <div class="space-between"><strong>${escapeHtml(report.animalType || 'חיה שנמצאה')}</strong><span class="badge">${escapeHtml(formatReportedAt(report.reportedAt) || 'עכשיו')}</span></div>
+        <div class="row">${report.breed ? `<span class="badge">${escapeHtml(report.breed)}</span>` : ''}${report.colors ? `<span class="badge">${escapeHtml(report.colors)}</span>` : ''}${report.city ? `<span class="badge">${escapeHtml(report.city)}</span>` : ''}</div>
+        <div class="small">${escapeHtml(report.locationText || 'ללא אזור מפורט')}</div>
+        ${report.notes ? `<div class="small">${escapeHtml(report.notes)}</div>` : ''}
+      </div>
+    </article>`).join('');
+}
+
 function registerServiceWorker() {
   if (window.__petconnectSwRegistered) return;
   if (!('serviceWorker' in navigator)) return;
@@ -1792,5 +1912,15 @@ if (typeof window !== 'undefined') {
     renderMatchCards,
     registerServiceWorker,
     openPrintablePoster,
+    buildPendingFoundReportDraft,
+    savePendingFoundReportDraft,
+    loadPendingFoundReportDraft,
+    clearPendingFoundReportDraft,
+    loadFoundReports,
+    saveFoundReport,
+    buildFoundReportShareText,
+    buildFoundReportWhatsAppHref,
+    estimateAnimalSizeLabel,
+    renderFoundReportCards,
   });
 }

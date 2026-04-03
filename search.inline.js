@@ -29,6 +29,8 @@ async function waitForCommonHelpers() {
     'buildConnectionHint',
     'requestNeighborhoodAlertsPermission',
     'shareCommunityFlyer',
+    'savePendingFoundReportDraft',
+    'estimateAnimalSizeLabel',
   ];
   const start = Date.now();
   while (Date.now() - start < 8000) {
@@ -92,6 +94,8 @@ async function runSearchPage() {
   const lowDataToggle = document.getElementById('low-data-toggle');
   const connectionNoteEl = document.getElementById('connection-note');
   const reportTopBtn = document.getElementById('report-top-btn');
+  const reportDirectBtn = document.getElementById('report-direct-btn');
+  const reportCtaContainer = document.getElementById('report-cta-container');
   const privacyNoteEl = document.getElementById('privacy-note');
   const smartHintEl = document.getElementById('smart-hint');
   const radiusInput = document.getElementById('search-radius');
@@ -405,6 +409,7 @@ async function runSearchPage() {
             <button id="whatsapp-inline" class="secondary small" type="button">וואטסאפ</button>
             <button id="poster-inline" class="secondary small" type="button">פלייר PNG</button>
             <button id="print-inline" class="secondary small" type="button">פוסטר להדפסה</button>
+            <button id="report-inline" class="secondary small" type="button">פרסמי כחיה שנמצאה</button>
             ${state.band === 'low' ? '<button id="retry-search-inline" class="secondary small" type="button">בחירת אזור חדש</button>' : ''}
           </div>
         </div>
@@ -429,15 +434,115 @@ async function runSearchPage() {
       recordImpactEvent('poster');
       setStatus(statusEl, 'נפתח פוסטר מוכן להדפסה או שמירה כ-PDF.', { tone: 'success' });
     });
+    summaryEl.querySelector('#report-inline')?.addEventListener('click', () => {
+      goToFoundReport();
+    });
     summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
       document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       setStatus(statusEl, 'בחרי אזור חדש סביב החיה ונסי שוב. תמונה קרובה יותר בדרך כלל תשפר את התוצאה.', { tone: 'warn' });
     });
   }
 
+
+
+function buildCurrentReportDraft(overrides = {}) {
+  if (!currentPreviewImage || !currentSelection) return null;
+  const queryCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
+  const queryCanvas = circleMaskToggle?.checked ? applyCircleMask(queryCanvasRaw) : queryCanvasRaw;
+  const colorProfile = currentQueryFeatures ? {
+    colorName: currentQueryFeatures.colorName,
+    avgHex: currentQueryFeatures.avgHex,
+  } : extractColorProfile(queryCanvas);
+  const topMatch = currentResultBundle?.matches?.[0] || null;
+  const inferredType = inferAnimalTypeLabel(queryAnimalTypeEl.value || topMatch?.animalType || currentDetections?.animals?.[0]?.class || '');
+  const inferredBreed = String(breedInput.value || topMatch?.breed || '').trim();
+  const inferredColor = String(colorProfile.colorName || topMatch?.colors || topMatch?.colorName || '').trim();
+  const draft = savePendingFoundReportDraft({
+    imageData: cropRectToDataUrlMasked(currentPreviewImage, currentSelection, 720, circleMaskToggle?.checked ? 'circle' : 'rect'),
+    animalType: inferredType,
+    breed: inferredBreed,
+    colorName: inferredColor,
+    colors: inferredColor,
+    city: cityInput.value,
+    locationText: locationTextInput.value,
+    reportedAt: currentReportTimestamp || new Date().toISOString(),
+    lat: geoState.lat,
+    lng: geoState.lng,
+    sizeLabel: estimateAnimalSizeLabel(currentSelection, currentPreviewImage),
+    searchRadiusKm: Number(radiusInput?.value || 0),
+    sourcePage: window.location.href,
+    querySummary: currentResultBundle?.matches?.[0]?.label ? `התוצאה המובילה כרגע: ${currentResultBundle.matches[0].label}` : '',
+    ...overrides,
+  });
+  return draft;
+}
+
+async function ensurePreparedPreviewForReporting() {
+  if (currentPreviewImage && currentSelection) return true;
+  const file = fileInput.files?.[0];
+  if (!file) return false;
+  const connectionProfile = { ...(getConnectionProfile?.() || {}), weak: Boolean(lowDataToggle?.checked) || Boolean(getConnectionProfile?.().weak) };
+  const prepared = await shrinkImage(file, {
+    connectionProfile,
+    maxWidth: connectionProfile.weak ? 224 : 1200,
+    maxHeight: connectionProfile.weak ? 224 : 1200,
+    quality: connectionProfile.weak ? 0.72 : 0.82,
+  });
+  try {
+    currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
+    currentSelection = defaultSelectionRect(currentPreviewImage);
+    if (!currentReportTimestamp) setAutoTimestamp(new Date());
+    if (subjectOnlyToggle?.checked) {
+      try { await runSmartAnimalScan(currentPreviewImage); } catch (error) { console.warn(error); }
+    }
+    redrawPreview();
+    updateSelectionPreview();
+    runSelectedBtn.disabled = false;
+    return true;
+  } finally {
+    prepared.cleanup();
+  }
+}
+
+async function goToFoundReport(overrides = {}) {
+  const ok = await ensurePreparedPreviewForReporting();
+  if (!ok) {
+    setStatus(statusEl, 'צריך קודם לבחור תמונה כדי לעבור לדיווח חיה שנמצאה.', { tone: 'warn' });
+    return;
+  }
+  buildCurrentReportDraft(overrides);
+  window.location.href = './report-found.html';
+}
+
+function renderReportCta(bundle) {
+  if (!reportCtaContainer) return;
+  const state = classifyResultState(bundle);
+  const showProminent = !bundle || state.band === 'empty' || state.band === 'low' || state.band === 'fallback';
+  const heading = showProminent ? 'לא נמצאה התאמה חזקה?' : 'רוצה גם לפרסם את החיה שנמצאה?';
+  const text = showProminent
+    ? 'אפשר להפוך את התמונה שכבר נטענה לדיווח חיה שנמצאה — בלי להעלות אותה שוב.'
+    : 'אם תרצי, אפשר להמשיך מהחיפוש הזה ישר לדיווח מהיר עם אותה תמונה ואותו מיקום.';
+  reportCtaContainer.className = 'report-cta-card';
+  reportCtaContainer.innerHTML = `
+    <div class="space-between wrap-gap">
+      <div class="stack" style="gap:6px;">
+        <div class="chip">Quick Convert</div>
+        <strong>${escapeHtml(heading)}</strong>
+        <div class="small">${escapeHtml(text)}</div>
+      </div>
+      <div class="row wrap compact-row">
+        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small" type="button">לא מצאת התאמה? פרסמי כחיה שנמצאה</button>
+        <button id="cta-quick-post-btn" class="secondary small" type="button">דיווח מהיר מהמיקום הזה</button>
+      </div>
+    </div>`;
+  reportCtaContainer.querySelector('#cta-report-btn')?.addEventListener('click', () => goToFoundReport());
+  reportCtaContainer.querySelector('#cta-quick-post-btn')?.addEventListener('click', () => goToFoundReport({ quickPost: true }));
+}
+
   function rerenderResults() {
     const filteredBundle = applyResultFilters(currentResultBundle);
     renderSummary(filteredBundle);
+    renderReportCta(filteredBundle);
     renderResults(filteredBundle);
     updateTopActions(filteredBundle);
     saveLastMatchGallery(filteredBundle, {
@@ -502,6 +607,7 @@ async function runSearchPage() {
   libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
   resetSearchProgress();
   updateTopActions(null);
+  renderReportCta(null);
   updatePrivacyNote();
   updateRadiusNote();
   renderBreedChips(queryAnimalTypeEl.value, breedInput.value.trim());
@@ -527,8 +633,21 @@ async function runSearchPage() {
       setAutoTimestamp(new Date());
       setStatus(statusEl, 'התמונה נבחרה. זמן הדיווח נשמר אוטומטית.', { tone: 'success' });
       updateDetectionStatus('מוכן לסריקה חכמה של החיה.');
+      setButtonBusy?.(reportDirectBtn, false);
     }
   });
+  reportDirectBtn?.addEventListener('click', async () => {
+    try {
+      setButtonBusy?.(reportDirectBtn, true, 'מעביר לדיווח…');
+      await goToFoundReport();
+    } catch (error) {
+      console.error(error);
+      setStatus(statusEl, `המעבר לדיווח נכשל: ${error.message}`, { tone: 'warn' });
+    } finally {
+      setButtonBusy?.(reportDirectBtn, false);
+    }
+  });
+
   smartScanBtn?.addEventListener('click', async () => {
     if (!currentPreviewImage) {
       setStatus(statusEl, 'צריך קודם להעלות תמונה כדי לבצע סריקה חכמה.', { tone: 'warn' });
@@ -715,6 +834,7 @@ async function runSearchPage() {
     summaryEl.classList.add('hidden');
     currentResultBundle = null;
     updateTopActions(null);
+  renderReportCta(null);
     clearLastMatchGallery();
     resetSearchProgress();
 

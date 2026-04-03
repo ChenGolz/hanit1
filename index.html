@@ -4,13 +4,13 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v12">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v12">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v13">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v13">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/i18n.js?v=20260403v12"></script>
-    <script defer src="./assets/common.js?v=20260403v12"></script>
-    <script defer src="./assets/app.js?v=20260403v12"></script>
+    <script defer src="./assets/i18n.js?v=20260403v13"></script>
+    <script defer src="./assets/common.js?v=20260403v13"></script>
+    <script defer src="./assets/app.js?v=20260403v13"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -27,6 +27,7 @@
           <a class="link" href="./index.html">דף הבית</a>
           <a class="link" href="./search.html">חיפוש חיה</a>
           <a class="link" href="./enroll.html">בניית מאגר</a>
+          <a class="link" href="./report-found.html">דיווח חיה שנמצאה</a>
         </div>
       </nav>
 
@@ -34,8 +35,9 @@
         <div class="chip">מוכן ל-GitHub Pages</div>
         <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.4rem);">חיפוש בעלי חיים באתר סטטי, בלי שרת.</h1>
         <p class="meta" style="font-size:1.08rem; max-width: 760px;">הגרסה הזאת מיועדת לבעלי חיים בלבד — לא לאנשים. מעלים תמונה, מסמנים את אזור החיה ידנית, והאתר משווה אותה למאגר שפרסמת. אם אין התאמה ויזואלית חזקה, מוצגות חיות בצבעים דומים כדי לעזור לא לפספס.</p>
-        <div class="row">
-          <a class="button-link" href="./search.html">פתיחת חיפוש חיה</a>
+        <div class="row wrap compact-row">
+          <a class="button-link" href="./search.html">חיפוש בעלים</a>
+          <a class="button-link success" href="./report-found.html">דיווח כחיה שנמצאה</a>
           <a class="button-link secondary" href="./enroll.html">בניית המאגר שלך</a>
         </div>
         <div class="hero-stats" id="hero-stats">
@@ -52,6 +54,20 @@
         </div>
         <div class="notice warn">
           GitHub Pages יכול לארח את האתר עצמו, אבל הוא לא מפעיל Backend של FastAPI ולא שומר העלאות ציבוריות משותפות. למאגר חי ומשותף עדיין תצטרכי אחסון אמיתי בהמשך.
+        </div>
+      </section>
+
+      <section class="card stack" style="margin-top:16px;">
+        <div class="space-between">
+          <div>
+            <h2 class="section-title" style="margin:0;">זרימה מהירה בשטח</h2>
+            <div class="small">אחרי צילום תמונה אפשר לבחור מיד: לחפש בעלים או לפרסם כחיה שנמצאה — בלי להעלות שוב את הקובץ.</div>
+          </div>
+          <div class="chip">One-Tap</div>
+        </div>
+        <div class="row wrap compact-row">
+          <a class="button-link" href="./search.html">חיפוש בעלים</a>
+          <a class="button-link success" href="./report-found.html">דיווח חיה שנמצאה</a>
         </div>
       </section>
 

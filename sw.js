@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v19';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v19';
+const STATIC_CACHE = 'petconnect-animal-static-v20';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v20';
 const SYNC_DB_NAME = 'petconnect-sync-db';
 const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [
@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
   './index.html',
   './search.html',
   './enroll.html',
+  './report-found.html',
   './offline.html',
   './manifest.webmanifest',
   './favicon.svg',
@@ -18,6 +19,7 @@ const ASSETS_TO_CACHE = [
   './assets/i18n.js',
   './search.inline.js',
   './enroll.inline.js',
+  './report-found.inline.js',
   './data/library.json',
 ];
 const RUNTIME_HOSTS = new Set([

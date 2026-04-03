@@ -721,3 +721,14 @@ button[aria-busy="true"]::after {
 
 
 .print-note{font-size:.92rem;color:#9aa4d8;}
+
+
+.button-link.success, button.success { background: linear-gradient(135deg,#1f9d65,#33c27a); color:#fff; }
+.report-cta-card { margin: 12px 0 16px; padding: 16px; border: 1px solid rgba(139,92,246,.25); border-radius: 18px; background: rgba(139,92,246,.08); display:block; }
+.wrap-gap { gap: 12px; }
+.report-preview { width: 100%; max-height: 420px; object-fit: contain; border-radius: 18px; background: rgba(255,255,255,.04); }
+.report-card .thumb-wrap img { object-fit: cover; }
+.readonly-input { opacity: .92; }
+@media (max-width: 760px) {
+  .report-preview { max-height: 300px; }
+}
