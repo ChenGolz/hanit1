@@ -1716,3 +1716,16 @@ body { background: var(--bg-light-soft); }
 html[dir="ltr"] body, html[dir="rtl"] body { transition: background-color .25s ease, color .25s ease; }
 .home-thumb-zone, .live-feed-shell, #success-stories { max-width: 1100px; margin-inline: auto; }
 .footer { opacity: .75; }
+
+
+.minimalist-homepage .footer { opacity: .78; }
+.hero-home-card { max-width: 980px; margin-inline: auto; text-align: center; }
+.hero-actions-grid { display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px; width:100%; }
+.action-hero-card { display:flex; flex-direction:column; justify-content:space-between; align-items:flex-start; min-height: 168px; padding: 1.4rem; border-radius: 28px; text-decoration:none; border:none; box-shadow: 0 12px 34px rgba(0,0,0,.06); transition: transform .22s ease, box-shadow .22s ease; }
+.action-hero-card:hover { transform: translateY(-4px); box-shadow: 0 18px 42px rgba(0,122,255,.12); }
+.action-hero-card.found-now { background: linear-gradient(135deg, rgba(0,122,255,.14), rgba(255,255,255,.95)); color: inherit; }
+.action-hero-card.lost { background: linear-gradient(135deg, rgba(255,149,0,.16), rgba(255,255,255,.95)); color: inherit; }
+.hero-mini-stats { justify-content:center; }
+.compact-home-disclosure summary { cursor:pointer; font-weight:700; }
+.pet-preview { width:100px; height:100px; border: 3px solid var(--primary-blue, #007AFF); box-shadow: 0 8px 20px rgba(0,122,255,.12); }
+@media (max-width: 720px) { .hero-actions-grid { grid-template-columns: 1fr; } }

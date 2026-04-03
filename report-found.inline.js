@@ -15,9 +15,7 @@ async function waitForReportHelpers() {
 
 async function runReportFoundPage() {
   await waitForReportHelpers();
-  window.initLang?.('he');
-  window.applyTranslations?.();
-  window.mountLanguageSwitcher?.();
+  window.bootUiShell?.(document);
   window.registerServiceWorker?.();
 
   const statusEl = document.getElementById('report-status');

@@ -643,8 +643,14 @@ async function goToFoundReport(overrides = {}) {
     setStatus(statusEl, 'צריך קודם לבחור תמונה כדי לעבור לדיווח חיה שנמצאה.', { tone: 'warn' });
     return;
   }
-  buildCurrentReportDraft(overrides);
-  try { sessionStorage.setItem('petconnect-report-arrival-v1', '1'); } catch (error) { console.warn(error); }
+  const draft = buildCurrentReportDraft(overrides);
+  try {
+    if (draft?.imageData) sessionStorage.setItem('pendingFoundImage', draft.imageData);
+    if (draft?.imageData) sessionStorage.setItem('pendingReportImage', draft.imageData);
+    sessionStorage.setItem('pendingFoundLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
+    sessionStorage.setItem('pendingReportLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
+    sessionStorage.setItem('petconnect-report-arrival-v1', '1');
+  } catch (error) { console.warn(error); }
   await animateReportTransition();
   window.location.href = './report-found.html';
 }

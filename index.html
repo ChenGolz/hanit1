@@ -4,24 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v23">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v23">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v24">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v24">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/global.js?v=20260403v23"></script>
-    <script defer src="./assets/i18n.js?v=20260403v23"></script>
-    <script defer src="./assets/common.js?v=20260403v23"></script>
-    <script defer src="./assets/app.js?v=20260403v23"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').catch((error) => console.warn('רישום Service Worker נכשל:', error));
-        });
-      }
-    </script>
+    <script defer src="./assets/global.js?v=20260403v24"></script>
+    <script defer src="./assets/i18n.js?v=20260403v24"></script>
+    <script defer src="./assets/common.js?v=20260403v24"></script>
+    <script defer src="./assets/app.js?v=20260403v24"></script>
   </head>
   <body>
-    <main class="page unified-page">
+    <main class="page unified-page minimalist-homepage">
       <nav class="nav nav-glass header-modern">
         <div class="brand-block"><strong>פאטקונקט</strong><span class="brand-subtitle">איתור והצלה</span></div>
         <div class="nav-actions">
@@ -30,58 +23,47 @@
             <button type="button" data-lang="ar">عر</button>
             <button type="button" data-lang="en">EN</button>
           </div>
-          <a class="button-link secondary small" href="./search.html">פתיחת חיפוש</a>
+          <button id="theme-toggle" type="button" class="button-link secondary small">מצב כהה</button>
         </div>
         <div class="links">
           <a class="link" href="./index.html">דף הבית</a>
           <a class="link" href="./search.html">חיפוש חיה</a>
-          <a class="link" href="./enroll.html">בניית מאגר</a>
           <a class="link" href="./report-found.html">דיווח חיה שנמצאה</a>
+          <a class="link" href="./enroll.html">בניית מאגר</a>
         </div>
       </nav>
+
       <input id="home-camera-input" class="camera-direct-input" type="file" accept="image/*" capture="environment">
 
-      <section class="hero hero-modern stack high-contrast-card section-shell hero-shell">
-        <div class="chip">עזרה מהירה מהשטח</div>
-        <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.5rem);">מחזירים חיות הביתה בעזרת AI.</h1>
-        <p class="meta" style="font-size:1.08rem; max-width: 760px;">כל שנייה חשובה. התחילי עכשיו חיפוש או דיווח על חיה שנמצאה — מהר, ברור, ובשפה שלך.</p>
-        <div class="cta-note"><strong>מסלול אחד ברור לכל מצב.</strong> בחרי אם איבדת חיה או אם מצאת עכשיו חיה משוטטת, והמשיכי מיד לפעולה.</div>
-        <div class="hero-actions">
-          <button id="hero-found-now" class="emergency" type="button">מצאתי כלב עכשיו!</button>
-          <a class="button-link lost xl" href="./search.html">איבדתי חיה</a>
-          <a class="button-link found xl" href="./report-found.html">מצאתי חיה</a>
-        </div>
-            <strong id="impact-counter-value">—</strong>
-            <div id="impact-counter-note" class="small">נטען מהשרת, או מגיבוי מקומי אם אין API זמין.</div>
-          </article>
-          <article class="hero-stat-card">
-            <div class="small">חיפושים שבוצעו מהדפדפן הזה</div>
-            <strong id="impact-counter-searches">0</strong>
-            <div class="small">מדד מקומי שנותן תחושת התקדמות גם לפני שרת מלא.</div>
-          </article>
-        </div>
-      </section>
-
-      <section class="home-thumb-zone compact-home-zone minimalist-home-zone">
-        <div class="action-duo main-actions">
-          <a class="action-slab urgent" href="./search.html">
+      <section class="hero hero-modern hero-home-card stack high-contrast-card section-shell hero-shell">
+        <div class="chip">Emergency mode</div>
+        <h1 style="margin:0; font-size: clamp(2.2rem, 6vw, 4rem);">מחזירים חיות הביתה בעזרת AI.</h1>
+        <p class="meta" style="font-size:1.08rem; max-width: 700px;">כל שנייה חשובה. בחרי מסלול אחד ברור: חיפוש מהיר או דיווח על חיה שנמצאה עכשיו.</p>
+        <div class="hero-actions hero-actions-grid">
+          <a class="action-hero-card lost" href="./search.html">
             <span class="eyebrow">Lost path</span>
             <strong>איבדתי חיה</strong>
-            <small>התחילי חיפוש מהיר לפי תמונה, מיקום ופרטי החיה.</small>
+            <small>חיפוש לפי תמונה, מיקום ופרטים.</small>
           </a>
-          <button id="hero-found-now-2" class="action-slab found-now" type="button">
+          <button id="hero-found-now" class="action-hero-card found-now" type="button">
             <span class="eyebrow">Found path</span>
             <strong>מצאתי חיה עכשיו</strong>
-            <small>פותח מצלמה מיד ומעביר אותך למסלול חיפוש או דיווח בלי העלאה חוזרת.</small>
+            <small>פותח מצלמה מיד ושומר את התמונה למסלול הבא.</small>
           </button>
         </div>
-        <div class="hero-secondary-link"><a class="button-link secondary small" href="./enroll.html">בניית מאגר פרטי</a></div>
+        <div class="hero-mini-stats row wrap compact-row" id="hero-stats">
+          <span class="badge">איחודים אחרונים: <strong id="impact-counter-value">—</strong></span>
+          <span class="badge">חיפושים מהמכשיר הזה: <strong id="impact-counter-searches">0</strong></span>
+        </div>
+        <div id="impact-counter-note" class="small">אם אין שרת זמין, יוצג גיבוי מקומי.</div>
       </section>
 
       <section class="card stack section-shell live-feed-shell" style="margin-top:16px;">
         <div class="space-between">
-          <div>
-            <div class="section-head"><div class="section-kicker">Live feed</div><h2 class="section-title" style="margin:0;">קהילה חיה עכשיו</h2><div class="section-subtitle">עדכונים אחרונים מהמכשיר הזה, כדי לשמור על דף בית קצר וברור.</div></div>
+          <div class="section-head">
+            <div class="section-kicker">Live feed</div>
+            <h2 class="section-title" style="margin:0;">מה קורה עכשיו באזור</h2>
+            <div class="section-subtitle">מפה קטנה ופיד קצר — בלי עומס טקסטואלי.</div>
           </div>
           <a class="button-link secondary small" href="./report-found.html">דיווח מהיר</a>
         </div>
@@ -94,71 +76,54 @@
               <span class="map-ring"></span>
               <div class="map-label">Live area</div>
             </div>
-            <div class="small">בגרסה הסטטית מוצג תקציר מקומי. מפה חיה מלאה תתחבר בשלב השרת.</div>
+            <div class="small">בגרסה הסטטית מוצג תקציר מקומי. מפה חיה מלאה תתחבר בהמשך.</div>
           </div>
           <div class="live-feed-list" id="home-live-feed-list">
             <article class="mini-feed-card empty">
               <strong>עדיין אין דיווחים מקומיים</strong>
-              <div class="small">ברגע שישמרו חיפושים או דיווחים במכשיר הזה, הם יופיעו כאן מייד.</div>
+              <div class="small">ברגע שישמרו חיפושים או דיווחים במכשיר הזה, הם יופיעו כאן מיד.</div>
             </article>
           </div>
         </div>
       </section>
 
+      <details class="card soft-disclosure compact-home-disclosure" style="margin-top:16px;">
+        <summary>עוד פרטים וסטטיסטיקה מקומית</summary>
+        <div class="soft-disclosure-body stack" style="margin-top:12px;">
+          <section id="success-stories" class="stack">
+            <div class="space-between">
+              <div>
+                <h2 class="section-title" style="margin:0;">נמצאו לאחרונה</h2>
+                <div class="small">כמה כרטיסים קטנים שנותנים תקווה ומציגים פעילות מקומית.</div>
+              </div>
+              <span class="chip">Hope Feed</span>
+            </div>
+            <div id="success-stories-list" class="success-feed-grid"></div>
+          </section>
 
-
-
-
-      <section id="success-stories" class="card stack section-shell" style="margin-top:16px;">
-        <div class="space-between">
-          <div>
-            <h2 class="section-title" style="margin:0;">נמצאו לאחרונה / סיפורי תקווה</h2>
-            <div class="small">כמה כרטיסים קטנים שנותנים תקווה ומראים שהחיפוש באמת עובד.</div>
-          </div>
-          <span class="chip">Hope Feed</span>
+          <section id="impact-section" class="stack">
+            <div class="space-between">
+              <div>
+                <h2 class="section-title" style="margin:0;">השפעה מקומית</h2>
+                <div class="small">נשמר רק בדפדפן הזה.</div>
+              </div>
+              <div class="chip">Local Impact</div>
+            </div>
+            <div class="stat-grid compact-stat-grid">
+              <article class="impact-card"><div class="small">חיפושים</div><strong id="impact-searches">0</strong></article>
+              <article class="impact-card"><div class="small">התאמות חזקות</div><strong id="impact-strong">0</strong></article>
+              <article class="impact-card"><div class="small">ייצוא ספריות</div><strong id="impact-exports">0</strong></article>
+              <article class="impact-card"><div class="small">חיות במאגר</div><strong id="impact-local-animals">0</strong></article>
+              <article class="impact-card"><div class="small">נקודות קהילה</div><strong id="impact-karma">0</strong></article>
+            </div>
+            <div class="row wrap compact-row">
+              <button id="enable-alerts-btn" class="secondary small" type="button">הפעלת התראות שכונתיות</button>
+              <div id="alerts-note" class="small">אפשר לבקש הרשאת התראות מקומית.</div>
+            </div>
+            <div><div class="small" style="margin-bottom:8px;">תגים מקומיים</div><div id="impact-badges" class="badge-list"></div></div>
+          </section>
         </div>
-        <div id="success-stories-list" class="success-feed-grid"></div>
-      </section>
-
-      <section id="impact-section" class="card stack section-shell" style="margin-top:16px;">
-        <div class="space-between">
-          <div>
-            <h2 class="section-title" style="margin:0;">השפעה מקומית</h2>
-            <div class="small">החלק הזה נשמר בדפדפן שלך בלבד, כדי לתת תחושת התקדמות גם לפני שיש שרת מלא.</div>
-          </div>
-          <div class="chip">Local Impact</div>
-        </div>
-        <div class="stat-grid">
-          <article class="impact-card">
-            <div class="small">חיפושים שביצעת</div>
-            <strong id="impact-searches">0</strong>
-          </article>
-          <article class="impact-card">
-            <div class="small">התאמות חזקות</div>
-            <strong id="impact-strong">0</strong>
-          </article>
-          <article class="impact-card">
-            <div class="small">ספריות שיוצאו</div>
-            <strong id="impact-exports">0</strong>
-          </article>
-          <article class="impact-card">
-            <div class="small">חיות במאגר המקומי</div>
-            <strong id="impact-local-animals">0</strong>
-          </article>
-          <article class="impact-card">
-            <div class="small">נקודות קהילה</div>
-            <strong id="impact-karma">0</strong>
-          </article>
-        </div>
-        <div class="row wrap compact-row">
-          <button id="enable-alerts-btn" class="secondary small" type="button">הפעלת התראות שכונתיות</button>
-          <div id="alerts-note" class="small">הגרסה הסטטית יכולה לבקש הרשאת התראות מקומית. Web Push אמיתי יתחבר בשלב השרת.</div>
-        </div>
-        <div>
-          <div class="small" style="margin-bottom:8px;">תגים מקומיים</div>
-          <div id="impact-badges" class="badge-list"></div>
-        </div>
-      </section>
+      </details>
 
       <div class="fab-wrap">
         <div id="home-fab-sheet" class="fab-sheet hidden">
@@ -171,7 +136,7 @@
 
       <div class="footer">חיפוש ודיווח מהיר על חיות — פשוט, ברור, ומותאם למובייל.</div>
     </main>
-  
+
     <script>
   window.addEventListener('DOMContentLoaded', () => {
     const STORAGE_KEY = 'petconnect-home-pending-capture-v1';
@@ -182,7 +147,7 @@
       if (!feed) return;
       const reports = (window.loadFoundReports?.() || []).slice(0, 4);
       if (!reports.length) {
-        feed.innerHTML = `<article class="mini-feed-card empty"><strong>עדיין אין דיווחים מקומיים</strong><div class="small">ברגע שישמרו חיפושים או דיווחים במכשיר הזה, הם יופיעו כאן מייד.</div></article>`;
+        feed.innerHTML = `<article class="mini-feed-card empty"><strong>עדיין אין דיווחים מקומיים</strong><div class="small">ברגע שישמרו חיפושים או דיווחים במכשיר הזה, הם יופיעו כאן מיד.</div></article>`;
         return;
       }
       feed.innerHTML = reports.map((report) => `
@@ -200,7 +165,6 @@
     const cameraInput = document.getElementById('home-camera-input');
     const openCamera = () => cameraInput?.click();
     document.getElementById('hero-found-now')?.addEventListener('click', openCamera);
-    document.getElementById('hero-found-now-2')?.addEventListener('click', openCamera);
     document.getElementById('fab-open-camera')?.addEventListener('click', openCamera);
     cameraInput?.addEventListener('change', () => {
       const file = cameraInput.files?.[0];
@@ -216,7 +180,7 @@
     const fabSheet = document.getElementById('home-fab-sheet');
     fabToggle?.addEventListener('click', () => fabSheet?.classList.toggle('hidden'));
 
-    const stats = window.loadImpactStats?.() || { searches: 0, strongMatches: 0, librariesExported: 0, localAnimals: 0 };
+    const stats = window.loadImpactStats?.() || { searches: 0, strongMatches: 0, librariesExported: 0, localAnimals: 0, karma: 0 };
     document.getElementById('impact-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
     document.getElementById('impact-counter-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
     window.fetchSummaryStats?.().then((summary) => {
@@ -237,39 +201,9 @@
       const noteEl = document.getElementById('alerts-note');
       if (!noteEl) return;
       if (!result?.supported) noteEl.textContent = 'הדפדפן הזה לא תומך בהתראות.';
-      else if (result.granted) {
-        noteEl.textContent = 'התראות מקומיות הופעלו. בשלב הבא, גרסת השרת תוכל לשלוח התראות אזוריות אמיתיות.';
-        window.showLocalNeighborhoodAlert?.({
-          title: 'התראת שכונה הופעלה',
-          body: 'מעכשיו נוכל להציג התראות מקומיות גם כשהאפליקציה סגורה.',
-          data: { url: './search.html' },
-          tag: 'alerts-enabled',
-        }).catch(() => {});
-      } else noteEl.textContent = 'לא ניתנה הרשאה להתראות.';
+      else if (result.granted) noteEl.textContent = 'התראות מקומיות הופעלו.';
+      else noteEl.textContent = 'לא ניתנה הרשאה להתראות.';
     });
-
-const nearbyCard = document.getElementById('nearby-context-card');
-const nearbyText = document.getElementById('nearby-context-text');
-document.getElementById('nearby-context-btn')?.addEventListener('click', () => {
-  if (!navigator.geolocation) {
-    if (nearbyCard) nearbyCard.classList.remove('hidden');
-    if (nearbyText) nearbyText.textContent = 'הדפדפן לא תומך בגישה למיקום.';
-    return;
-  }
-  navigator.geolocation.getCurrentPosition((pos) => {
-    const reports = window.getNearbyFoundReports?.(pos.coords.latitude, pos.coords.longitude, 2) || [];
-    if (nearbyCard) nearbyCard.classList.remove('hidden');
-    if (!reports.length) {
-      if (nearbyText) nearbyText.textContent = 'לא נמצאו כרגע דיווחים מקומיים בטווח של 2 ק"מ מהמיקום שלך.';
-      return;
-    }
-    const first = reports[0];
-    if (nearbyText) nearbyText.textContent = `את קרובה לדיווח שנשמר ${first.distanceKm.toFixed(1)} ק"מ ממך${first.city ? ' · ' + first.city : ''}${first.locationText ? ' · ' + first.locationText : ''}.`;
-  }, () => {
-    if (nearbyCard) nearbyCard.classList.remove('hidden');
-    if (nearbyText) nearbyText.textContent = 'לא הצלחנו לגשת למיקום. אפשר עדיין לבדוק חיפוש או לפרסם דיווח.';
-  }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 180000 });
-});
 
     const storiesHost = document.getElementById('success-stories-list');
     if (storiesHost) {
@@ -279,26 +213,25 @@ document.getElementById('nearby-context-btn')?.addEventListener('click', () => {
       localReports.forEach((report) => {
         storyCards.push(`
           <article class="story-card">
-            ${report.imageData ? `<img class="story-thumb blur-up" src="${report.imageData}" alt="${window.escapeHtml?.(report.animalType || 'חיה') || 'חיה'}">` : ''}
+            ${report.imageData ? `<img class="story-thumb blur-up pet-preview" src="${report.imageData}" alt="${window.escapeHtml?.(report.animalType || 'חיה') || 'חיה'}">` : ''}
             <div class="body">
               <strong>${window.escapeHtml?.(report.animalType || 'חיה שנמצאה') || 'חיה שנמצאה'}</strong>
               <div class="small">${window.escapeHtml?.(report.locationText || report.city || 'דיווח מקומי שנשמר במכשיר') || ''}</div>
-              <div class="row">${report.breed ? `<span class="badge">${window.escapeHtml?.(report.breed) || report.breed}</span>` : ''}${report.colors ? `<span class="badge">${window.escapeHtml?.(report.colors) || report.colors}</span>` : ''}</div>
             </div>
           </article>`);
       });
       recentMatches.forEach((match) => {
         storyCards.push(`
           <article class="story-card">
-            ${match.thumb ? `<img class="story-thumb blur-up" src="${match.thumb}" alt="${window.escapeHtml?.(match.label || 'התאמה') || 'התאמה'}">` : ''}
+            ${match.thumb ? `<img class="story-thumb blur-up pet-preview" src="${match.thumb}" alt="${window.escapeHtml?.(match.label || 'התאמה') || 'התאמה'}">` : ''}
             <div class="body">
               <strong>${window.escapeHtml?.(match.label || 'התאמה אחרונה') || 'התאמה אחרונה'}</strong>
               <div class="small">${window.escapeHtml?.(match.city || match.locationText || 'תוצאה שנשמרה מהחיפוש האחרון') || ''}</div>
-              <div class="row"><span class="score-pill ${Number(match.score||0) >= 0.9 ? 'high' : Number(match.score||0) >= 0.6 ? 'medium' : 'low'}">${Math.round(Number(match.score||0) * 100)}%</span></div>
+              <div class="row"><span class="score-pill ${Math.round(Number(match.score||0)*100) >= 90 ? 'high' : Math.round(Number(match.score||0)*100) >= 60 ? 'medium' : 'low'}">${Math.round(Number(match.score||0) * 100)}%</span></div>
             </div>
           </article>`);
       });
-      storiesHost.innerHTML = storyCards.length ? storyCards.join('') : '<div class="empty">כאן יופיעו סיפורי תקווה, דיווחים אחרונים והתאמות חדשות מהמכשיר הזה.</div>';
+      storiesHost.innerHTML = storyCards.length ? storyCards.join('') : '<div class="empty">כאן יופיעו דיווחים והתאמות שנשמרו במכשיר הזה.</div>';
     }
 
     const badgeHost = document.getElementById('impact-badges');
@@ -306,44 +239,9 @@ document.getElementById('nearby-context-btn')?.addEventListener('click', () => {
       const badges = window.getImpactBadges?.(stats) || [];
       badgeHost.innerHTML = badges.length
         ? badges.map((badge) => `<span class="badge">${window.escapeHtml ? window.escapeHtml(badge) : badge}</span>`).join('')
-        : '<span class="small">עוד אין תגים — חיפוש ראשון או ייצוא ראשון יפעילו אותם כאן.</span>';
+        : '<span class="small">עוד אין תגים.</span>';
     }
-
-    const section = document.getElementById('match-results');
-    const galleryHost = document.getElementById('match-results-container');
-    const prevBtn = document.getElementById('match-prev');
-    const nextBtn = document.getElementById('match-next');
-    const payload = window.loadLastMatchGallery?.();
-    if (!section || !galleryHost) return;
-
-    const disableArrows = () => {
-      prevBtn?.setAttribute('disabled', 'disabled');
-      nextBtn?.setAttribute('disabled', 'disabled');
-    };
-
-    if (!payload?.matches?.length) {
-      galleryHost.innerHTML = `<div class="empty">${window.t?.('noRecentMatches', 'עדיין אין תוצאות אחרונות. בצעי חיפוש כדי לראות כאן את שלוש ההתאמות המובילות.') || ''}</div>`;
-      section.classList.remove('hidden');
-      disableArrows();
-      return;
-    }
-
-    window.displayMatches?.(payload.matches, {
-      container: galleryHost,
-      kind: payload.kind,
-      heading: 'שלוש ההתאמות האחרונות שלך',
-      wrapperClass: 'match-scroller',
-    });
-
-    section.classList.remove('hidden');
-    const scroller = galleryHost.querySelector('.match-scroller') || galleryHost;
-    const slideWidth = () => Math.max(280, Math.min(scroller.clientWidth * 0.92, 360));
-    prevBtn?.removeAttribute('disabled');
-    nextBtn?.removeAttribute('disabled');
-    prevBtn?.addEventListener('click', () => scroller.scrollBy({ left: -slideWidth(), behavior: 'smooth' }));
-    nextBtn?.addEventListener('click', () => scroller.scrollBy({ left: slideWidth(), behavior: 'smooth' }));
   });
-</script>
-
+    </script>
   </body>
 </html>
