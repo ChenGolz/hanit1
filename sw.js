@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v20';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v20';
+const STATIC_CACHE = 'petconnect-animal-static-v21';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v21';
 const SYNC_DB_NAME = 'petconnect-sync-db';
 const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [

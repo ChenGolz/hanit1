@@ -477,6 +477,12 @@ function renderLoadingResultsSkeleton() {
     if (state.band === 'high') {
       title = 'נמצאה התאמה חזקה מאוד';
       text = 'זה הזמן הטוב ביותר לפתוח מיד את הכרטיס הראשון ולשתף את ההתאמה.';
+      const confettiKey = `${top.id || top.label || 'top'}:${Math.round(score * 100)}`;
+      if (window.__petconnectLastConfettiKey !== confettiKey) {
+        window.__petconnectLastConfettiKey = confettiKey;
+        window.launchConfettiBurst?.({ count: 22 });
+        window.vibrateIfPossible?.([20, 30, 20]);
+      }
     } else if (state.band === 'medium') {
       title = 'נמצאו התאמות אפשריות';
       text = 'כדאי לעבור על המועמדים ולבדוק את התמונות והפרטים.';
