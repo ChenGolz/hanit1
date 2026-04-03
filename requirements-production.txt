@@ -10,3 +10,5 @@ psycopg[binary]>=3.2
 slowapi>=0.1.9
 torch>=2.5
 torchvision>=0.20
+scipy>=1.13
+pgvector>=0.2.5

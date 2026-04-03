@@ -92,10 +92,82 @@ function setButtonBusy(button, busy, busyText = 'טוען…') {
   if (!button) return;
   if (!button.dataset.defaultText) {
     button.dataset.defaultText = button.textContent || '';
+    button.dataset.defaultHtml = button.innerHTML || '';
   }
   button.disabled = !!busy;
   button.setAttribute('aria-busy', busy ? 'true' : 'false');
-  button.textContent = busy ? busyText : (button.dataset.defaultText || button.textContent || '');
+  if (busy) {
+    button.innerHTML = `<span class="spinner" aria-hidden="true"></span><span>${escapeHtml(busyText)}</span>`;
+  } else {
+    button.innerHTML = button.dataset.defaultHtml || escapeHtml(button.dataset.defaultText || button.textContent || '');
+  }
+}
+
+
+function normalizeHebrewFuzzy(value = '') {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKC')
+    .replace(/[֑-ׇ]/g, '')
+    .replace(/["'׳״`]/g, '')
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/יפו/g, 'יפו')
+    .replace(/תא/g, 'תל אביב')
+    .replace(/[וו]+/g, 'ו')
+    .replace(/[יי]+/g, 'י')
+    .replace(/צ'/g, 'צ')
+    .replace(/ג'/g, 'ג')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function levenshteinDistance(left = '', right = '') {
+  const a = normalizeHebrewFuzzy(left);
+  const b = normalizeHebrewFuzzy(right);
+  if (!a) return b.length;
+  if (!b) return a.length;
+  const matrix = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,
+        matrix[i][j - 1] + 1,
+        matrix[i - 1][j - 1] + cost,
+      );
+    }
+  }
+  return matrix[a.length][b.length];
+}
+
+function fuzzySimilarity(left = '', right = '') {
+  const a = normalizeHebrewFuzzy(left);
+  const b = normalizeHebrewFuzzy(right);
+  if (!a || !b) return 0;
+  if (a === b) return 1;
+  if (a.includes(b) || b.includes(a)) return 0.92;
+  const distance = levenshteinDistance(a, b);
+  const longest = Math.max(a.length, b.length, 1);
+  return Math.max(0, 1 - (distance / longest));
+}
+
+function fuzzyRankItems(items = [], query = '', limit = 12) {
+  const cleanQuery = normalizeHebrewFuzzy(query);
+  return items
+    .map((item) => ({
+      item,
+      score: cleanQuery ? fuzzySimilarity(cleanQuery, item) : 1,
+      starts: cleanQuery ? normalizeHebrewFuzzy(item).startsWith(cleanQuery) : true,
+      includes: cleanQuery ? normalizeHebrewFuzzy(item).includes(cleanQuery) : true,
+    }))
+    .filter((row) => !cleanQuery || row.score >= 0.45 || row.includes)
+    .sort((a, b) => (Number(b.starts) - Number(a.starts)) || (Number(b.includes) - Number(a.includes)) || (b.score - a.score) || String(a.item).localeCompare(String(b.item), 'he'))
+    .slice(0, limit)
+    .map((row) => row.item);
 }
 
 function getIsraeliCities() {
@@ -116,12 +188,7 @@ function attachCityAutocomplete(input, datalistId = 'city-suggestions') {
   const cities = getIsraeliCities();
   const renderSuggestions = () => {
     const query = String(input.value || '').trim();
-    const normalizedQuery = query.replace(/[-\s]/g, '').toLowerCase();
-    const suggestions = cities.filter((city) => {
-      if (!normalizedQuery) return true;
-      const normalizedCity = city.replace(/[-\s]/g, '').toLowerCase();
-      return normalizedCity.includes(normalizedQuery);
-    }).slice(0, 12);
+    const suggestions = fuzzyRankItems(cities, query, 12);
     datalist.innerHTML = suggestions.map((city) => `<option value="${escapeHtml(city)}"></option>`).join('');
   };
   input.addEventListener('input', renderSuggestions);
@@ -165,14 +232,11 @@ function attachBreedAutocomplete(input, animalTypeSource = null, datalistId = 'b
     return animalTypeSource.value || '';
   };
   const renderSuggestions = () => {
-    const query = String(input.value || '').trim().toLowerCase();
+    const query = String(input.value || '').trim();
     const directBreeds = getBreedsForType(resolveType());
     const fallbackBreeds = Object.values(DEFAULT_BREEDS).flat();
     const source = directBreeds.length ? directBreeds : fallbackBreeds;
-    const suggestions = source.filter((breed) => {
-      if (!query) return true;
-      return String(breed).toLowerCase().includes(query);
-    }).slice(0, 12);
+    const suggestions = fuzzyRankItems(source, query, 12);
     datalist.innerHTML = suggestions.map((breed) => `<option value="${escapeHtml(breed)}"></option>`).join('');
   };
   input.addEventListener('input', renderSuggestions);
@@ -372,7 +436,7 @@ async function fileToPreparedImage(file, options = {}) {
     maxWidth = 1200,
     maxHeight = 1200,
     type = 'image/jpeg',
-    quality = 0.80,
+    quality = 0.82,
   } = options;
 
   const initial = await fileToImage(file);
@@ -420,6 +484,40 @@ async function fileToPreparedImage(file, options = {}) {
     cleanupInitial();
     throw error;
   }
+}
+
+
+function prepareCanvasForEmbedding(source, options = {}) {
+  const { size = 512, grayscale = true } = options;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#808080';
+  ctx.fillRect(0, 0, size, size);
+
+  const sourceWidth = source.naturalWidth || source.videoWidth || source.width || size;
+  const sourceHeight = source.naturalHeight || source.videoHeight || source.height || size;
+  const scale = Math.min(size / sourceWidth, size / sourceHeight);
+  const drawWidth = Math.max(1, Math.round(sourceWidth * scale));
+  const drawHeight = Math.max(1, Math.round(sourceHeight * scale));
+  const dx = Math.round((size - drawWidth) / 2);
+  const dy = Math.round((size - drawHeight) / 2);
+  ctx.drawImage(source, 0, 0, sourceWidth, sourceHeight, dx, dy, drawWidth, drawHeight);
+
+  if (grayscale) {
+    const image = ctx.getImageData(0, 0, size, size);
+    const { data } = image;
+    for (let i = 0; i < data.length; i += 4) {
+      const luminance = Math.round((data[i] * 0.299) + (data[i + 1] * 0.587) + (data[i + 2] * 0.114));
+      const normalized = Math.max(0, Math.min(255, Math.round(((luminance - 128) * 1.08) + 128)));
+      data[i] = normalized;
+      data[i + 1] = normalized;
+      data[i + 2] = normalized;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+  return canvas;
 }
 
 function createCropCanvas(img, sx, sy, sw, sh) {
@@ -692,8 +790,9 @@ async function extractAnimalEmbedding(source) {
   if (!window.__petconnectAnimalModel) {
     throw new Error('מודל בעלי החיים עדיין לא נטען.');
   }
+  const cleanCanvas = prepareCanvasForEmbedding(source, { size: 512, grayscale: true });
   const tensor = window.tf.tidy(() => {
-    const inferred = window.__petconnectAnimalModel.infer(source, true);
+    const inferred = window.__petconnectAnimalModel.infer(cleanCanvas, true);
     return inferred.flatten();
   });
   try {
@@ -832,14 +931,21 @@ function bestEntryMatch(queryFeatures, entry) {
 function computeSearchResults(queryFeatures, library, options = {}) {
   const minScore = Math.max(0, Math.min(1, Number(options.minScore ?? 0.55)));
   const queryAnimalType = inferAnimalTypeLabel(options.queryAnimalType || '');
-  const queryBreed = String(options.queryBreed || '').trim().toLowerCase();
+  const queryBreed = String(options.queryBreed || '').trim();
+  const normalizedQueryBreed = normalizeHebrewFuzzy(queryBreed);
 
   const visualMatches = library
     .map((entry) => {
       const match = bestEntryMatch(queryFeatures, entry);
       let boostedScore = match.visualScore;
+      const entryBreed = String(entry.breed || '').trim();
       if (queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType) boostedScore += 0.06;
-      if (queryBreed && String(entry.breed || '').trim().toLowerCase() === queryBreed) boostedScore += 0.08;
+      if (normalizedQueryBreed) {
+        const breedSimilarity = fuzzySimilarity(normalizedQueryBreed, entryBreed);
+        if (breedSimilarity >= 0.98) boostedScore += 0.08;
+        else if (breedSimilarity >= 0.8) boostedScore += 0.05;
+        else if (breedSimilarity >= 0.62) boostedScore += 0.025;
+      }
       boostedScore = Math.min(0.999, boostedScore);
       return {
         ...entry,
@@ -862,8 +968,14 @@ function computeSearchResults(queryFeatures, library, options = {}) {
     .map((entry) => {
       const colorCandidates = entry.colorHistograms?.length ? entry.colorHistograms : [[]];
       let colorScore = Math.max(...colorCandidates.map((histogram) => histogramSimilarity(queryFeatures.colorHistogram, histogram)));
+      const entryBreed = String(entry.breed || '').trim();
       if (queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType) colorScore += 0.05;
-      if (queryBreed && String(entry.breed || '').trim().toLowerCase() === queryBreed) colorScore += 0.07;
+      if (normalizedQueryBreed) {
+        const breedSimilarity = fuzzySimilarity(normalizedQueryBreed, entryBreed);
+        if (breedSimilarity >= 0.98) colorScore += 0.07;
+        else if (breedSimilarity >= 0.8) colorScore += 0.04;
+        else if (breedSimilarity >= 0.62) colorScore += 0.02;
+      }
       colorScore = Math.min(0.999, colorScore);
       return {
         ...entry,
@@ -1267,8 +1379,12 @@ if (typeof window !== 'undefined') {
     buildWhatsAppHref,
     buildCommunityWatchHref,
     shareResult,
-  setButtonBusy,
-  attachCityAutocomplete,
+    setButtonBusy,
+    attachCityAutocomplete,
+    normalizeHebrewFuzzy,
+    fuzzySimilarity,
+    fuzzyRankItems,
+    prepareCanvasForEmbedding,
     pickTopMatchesForGallery,
     saveLastMatchGallery,
     loadLastMatchGallery,

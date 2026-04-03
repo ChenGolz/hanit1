@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v15';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v15';
+const STATIC_CACHE = 'petconnect-animal-static-v16';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v16';
 const SYNC_DB_NAME = 'petconnect-sync-db';
 const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [
@@ -46,6 +46,7 @@ self.addEventListener('activate', (event) => {
     const keys = await caches.keys();
     await Promise.all(keys.filter((key) => ![STATIC_CACHE, RUNTIME_CACHE].includes(key)).map((key) => caches.delete(key)));
     await self.clients.claim();
+    await flushPendingJsonPosts();
   })());
 });
 
@@ -125,6 +126,10 @@ self.addEventListener('message', (event) => {
   const data = event.data || {};
   if (data.type === 'queue-report' && data.payload?.url) {
     event.waitUntil?.(addPendingJsonPost(data.payload));
+    return;
+  }
+  if (data.type === 'flush-report-queue') {
+    event.waitUntil?.(flushPendingJsonPosts());
   }
 });
 

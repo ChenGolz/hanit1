@@ -34,6 +34,7 @@ async function runSearchPage() {
   window.initLang?.('he');
   window.applyTranslations?.();
   window.registerServiceWorker?.();
+  window.flushQueuedBackgroundReports?.().catch(() => {});
 
   const statusEl = document.getElementById('status');
   const searchForm = document.getElementById('search-form');
@@ -601,8 +602,8 @@ async function runSearchPage() {
         runSelectedBtn.disabled = false;
         setSearchProgress(24, 'התמונה נדחסה ומוכנה להצגה.');
         prepNoteEl.textContent = prepared.wasResized
-          ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height} כדי לזרז את החיפוש ברשת סלולרית.`
-          : 'התמונה עובדה בגודל המקורי שלה.';
+          ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height}. בנוסף, מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור כדי לייצב את ההשוואה.`
+          : 'התמונה נשמרה בגודל המקורי להצגה, אך מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור.';
         selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה.';
         setStatus(statusEl, 'התמונה נטענה. סמני את אזור החיה או השאירי את ברירת המחדל, ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
         await runSearch();

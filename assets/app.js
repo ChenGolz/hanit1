@@ -22,6 +22,22 @@
     return true;
   }
 
+
+  async function flushQueuedBackgroundReports() {
+    if (!('serviceWorker' in navigator)) return false;
+    const registration = await navigator.serviceWorker.ready.catch(() => null);
+    if (!registration?.active) return false;
+    registration.active.postMessage({ type: 'flush-report-queue' });
+    if ('sync' in registration) {
+      try {
+        await registration.sync.register('send-report');
+      } catch (error) {
+        console.warn('רישום סנכרון-מחדש נכשל:', error);
+      }
+    }
+    return true;
+  }
+
   async function postMultipart(url, formData, options = {}) {
     const button = options.button || null;
     const setBusy = options.setBusy || window.setButtonBusy;
@@ -65,10 +81,15 @@
     }
   }
 
+  window.addEventListener?.('online', () => {
+    flushQueuedBackgroundReports().catch(() => {});
+  });
+
   Object.assign(window, {
     shrinkImage: window.shrinkImage || window.fileToPreparedImage,
     displayMatches: window.displayMatches,
     postMultipart,
     queueBackgroundReport,
+    flushQueuedBackgroundReports,
   });
 })();

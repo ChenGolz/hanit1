@@ -21,6 +21,7 @@ async function waitForCommonHelpers() {
 async function runEnrollPage() {
   await waitForCommonHelpers();
   window.registerServiceWorker?.();
+  window.flushQueuedBackgroundReports?.().catch(() => {});
 
   const statusEl = document.getElementById('status');
   const createForm = document.getElementById('create-entry-form');
@@ -184,8 +185,8 @@ async function runEnrollPage() {
       }
 
       prepNoteEl.textContent = resizedCount
-        ? `${resizedCount} תמונות כבדות נדחסו מקומית ל-1200px כדי לקצר את זמן העיבוד וההעלאה.`
-        : 'לא נדרשה דחיסה מקומית לתמונות שבחרת.';
+        ? `${resizedCount} תמונות כבדות נדחסו מקומית ל-1200px, ולמנוע ההתאמה נבנה גם עותק מנורמל של 512×512 בגווני אפור כדי לייצב מאפיינים.`
+        : 'התמונות נשמרו להצגה, ולמנוע ההתאמה נבנה עותק מנורמל של 512×512 בגווני אפור.';
 
       if (!descriptors.length) {
         setProgress(0, 'לא נמצאו תמונות שימושיות.');

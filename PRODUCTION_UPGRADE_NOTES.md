@@ -86,3 +86,15 @@ The GitHub Pages build still cannot safely expose private owner contact data, pr
 
 ## Important caveat for v8
 The verification flow works fully in the browser only for hashes stored in the public library JSON. Background Sync is implemented as a scaffold for future JSON report endpoints, but the static GitHub Pages search flow still does not have a live upload API to retry.
+
+
+## v9 additions
+
+- Frontend matching now normalizes a dedicated 512x512 grayscale copy before extracting browser-side features. This keeps the display image intact while making vector extraction more stable.
+- Hebrew city and breed inputs now use lightweight fuzzy ranking so small spelling differences like פינצ'ר / פינצר still surface the same suggestions.
+- The PWA queue can now be flushed on `online` and by direct message to the service worker, in addition to Background Sync.
+- `app/animal_embeddings.py` now models a real hosted vector-matching path using `scipy.spatial.distance.cosine` and candidate ranking helpers.
+
+## Accuracy note
+
+There is no honest way to claim a current global "accuracy score" from this static bundle without a labeled test set. Measure accuracy only after you benchmark on a held-out dataset of real missing/found animal photos.
