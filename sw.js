@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v23';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v23';
+const STATIC_CACHE = 'petconnect-animal-static-v24';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v24';
 const SYNC_DB_NAME = 'petconnect-sync-db';
 const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [
@@ -16,6 +16,7 @@ const ASSETS_TO_CACHE = [
   './assets/styles.css',
   './assets/common.js',
   './assets/app.js',
+  './assets/global.js',
   './assets/i18n.js',
   './search.inline.js',
   './enroll.inline.js',

@@ -4,13 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v22">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v22">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v23">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v23">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/i18n.js?v=20260403v22"></script>
-    <script defer src="./assets/common.js?v=20260403v22"></script>
-    <script defer src="./assets/app.js?v=20260403v22"></script>
+    <script defer src="./assets/global.js?v=20260403v23"></script>
+    <script defer src="./assets/i18n.js?v=20260403v23"></script>
+    <script defer src="./assets/common.js?v=20260403v23"></script>
+    <script defer src="./assets/app.js?v=20260403v23"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -29,7 +30,7 @@
             <button type="button" data-lang="ar">عر</button>
             <button type="button" data-lang="en">EN</button>
           </div>
-          <a class="button-link secondary small" href="./search.html">התחברות מתנדב</a>
+          <a class="button-link secondary small" href="./search.html">פתיחת חיפוש</a>
         </div>
         <div class="links">
           <a class="link" href="./index.html">דף הבית</a>
@@ -42,23 +43,14 @@
 
       <section class="hero hero-modern stack high-contrast-card section-shell hero-shell">
         <div class="chip">עזרה מהירה מהשטח</div>
-        <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.5rem);">כל שנייה חשובה. התחילי עכשיו חיפוש או דיווח על חיה — מהר, ברור, ובשפה שלך.</h1>
-        <p class="meta" style="font-size:1.08rem; max-width: 760px;">מערכת ברורה ומהירה לחיפוש בעלים או דיווח על חיה שנמצאה — בלי עומס, ועם מסלולים פשוטים שמתאימים למובייל.</p>
-        <div class="cta-note"><strong>כל שנייה חשובה.</strong> בחרי עכשיו רק אחד משני המסלולים: חיפוש בעלים או דיווח על חיה שנמצאה.</div>
+        <h1 style="margin:0; font-size: clamp(2rem, 5vw, 3.5rem);">מחזירים חיות הביתה בעזרת AI.</h1>
+        <p class="meta" style="font-size:1.08rem; max-width: 760px;">כל שנייה חשובה. התחילי עכשיו חיפוש או דיווח על חיה שנמצאה — מהר, ברור, ובשפה שלך.</p>
+        <div class="cta-note"><strong>מסלול אחד ברור לכל מצב.</strong> בחרי אם איבדת חיה או אם מצאת עכשיו חיה משוטטת, והמשיכי מיד לפעולה.</div>
         <div class="hero-actions">
           <button id="hero-found-now" class="emergency" type="button">מצאתי כלב עכשיו!</button>
-          <a class="button-link lost" href="./search.html">איבדתי חיה</a>
-          <a class="button-link found" href="./report-found.html">ראיתי חיה משוטטת</a>
-          <a class="button-link secondary" href="./enroll.html">בניית המאגר שלך</a>
+          <a class="button-link lost xl" href="./search.html">איבדתי חיה</a>
+          <a class="button-link found xl" href="./report-found.html">מצאתי חיה</a>
         </div>
-        <div class="hero-subcta small">
-          <span class="badge">חיפוש מיידי עוד לפני שליחת הטופס</span>
-          <span class="badge">מיקום אוטומטי</span>
-          <span class="badge">עובד טוב יותר במובייל</span>
-        </div>
-        <div class="hero-stats" id="hero-stats">
-          <article class="hero-stat-card">
-            <div class="small">איחודים ב-24 השעות האחרונות</div>
             <strong id="impact-counter-value">—</strong>
             <div id="impact-counter-note" class="small">נטען מהשרת, או מגיבוי מקומי אם אין API זמין.</div>
           </article>
@@ -70,25 +62,26 @@
         </div>
       </section>
 
-      <section class="home-thumb-zone compact-home-zone">
-        <div class="action-duo">
+      <section class="home-thumb-zone compact-home-zone minimalist-home-zone">
+        <div class="action-duo main-actions">
           <a class="action-slab urgent" href="./search.html">
             <span class="eyebrow">Lost path</span>
             <strong>איבדתי חיה</strong>
-            <small>פתיחת חיפוש מהיר, העלאת תמונה ומעבר למסלול איתור.</small>
+            <small>התחילי חיפוש מהיר לפי תמונה, מיקום ופרטי החיה.</small>
           </a>
           <button id="hero-found-now-2" class="action-slab found-now" type="button">
-            <span class="eyebrow">Emergency</span>
+            <span class="eyebrow">Found path</span>
             <strong>מצאתי חיה עכשיו</strong>
-            <small>פותח מצלמה מיד, שומר את התמונה, ומעביר אותך לחיפוש או דיווח בלי העלאה חוזרת.</small>
+            <small>פותח מצלמה מיד ומעביר אותך למסלול חיפוש או דיווח בלי העלאה חוזרת.</small>
           </button>
         </div>
+        <div class="hero-secondary-link"><a class="button-link secondary small" href="./enroll.html">בניית מאגר פרטי</a></div>
       </section>
 
       <section class="card stack section-shell live-feed-shell" style="margin-top:16px;">
         <div class="space-between">
           <div>
-            <div class="section-head"><div class="section-kicker">Live feed</div><h2 class="section-title" style="margin:0;">קהילה חיה עכשיו</h2><div class="section-subtitle">מבט קצר על פעילות מקומית אחרונה — כדי להראות שזה שירות פעיל ולא רק דף נחיתה.</div></div>
+            <div class="section-head"><div class="section-kicker">Live feed</div><h2 class="section-title" style="margin:0;">קהילה חיה עכשיו</h2><div class="section-subtitle">עדכונים אחרונים מהמכשיר הזה, כדי לשמור על דף בית קצר וברור.</div></div>
           </div>
           <a class="button-link secondary small" href="./report-found.html">דיווח מהיר</a>
         </div>
@@ -111,37 +104,16 @@
           </div>
         </div>
       </section>
-<section id="match-results" class="card stack section-shell hidden" style="margin-top:16px;">
-        <div class="space-between">
-          <div class="stack" style="gap:8px;">
-            <div class="section-head"><div class="section-kicker">Recent</div><h2 class="section-title" data-i18n="lastMatchesTitle">התוצאות האחרונות שלך</h2><div class="section-subtitle" data-i18n="lastMatchesSubtitle">אחרי חיפוש, שלוש ההתאמות המובילות נשמרות כאן מיד אחרי כל חיפוש כדי שתוכלי לפתוח אותן שוב בלי להמתין.</div></div>
-            
-          </div>
-          <a class="button-link secondary small" href="./search.html" data-i18n="openSearch">פתיחת חיפוש חיה</a>
-        </div>
-        <div class="match-gallery-shell">
-          <button id="match-prev" class="secondary small gallery-nav" type="button" aria-label="הקודם" data-i18n-aria-label="previous">‹</button>
-          <div id="match-results-container" class="match-scroller" aria-live="polite"></div>
-          <button id="match-next" class="secondary small gallery-nav" type="button" aria-label="הבא" data-i18n-aria-label="next">›</button>
-        </div>
-      </section>
 
 
-<section id="nearby-context-card" class="card stack context-alert hidden" style="margin-top:16px;">
-  <div class="space-between">
-    <div>
-      <h2 class="section-title" style="margin:0;">עדכון אזורי חכם</h2>
-      <div id="nearby-context-text" class="small">נבדוק אם יש דיווחים מקומיים שנשמרו קרוב אלייך.</div>
-    </div>
-    <button id="nearby-context-btn" class="secondary small" type="button">בדיקה לפי המיקום שלי</button>
-  </div>
-</section>
+
+
 
       <section id="success-stories" class="card stack section-shell" style="margin-top:16px;">
         <div class="space-between">
           <div>
             <h2 class="section-title" style="margin:0;">נמצאו לאחרונה / סיפורי תקווה</h2>
-            <div class="small">כרגע זה נשען על דיווחים ותוצאות שנשמרו במכשיר הזה, כדי לתת תחושת קהילה גם לפני חיבור שרת מלא.</div>
+            <div class="small">כמה כרטיסים קטנים שנותנים תקווה ומראים שהחיפוש באמת עובד.</div>
           </div>
           <span class="chip">Hope Feed</span>
         </div>
@@ -197,7 +169,7 @@
         <button id="home-fab-toggle" class="fab-main" type="button" aria-label="פעולות מהירות">+</button>
       </div>
 
-      <div class="footer">פלטפורמה מהירה לחיפוש ודיווח על חיות — בעיצוב מובייל פשוט וברור.</div>
+      <div class="footer">חיפוש ודיווח מהיר על חיות — פשוט, ברור, ומותאם למובייל.</div>
     </main>
   
     <script>

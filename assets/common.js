@@ -5,6 +5,8 @@ const IMPACT_STATS_KEY = 'petconnect-ghpages-impact-stats-v1';
 const FOUND_REPORTS_KEY = 'petconnect-ghpages-found-reports-v1';
 const PENDING_FOUND_REPORT_KEY = 'petconnect-ghpages-pending-found-report-v1';
 const STATS_SUMMARY_CACHE_KEY = 'petconnect-ghpages-stats-summary-cache-v1';
+const LANG_STORAGE_KEY = 'appLanguage';
+const LEGACY_LANG_STORAGE_KEY = 'petconnect-ui-lang-v1';
 const DEFAULT_BREEDS = Object.freeze({
   'כלב': ['לברדור', 'גולדן רטריבר', 'רועה גרמני', 'האסקי סיבירי', 'פומרניאן', 'שיצו', 'בוקסר', 'כנעני', 'מלינואה', 'יורקשייר טרייר'],
   'חתול': ['אירופאי קצר-שיער', 'חתול רחוב', 'פרסי', 'בריטי קצר-שיער', 'סיאמי', 'מיין קון', 'רגדול'],
@@ -575,7 +577,7 @@ async function fetchSummaryStats(endpoint = './api/stats/summary') {
     localStorage.setItem(STATS_SUMMARY_CACHE_KEY, JSON.stringify(summary));
     return { ...fallback, ...summary };
   } catch (error) {
-    const cached = safeJsonParse(localStorage.getItem(STATS_SUMMARY_CACHE_KEY), null);
+    const cached = safeJsonParse(localStorage.getItem(getStatsSummaryCacheKey()), null);
     if (cached) return { ...fallback, ...cached, source: 'cache' };
     return fallback;
   }
@@ -1773,28 +1775,41 @@ function buildPendingFoundReportDraft(payload = {}) {
   };
 }
 
+
+function getPendingFoundReportKey() {
+  return (typeof PENDING_FOUND_REPORT_KEY !== 'undefined' && PENDING_FOUND_REPORT_KEY) || window.PENDING_FOUND_REPORT_KEY || 'petconnect-ghpages-pending-found-report-v1';
+}
+
+function getFoundReportsKey() {
+  return (typeof FOUND_REPORTS_KEY !== 'undefined' && FOUND_REPORTS_KEY) || window.FOUND_REPORTS_KEY || 'petconnect-ghpages-found-reports-v1';
+}
+
+function getStatsSummaryCacheKey() {
+  return (typeof STATS_SUMMARY_CACHE_KEY !== 'undefined' && STATS_SUMMARY_CACHE_KEY) || window.STATS_SUMMARY_CACHE_KEY || 'petconnect-ghpages-stats-summary-cache-v1';
+}
+
 function savePendingFoundReportDraft(payload = {}) {
   const draft = buildPendingFoundReportDraft(payload);
-  sessionStorage.setItem(PENDING_FOUND_REPORT_KEY, JSON.stringify(draft));
+  sessionStorage.setItem(getPendingFoundReportKey(), JSON.stringify(draft));
   return draft;
 }
 
 function loadPendingFoundReportDraft() {
-  const parsed = safeJsonParse(sessionStorage.getItem(PENDING_FOUND_REPORT_KEY), null);
+  const parsed = safeJsonParse(sessionStorage.getItem(getPendingFoundReportKey()), null);
   return parsed && typeof parsed === 'object' ? parsed : null;
 }
 
 function clearPendingFoundReportDraft() {
-  try { sessionStorage.removeItem(PENDING_FOUND_REPORT_KEY); } catch (error) { console.warn('pending report clear failed', error); }
+  try { sessionStorage.removeItem(getPendingFoundReportKey()); } catch (error) { console.warn('pending report clear failed', error); }
 }
 
 function loadFoundReports() {
-  const parsed = safeJsonParse(localStorage.getItem(FOUND_REPORTS_KEY), []);
+  const parsed = safeJsonParse(localStorage.getItem(getFoundReportsKey()), []);
   return Array.isArray(parsed) ? parsed : [];
 }
 
 function saveFoundReports(reports = []) {
-  localStorage.setItem(FOUND_REPORTS_KEY, JSON.stringify(Array.isArray(reports) ? reports : []));
+  localStorage.setItem(getFoundReportsKey(), JSON.stringify(Array.isArray(reports) ? reports : []));
 }
 
 function saveFoundReport(report = {}) {
@@ -1886,7 +1901,11 @@ function mountLanguageSwitcher(root = document) {
     button.__langBound = true;
     button.addEventListener('click', () => {
       const next = button.dataset.lang || 'he';
-      try { localStorage.setItem('petconnect-ui-lang-v1', next); } catch (error) {}
+      if (window.setAppLanguage) {
+        window.setAppLanguage(next);
+        return;
+      }
+      try { localStorage.setItem(LANG_STORAGE_KEY, next); localStorage.setItem(LEGACY_LANG_STORAGE_KEY, next); } catch (error) {}
       document.documentElement.lang = next;
       document.documentElement.dir = (next === 'ar' || next === 'he') ? 'rtl' : 'ltr';
       root.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
@@ -1899,7 +1918,7 @@ function mountLanguageSwitcher(root = document) {
 }
 
 function bootUiShell(root = document) {
-  try { window.initLang?.('he'); } catch (error) {}
+  try { const preferredLang = localStorage.getItem(LANG_STORAGE_KEY) || localStorage.getItem(LEGACY_LANG_STORAGE_KEY) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
   try { window.applyTranslations?.(root); } catch (error) {}
   try { mountLanguageSwitcher(root); } catch (error) {}
   try { mountThemeToggle(root); } catch (error) {}
@@ -2091,6 +2110,10 @@ if (typeof window !== 'undefined') {
     toggleTheme,
     mountThemeToggle,
     launchConfettiBurst,
+    LANG_STORAGE_KEY,
+    FOUND_REPORTS_KEY: getFoundReportsKey(),
+    PENDING_FOUND_REPORT_KEY: getPendingFoundReportKey(),
+    STATS_SUMMARY_CACHE_KEY: getStatsSummaryCacheKey(),
   });
 
   if (document.readyState === 'loading') {

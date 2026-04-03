@@ -1,5 +1,6 @@
 
-const I18N_STORAGE_KEY = 'petconnect-ui-lang-v1';
+const I18N_STORAGE_KEY = 'appLanguage';
+const I18N_LEGACY_STORAGE_KEY = 'petconnect-ui-lang-v1';
 
 const I18N_STRINGS = {
   he: {
@@ -132,9 +133,9 @@ const PAGE_TRANSLATIONS = {
         '.links a[href="./enroll.html"]': 'بناء المكتبة',
         '.links a[href="./report-found.html"]': 'بلاغ عن حيوان تم العثور عليه',
         '.hero .chip': 'مساعدة سريعة من الميدان',
-        '.hero h1': 'نعيد الحيوانات إلى عائلاتها — بسرعة وهدوء وبلغتك.',
-        '.hero p.meta': 'أصبحت منصة الإنقاذ تبدو كمنتج جوال حديث: الكاميرا أولًا، مسارات واضحة للحيوان المفقود أو الذي تم العثور عليه، وتصميم هادئ وموثوق للحظات التوتر.',
-        '.cta-note': '<strong>الوقت حاسم.</strong> إذا رأيتِ الآن حيوانًا شاردًا، يمكنك فتح الكاميرا فورًا، وحفظ وقت ومكان البلاغ تلقائيًا، ثم المتابعة في مسار قصير للبحث أو البلاغ.',
+        '.hero h1': 'نعيد الحيوانات إلى بيوتها بالذكاء الاصطناعي.',
+        '.hero p.meta': 'كل ثانية مهمة. ابدئي البحث أو بلاغ المشاهدة من هنا.',
+        '.cta-note': '<strong>مسار واحد واضح لكل حالة.</strong> اختاري إن كنتِ فقدت حيوانًا أو وجدتِ حيوانًا الآن، ثم تابعي مباشرة إلى الإجراء المناسب.',
         '#hero-found-now': 'وجدت كلبًا الآن!',
         '.hero-actions a[href="./search.html"]': 'فقدت حيوانًا',
         '.hero-actions a[href="./report-found.html"]': 'رأيت حيوانًا شاردًا',
@@ -328,7 +329,7 @@ function currentPageKey() {
 }
 
 function initLang(defaultLang = 'he') {
-  const stored = localStorage.getItem(I18N_STORAGE_KEY);
+  const stored = localStorage.getItem(I18N_STORAGE_KEY) || localStorage.getItem(I18N_LEGACY_STORAGE_KEY);
   const preferred = normalizeLang(stored || document.documentElement.lang || navigator.language || defaultLang, defaultLang);
   document.documentElement.lang = preferred;
   document.documentElement.dir = (preferred === 'ar' || preferred === 'he') ? 'rtl' : 'ltr';
