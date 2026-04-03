@@ -4,21 +4,21 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>בניית מאגר חיות · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v21">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v21">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v22">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v22">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
-    <script defer src="./assets/i18n.js?v=20260403v21"></script>
-    <script defer src="./assets/common.js?v=20260403v21"></script>
-    <script defer src="./assets/app.js?v=20260403v21"></script>
-    <script defer src="./enroll.inline.js?v=20260403v21"></script>
+    <script defer src="./assets/i18n.js?v=20260403v22"></script>
+    <script defer src="./assets/common.js?v=20260403v22"></script>
+    <script defer src="./assets/app.js?v=20260403v22"></script>
+    <script defer src="./enroll.inline.js?v=20260403v22"></script>
   </head>
   <body>
     <main class="page unified-page">
       <nav class="nav nav-glass header-modern">
-        <div class="brand-block"><strong>פאטקונקט</strong><span class="brand-subtitle">Rescue PWA</span></div>
+        <div class="brand-block"><strong>פאטקונקט</strong><span class="brand-subtitle">איתור והצלה</span></div>
         <div class="nav-actions">
           <div class="lang-switcher" aria-label="בחירת שפה">
             <button type="button" data-lang="he" class="active">עב</button>
@@ -37,8 +37,9 @@
       <section class="card hero-slab stack section-shell hero-shell">
         <div class="chip">כלי ניהול</div>
         <h1 style="margin:0;">בניית מאגר חיות בתוך הדפדפן</h1>
-        <p class="meta">העמוד הזה מיועד לך ולא למבקרים. מעלים תמונות דוגמה של חיה אחת, מחשבים מאפיינים ויזואליים בדפדפן, ואז מייצאים JSON עבור <code>data/library.json</code>. המערכת תומכת בחיות בלבד ולא בזיהוי אנשים.</p>
+        <p class="meta">עמוד ניהול קצר ופשוט לבניית המאגר: מעלים תמונות, בודקים את הרשומה, ומייצאים JSON מוכן לפרסום.</p>
         <div id="status" class="notice">טוען…</div>
+        <div class="hero-mini-steps"><span class="badge">1 יצירת רשומה</span><span class="badge">2 בדיקה מקומית</span><span class="badge">3 ייצוא JSON</span></div>
         <div id="prep-note" class="small"></div>
         <div class="progress-block">
           <div class="progress-head">
@@ -76,15 +77,19 @@
               <button id="clear-btn" class="secondary" type="button">ניקוי המאגר המקומי</button>
             </div>
           </form>
-          <div class="notice warn">הרשומות שנוצרות כאן נשמרות רק בדפדפן הזה עד שמייצאים אותן. כדי לפרסם אותן לכולם צריך לעשות commit לקובץ ה-JSON המיוצא בתוך הריפו.</div>
+          <div class="notice warn">הרשומות נשמרות מקומית עד ייצוא. כדי לפרסם לכולם צריך לעדכן את קובץ ה-JSON בריפו.</div>
         </article>
 
-        <article class="card stack section-shell">
-          <div class="section-head"><div class="section-kicker">Guide</div><h2 class="section-title">איך החיפוש עובד עכשיו</h2><div class="section-subtitle">תקציר מהיר כדי להבין למה התמונות והמטא־דאטה משפיעים על איכות התוצאות.</div></div>
-          <div class="small">1. במקום זיהוי אנשים, המערכת משתמשת במאפיינים ויזואליים של בעלי חיים.</div>
-          <div class="small">2. בזמן חיפוש אפשר לסמן ידנית את אזור החיה כדי להתעלם מאנשים או רקע.</div>
-          <div class="small">3. אם אין התאמה ויזואלית חזקה, עמוד החיפוש יציג רשומות עם צבעים דומים.</div>
-          <div class="notice success">אחרי ייצוא הקובץ, החליפי את <code>data/library.json</code> בריפו ועשי commit כדי לפרסם את המאגר החדש.</div>
+        <article class="card stack section-shell section-shell--minimal">
+          <details class="soft-disclosure" open>
+            <summary>איך החיפוש משתמש במאגר הזה</summary>
+            <div class="soft-disclosure-body stack" style="margin-top:12px;">
+              <div class="small">1. המערכת משווה מאפיינים ויזואליים של חיות, לא אנשים.</div>
+              <div class="small">2. בחיפוש אפשר למקד ידנית את אזור החיה ולהתעלם מרקע.</div>
+              <div class="small">3. אם אין התאמה חזקה, יוצגו גם מועמדים עם צבעים דומים.</div>
+              <div class="notice success">אחרי ייצוא הקובץ, החליפי את <code>data/library.json</code> בריפו ועשי commit כדי לפרסם את המאגר החדש.</div>
+            </div>
+          </details>
         </article>
       </section>
 
@@ -93,12 +98,14 @@
         <div id="library-list"></div>
       </section>
 
-      <section class="card stack section-shell" style="margin-top:16px;">
-        <div class="space-between">
-          <div class="section-head"><div class="section-kicker">Export</div><h2 class="section-title" style="margin:0;">פלט JSON</h2><div class="section-subtitle">מוכן להדבקה ל־data/library.json בלי עבודה ידנית נוספת.</div></div>
-          <div class="small">יש להדביק לתוך <code>data/library.json</code></div>
-        </div>
-        <pre id="output-json"></pre>
+      <section class="card stack section-shell section-shell--minimal" style="margin-top:16px;">
+        <details class="soft-disclosure" open>
+          <summary>פלט JSON מוכן להדבקה ל־data/library.json</summary>
+          <div class="soft-disclosure-body stack" style="margin-top:12px;">
+            <div class="small">כאן יופיע הקובץ המוכן לפרסום.</div>
+            <pre id="output-json"></pre>
+          </div>
+        </details>
       </section>
     </main>
   </body>

@@ -1891,8 +1891,20 @@ function mountLanguageSwitcher(root = document) {
       document.documentElement.dir = (next === 'ar' || next === 'he') ? 'rtl' : 'ltr';
       root.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
       applyTranslations(document);
+      window.setTimeout(() => {
+        try { window.location.reload(); } catch (error) {}
+      }, 10);
     });
   });
+}
+
+function bootUiShell(root = document) {
+  try { window.initLang?.('he'); } catch (error) {}
+  try { window.applyTranslations?.(root); } catch (error) {}
+  try { mountLanguageSwitcher(root); } catch (error) {}
+  try { mountThemeToggle(root); } catch (error) {}
+  try { applyTheme(); } catch (error) {}
+  return document.documentElement.lang?.slice(0,2).toLowerCase() || 'he';
 }
 
 
@@ -1968,6 +1980,16 @@ function launchConfettiBurst(options = {}) {
   }
   document.body.appendChild(layer);
   setTimeout(() => layer.remove(), Number(options.duration || 1500));
+}
+
+if (typeof window !== 'undefined' && !window.__petconnectUiShellBooted) {
+  window.__petconnectUiShellBooted = true;
+  const runBoot = () => bootUiShell(document);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runBoot, { once: true });
+  } else {
+    runBoot();
+  }
 }
 
 if (typeof window !== 'undefined') {
@@ -2063,6 +2085,7 @@ if (typeof window !== 'undefined') {
     estimateAnimalSizeLabel,
     renderFoundReportCards,
     mountLanguageSwitcher,
+    bootUiShell,
     getResolvedTheme,
     applyTheme,
     toggleTheme,
