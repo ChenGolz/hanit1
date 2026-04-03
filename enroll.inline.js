@@ -20,6 +20,9 @@ async function waitForCommonHelpers() {
 
 async function runEnrollPage() {
   await waitForCommonHelpers();
+  window.initLang?.('he');
+  window.applyTranslations?.();
+  window.mountLanguageSwitcher?.();
   window.registerServiceWorker?.();
   window.flushQueuedBackgroundReports?.().catch(() => {});
 
