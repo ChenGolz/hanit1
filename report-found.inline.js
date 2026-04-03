@@ -3,7 +3,7 @@ async function waitForReportHelpers() {
   const needed = [
     'registerServiceWorker','setStatus','clearValidityOnInput','setRequiredValidity','attachCityAutocomplete','attachBreedAutocomplete',
     'loadPendingFoundReportDraft','savePendingFoundReportDraft','clearPendingFoundReportDraft','saveFoundReport','loadFoundReports',
-    'buildFoundReportShareText','buildFoundReportWhatsAppHref','renderFoundReportCards','reverseGeocodeLatLng','shareResult','blobToImage','cropRectToCanvas','extractColorProfile','estimateAnimalSizeLabel'
+    'buildFoundReportShareText','buildFoundReportWhatsAppHref','renderFoundReportCards','reverseGeocodeLatLng','shareResult','blobToImage','cropRectToCanvas','extractColorProfile','estimateAnimalSizeLabel','vibrateIfPossible'
   ];
   const start = Date.now();
   while (Date.now() - start < 8000) {
@@ -39,6 +39,11 @@ async function runReportFoundPage() {
   const backBtn = document.getElementById('back-to-search-btn');
   const successEl = document.getElementById('report-success');
   const localReportsEl = document.getElementById('local-found-reports');
+  const voiceStartBtn = document.getElementById('voice-start-btn');
+  const voiceStopBtn = document.getElementById('voice-stop-btn');
+  const voiceClearBtn = document.getElementById('voice-clear-btn');
+  const voiceStatusEl = document.getElementById('voice-status');
+  const voiceAudioEl = document.getElementById('voice-audio');
 
   [animalTypeEl, breedEl, colorEl, cityEl].forEach(clearValidityOnInput);
   attachCityAutocomplete?.(cityEl);
@@ -48,6 +53,9 @@ async function runReportFoundPage() {
   let currentImageData = draft?.imageData || '';
   let currentLat = Number.isFinite(draft?.lat) ? Number(draft.lat) : null;
   let currentLng = Number.isFinite(draft?.lng) ? Number(draft.lng) : null;
+  let currentAudioData = draft?.audioData || '';
+  let recorder = null;
+  let recorderChunks = [];
 
   function renderLocalReports() {
     localReportsEl.innerHTML = renderFoundReportCards(loadFoundReports());
@@ -65,6 +73,41 @@ async function runReportFoundPage() {
       imgEmptyEl.classList.remove('hidden');
     }
   }
+
+
+function setAudioData(dataUrl) {
+  currentAudioData = dataUrl || '';
+  if (voiceAudioEl) {
+    voiceAudioEl.src = currentAudioData;
+    voiceAudioEl.classList.toggle('hidden', !currentAudioData);
+  }
+  if (voiceClearBtn) voiceClearBtn.disabled = !currentAudioData;
+  if (voiceStatusEl) voiceStatusEl.textContent = currentAudioData ? 'נשמרה הקלטה קולית מקומית.' : 'עדיין אין הקלטה.';
+}
+
+async function startVoiceRecording() {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setStatus(statusEl, 'הדפדפן הזה לא תומך בהקלטת קול.', { tone: 'warn' });
+    return;
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  recorderChunks = [];
+  recorder = new MediaRecorder(stream);
+  recorder.addEventListener('dataavailable', (event) => { if (event.data?.size) recorderChunks.push(event.data); });
+  recorder.addEventListener('stop', async () => {
+    const blob = new Blob(recorderChunks, { type: recorder.mimeType || 'audio/webm' });
+    const reader = new FileReader();
+    reader.onload = () => setAudioData(String(reader.result || ''));
+    reader.readAsDataURL(blob);
+    stream.getTracks().forEach((track) => track.stop());
+    if (voiceStartBtn) voiceStartBtn.disabled = false;
+    if (voiceStopBtn) voiceStopBtn.disabled = true;
+  });
+  recorder.start();
+  if (voiceStartBtn) voiceStartBtn.disabled = true;
+  if (voiceStopBtn) voiceStopBtn.disabled = false;
+  if (voiceStatusEl) voiceStatusEl.textContent = 'מקליט… אפשר לעצור אחרי כמה שניות.';
+}
 
   async function maybeAutofillImageTraits(dataUrl) {
     if (!dataUrl) return;
@@ -96,6 +139,7 @@ async function runReportFoundPage() {
     locationEl.value = draft.locationText || '';
     timeEl.value = formatReportedAt(draft.reportedAt) || '';
     detailsEl.value = draft.notes || '';
+    setAudioData(draft.audioData || '');
     await maybeAutofillImageTraits(draft.imageData || '');
     if (draft.quickPost) {
       setStatus(statusEl, 'הפרטים מהחיפוש הועברו לכאן. נשאר רק להוסיף פרטים נוספים ולשמור דיווח.', { tone: 'success' });
@@ -124,6 +168,7 @@ async function runReportFoundPage() {
       lat: currentLat,
       lng: currentLng,
       notes: detailsEl.value.trim(),
+      audioData: currentAudioData,
       sourcePage: draft?.sourcePage || './search.html',
     };
     if (!payload.locationText && Number.isFinite(currentLat) && Number.isFinite(currentLng)) {
@@ -147,7 +192,9 @@ async function runReportFoundPage() {
         <button id="success-wa-btn" class="secondary small" type="button">פוסט לוואטסאפ</button>
         <a class="button-link secondary small" id="success-106-btn" href="#">טיוטת 106</a>
       </div>
-      <div class="notice success">מה לעשות עכשיו? בדקי אם יש קולר, פני לוטרינר/ית לסריקת שבב, הציעי מים, והישארי בקרבת האזור שבו החיה נמצאה.</div>`;
+      <div class="notice success">מה לעשות עכשיו? בדקי אם יש קולר, פני לוטרינר/ית לסריקת שבב, הציעי מים, והישארי בקרבת האזור שבו החיה נמצאה.</div>
+      ${report.audioData ? '<div class="small">נשמר גם תיאור קולי קצר יחד עם הדיווח.</div>' : ''}`;
+    vibrateIfPossible?.([18, 12, 18]);
     const shareText = buildFoundReportShareText(report);
     successEl.querySelector('#success-share-btn')?.addEventListener('click', async () => {
       const ok = await shareResult({ city: report.city, locationText: report.locationText, reportedAt: report.reportedAt, lat: report.lat, lng: report.lng, bestMatch: { label: report.animalType || 'חיה שנמצאה', animalType: report.animalType, breed: report.breed, colors: report.colors, href: './report-found.html' } });
@@ -180,6 +227,7 @@ async function runReportFoundPage() {
     draft = null;
     currentLat = null; currentLng = null;
     setImage('');
+    setAudioData('');
     [animalTypeEl, breedEl, colorEl, sizeEl, cityEl, locationEl, detailsEl].forEach((el) => { if (el) el.value = ''; });
     timeEl.value = formatReportedAt(new Date()) || '';
     successEl.classList.add('hidden');
@@ -219,6 +267,10 @@ async function runReportFoundPage() {
     if (!payload) return;
     window.open(buildFoundReportWhatsAppHref(payload), '_blank', 'noopener');
   });
+
+  voiceStartBtn?.addEventListener('click', async () => { try { await startVoiceRecording(); } catch (error) { console.error(error); setStatus(statusEl, 'לא הצלחנו להתחיל הקלטה.', { tone: 'warn' }); } });
+  voiceStopBtn?.addEventListener('click', () => { try { recorder?.stop(); } catch (error) { console.warn(error); } });
+  voiceClearBtn?.addEventListener('click', () => setAudioData(''));
 
   await hydrateFromDraft();
 }

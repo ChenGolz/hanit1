@@ -90,6 +90,7 @@ async function runSearchPage() {
   const whatsappTopBtn = document.getElementById('whatsapp-top-btn');
   const communityTopBtn = document.getElementById('community-top-btn');
   const posterTopBtn = document.getElementById('poster-top-btn');
+  const printPosterTopBtn = document.getElementById('print-poster-top-btn');
   const alertOptInBtn = document.getElementById('alert-optin-btn');
   const lowDataToggle = document.getElementById('low-data-toggle');
   const connectionNoteEl = document.getElementById('connection-note');
@@ -356,6 +357,13 @@ async function runSearchPage() {
     runSelectedBtn.disabled = !currentPreviewImage;
   }
 
+
+function renderLoadingResultsSkeleton() {
+  resultsEl.innerHTML = buildSearchSkeleton?.(3) || '<div class="empty">טוען תוצאות…</div>';
+  summaryEl.innerHTML = '<div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>';
+  summaryEl.classList.remove('hidden');
+}
+
   function renderResults(bundle) {
     const matches = bundle.matches || [];
     if (!matches.length) {
@@ -404,7 +412,7 @@ async function runSearchPage() {
           <div class="small">${escapeHtml(text)}</div>
           <div class="small muted">שילוב ציונים: הטמעה/מבנה ${Math.round(Number(top.embeddingScore || top.rawScore || 0) * 100)}% · צבע פרווה ${Math.round(Number(top.colorScore || 0) * 100)}%${Number(top.breedScore || 0) ? ` · גזע ${Math.round(Number(top.breedScore || 0) * 100)}%` : ''}</div>
           <div class="small">${reportedAtInput.value ? `דווח אוטומטית ב-${escapeHtml(reportedAtInput.value)}.` : ''} ${locationTextInput.value ? `אזור: ${escapeHtml(locationTextInput.value)}.` : ''}</div>
-          <div class="summary-actions">
+          ${state.band === 'high' ? `<div class="match-safety-card"><strong>מגן בטיחות למפגש</strong><ul><li>עדיף להיפגש במקום ציבורי ומואר.</li><li>לא לשתף כתובת בית פרטית בצעד הראשון.</li><li>אפשר להשתמש בשאלת האימות לפני מסירת פרטים.</li></ul></div>` : ''}<div class="summary-actions">
             <button id="share-inline" class="small" type="button">שיתוף עכשיו</button>
             <button id="whatsapp-inline" class="secondary small" type="button">וואטסאפ</button>
             <button id="poster-inline" class="secondary small" type="button">פלייר PNG</button>
@@ -522,16 +530,17 @@ function renderReportCta(bundle) {
   const text = showProminent
     ? 'אפשר להפוך את התמונה שכבר נטענה לדיווח חיה שנמצאה — בלי להעלות אותה שוב.'
     : 'אם תרצי, אפשר להמשיך מהחיפוש הזה ישר לדיווח מהיר עם אותה תמונה ואותו מיקום.';
-  reportCtaContainer.className = 'report-cta-card';
+  reportCtaContainer.className = `report-cta-card ${showProminent ? 'prominent' : ''}`;
   reportCtaContainer.innerHTML = `
     <div class="space-between wrap-gap">
       <div class="stack" style="gap:6px;">
         <div class="chip">Quick Convert</div>
-        <strong>${escapeHtml(heading)}</strong>
+        <div class="predictive-title">${escapeHtml(heading)}</div>
         <div class="small">${escapeHtml(text)}</div>
+        ${showProminent ? '<div class="small">לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.</div>' : ''}
       </div>
       <div class="row wrap compact-row">
-        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small" type="button">לא מצאת התאמה? פרסמי כחיה שנמצאה</button>
+        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small" type="button">לא מצאת התאמה? פרסמי עכשיו</button>
         <button id="cta-quick-post-btn" class="secondary small" type="button">דיווח מהיר מהמיקום הזה</button>
       </div>
     </div>`;
@@ -569,6 +578,7 @@ function renderReportCta(bundle) {
     }
 
     setSearchButtonsBusy(true, 'מנתח תמונה…');
+    renderLoadingResultsSkeleton();
     setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
     setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
     const queryCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
@@ -590,6 +600,7 @@ function renderReportCta(bundle) {
     recordImpactEvent('search');
     if (state.band === 'high') {
       recordImpactEvent('strong-match');
+      vibrateIfPossible?.([35, 20, 45]);
       setStatus(statusEl, `נמצאה התאמה חזקה מאוד של ${Math.round(state.score * 100)}%. מומלץ לפתוח מיד את הכרטיס הראשון.`, { tone: 'success' });
     } else if (state.band === 'medium') {
       setStatus(statusEl, 'נמצאו כמה מועמדים טובים. עברי על הגלריה והשווי בין הכרטיסים.', { tone: 'success' });

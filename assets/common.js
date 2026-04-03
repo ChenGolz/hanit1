@@ -1683,6 +1683,43 @@ function renderMatchCards(matches = [], options = {}) {
   }).join('');
 }
 
+
+function vibrateIfPossible(pattern = 24) {
+  try {
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') navigator.vibrate(pattern);
+  } catch (error) { console.warn('vibrate failed', error); }
+}
+
+function haversineDistanceKm(lat1, lng1, lat2, lng2) {
+  const toRad = (deg) => (Number(deg) * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad((lat2 || 0) - (lat1 || 0));
+  const dLng = toRad((lng2 || 0) - (lng1 || 0));
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1 || 0)) * Math.cos(toRad(lat2 || 0)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getNearbyFoundReports(lat, lng, maxKm = 2) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+  return loadFoundReports().map((report) => ({
+    ...report,
+    distanceKm: Number.isFinite(report.lat) && Number.isFinite(report.lng)
+      ? haversineDistanceKm(lat, lng, Number(report.lat), Number(report.lng))
+      : Infinity,
+  })).filter((report) => Number.isFinite(report.distanceKm) && report.distanceKm <= maxKm)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
+}
+
+function buildSearchSkeleton(count = 3) {
+  return `<div class="result-grid">${Array.from({ length: count }).map(() => `
+    <article class="skeleton-card">
+      <div class="skeleton-thumb"></div>
+      <div class="skeleton-line medium"></div>
+      <div class="skeleton-line short"></div>
+      <div class="skeleton-line"></div>
+    </article>`).join('')}</div>`;
+}
+
 function displayMatches(matches = [], options = {}) {
   const container = options.container || document.getElementById('match-results-container') || document.getElementById('results');
   if (!container) return false;
@@ -1729,6 +1766,7 @@ function buildPendingFoundReportDraft(payload = {}) {
     sourcePage: String(payload.sourcePage || window.location.href).trim(),
     quickPost: Boolean(payload.quickPost),
     querySummary: String(payload.querySummary || '').trim(),
+    audioData: String(payload.audioData || '').trim(),
   };
 }
 
@@ -1775,6 +1813,7 @@ function saveFoundReport(report = {}) {
     verificationPrompt: String(report.verificationPrompt || '').trim(),
     verificationAnswerHash: String(report.verificationAnswerHash || '').trim(),
     sourcePage: String(report.sourcePage || '').trim(),
+    audioData: String(report.audioData || '').trim(),
     createdAt: new Date().toISOString(),
     status: 'local',
   };
@@ -1819,6 +1858,7 @@ function renderFoundReportCards(reports = []) {
         <div class="row">${report.breed ? `<span class="badge">${escapeHtml(report.breed)}</span>` : ''}${report.colors ? `<span class="badge">${escapeHtml(report.colors)}</span>` : ''}${report.city ? `<span class="badge">${escapeHtml(report.city)}</span>` : ''}</div>
         <div class="small">${escapeHtml(report.locationText || 'ללא אזור מפורט')}</div>
         ${report.notes ? `<div class="small">${escapeHtml(report.notes)}</div>` : ''}
+        ${report.audioData ? `<audio controls preload="none" src="${report.audioData}"></audio>` : ''}
       </div>
     </article>`).join('');
 }
@@ -1898,6 +1938,10 @@ if (typeof window !== 'undefined') {
     buildCommunityWatchHref,
     shareResult,
     setButtonBusy,
+    vibrateIfPossible,
+    haversineDistanceKm,
+    getNearbyFoundReports,
+    buildSearchSkeleton,
     attachCityAutocomplete,
     normalizeHebrewFuzzy,
     fuzzySimilarity,
