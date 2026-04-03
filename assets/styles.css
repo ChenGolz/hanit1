@@ -706,3 +706,15 @@ button[aria-busy="true"]::after {
 .checkbox-inline { display:inline-flex; align-items:center; gap:8px; }
 .row.wrap { flex-wrap: wrap; }
 #query-crop { background: #f7f4ff; border-radius: 20px; padding: 10px; }
+
+
+.muted { opacity: .84; }
+#connection-note { min-height: 48px; }
+.result-grid--swipe {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(280px, 340px);
+  overflow-x: auto;
+  gap: 16px;
+  padding-bottom: 4px;
+}

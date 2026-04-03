@@ -1,5 +1,5 @@
-const STATIC_CACHE = 'petconnect-animal-static-v18';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v18';
+const STATIC_CACHE = 'petconnect-animal-static-v19';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v19';
 const SYNC_DB_NAME = 'petconnect-sync-db';
 const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [
@@ -211,4 +211,32 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate' || url.origin === self.location.origin || RUNTIME_HOSTS.has(url.host)) {
     event.respondWith(networkFirst(request));
   }
+});
+
+
+self.addEventListener('push', (event) => {
+  const payload = (() => {
+    try { return event.data?.json?.() || {}; } catch (error) { return {}; }
+  })();
+  const title = payload.title || 'התראת שכונה';
+  const options = {
+    body: payload.body || 'יש דיווח חדש באזור שלך.',
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    data: payload.data || { url: './search.html' },
+    tag: payload.tag || 'petconnect-push',
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || './search.html';
+  event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    for (const client of clientList) {
+      if ('focus' in client) return client.focus();
+    }
+    if (clients.openWindow) return clients.openWindow(targetUrl);
+    return null;
+  }));
 });

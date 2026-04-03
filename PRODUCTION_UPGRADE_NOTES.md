@@ -113,3 +113,11 @@ The GitHub Pages build now includes **browser-side smart scan** using TensorFlow
 Included scaffold file: `app/animal_preprocess.py`
 
 That file is not wired into the static GitHub Pages flow. It is the next hosted step so the system can ignore people, clothes and busy backgrounds more consistently.
+
+
+## v11 additions
+- Frontend now supports a low-data mode that automatically compresses search images more aggressively on weak connections.
+- Added local neighborhood alert opt-in using the Notifications API. Real Web Push still requires a hosted backend and VAPID keys.
+- Added community flyer generation as a PNG for sharing in WhatsApp and neighborhood groups.
+- Current GitHub Pages build already combines visual embedding similarity, color histogram similarity, and breed/type boosts into one score. This is not a benchmarked accuracy metric.
+- For a hosted phase, add real push subscriptions, a heatmap layer, a poster/PDF endpoint, and chip-scanner directories by municipality.

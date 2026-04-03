@@ -4,17 +4,17 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>חיפוש חיה לפי תמונה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v10b">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v10b">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v11">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v11">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-    <script defer src="./assets/i18n.js?v=20260403v10b"></script>
-    <script defer src="./assets/common.js?v=20260403v10b"></script>
-    <script defer src="./assets/app.js?v=20260403v10b"></script>
-    <script defer src="./search.inline.js?v=20260403v10b"></script>
+    <script defer src="./assets/i18n.js?v=20260403v11"></script>
+    <script defer src="./assets/common.js?v=20260403v11"></script>
+    <script defer src="./assets/app.js?v=20260403v11"></script>
+    <script defer src="./search.inline.js?v=20260403v11"></script>
   </head>
   <body>
     <main class="page">
@@ -60,6 +60,13 @@
               <input id="search-radius" type="range" min="1" max="10" step="1" value="2" aria-label="רדיוס חיפוש משוער">
             </label>
             <div id="search-radius-note" class="notice">הרדיוס כרגע משמש לשיתופים, לדיווח 106 ולחיווי חיפוש. כשהפרויקט יעבור לשרת+מפה, אותו ערך יוכל לצייר גם מעגל על Leaflet.</div>
+          </div>
+          <div class="field-grid">
+            <div id="connection-note" class="notice">האתר יתאים אוטומטית את דחיסת התמונה למהירות הרשת.</div>
+            <div class="row wrap compact-row">
+              <label class="small checkbox-inline"><input id="low-data-toggle" type="checkbox"> מצב חסכוני לגלישה חלשה</label>
+              <button id="alert-optin-btn" class="secondary small" type="button">הפעלת התראות שכונתיות</button>
+            </div>
           </div>
           <div class="field-grid">
             <input id="query-animal-type" type="text" placeholder="סוג חיה, למשל כלב / חתול" aria-label="סוג החיה לחיפוש">
@@ -108,6 +115,7 @@
           <img id="query-crop" class="hidden" alt="האזור שנבחר לחיפוש">
           <div id="crop-meta" class="small">עדיין לא נבחר אזור חיה.</div>
           <div class="notice warn">כדי לזהות חיה מתוך תמונה עם אדם, אפשר לתת לסריקה החכמה להתמקד אוטומטית בחיה. אם אין התאמה חזקה, יוצגו גם חיות עם צבעים דומים.</div>
+          <div id="ai-crop-note" class="small">✅ אפשר לנסות קודם סריקה חכמה. אם תזוהה רק דמות אדם ולא חיה, יוצג חיווי ברור כדי שתבחרי אזור ידני.</div>
           <div id="privacy-note" class="small privacy-note">אם תשתמשי במיקום, בשיתופים ובטיוטת 106 יופיע אזור משוער בלבד כדי לשמור על פרטיות.</div>
           <div id="smart-hint" class="small">אם אינך בטוחה בגזע, השאירי את השדה ריק. אחרי הסריקה נציע גזעים נפוצים לפי סוג החיה ולפי התוצאות המובילות.</div>
         </article>

@@ -317,6 +317,7 @@ function loadImpactStats() {
     searches: Number(parsed?.searches || 0),
     strongMatches: Number(parsed?.strongMatches || 0),
     librariesExported: Number(parsed?.librariesExported || 0),
+    karma: Number(parsed?.karma || 0),
     localAnimals: Number(loadLocalLibrary().length || 0),
     updatedAt: parsed?.updatedAt || null,
   };
@@ -327,15 +328,18 @@ function saveImpactStats(stats) {
     searches: Number(stats?.searches || 0),
     strongMatches: Number(stats?.strongMatches || 0),
     librariesExported: Number(stats?.librariesExported || 0),
+    karma: Number(stats?.karma || 0),
     updatedAt: new Date().toISOString(),
   }));
 }
 
 function recordImpactEvent(eventName, payload = {}) {
   const stats = loadImpactStats();
-  if (eventName === 'search') stats.searches += 1;
-  if (eventName === 'strong-match') stats.strongMatches += 1;
-  if (eventName === 'export-library') stats.librariesExported += 1;
+  if (eventName === 'search') { stats.searches += 1; stats.karma += 1; }
+  if (eventName === 'strong-match') { stats.strongMatches += 1; stats.karma += 5; }
+  if (eventName === 'export-library') { stats.librariesExported += 1; stats.karma += 2; }
+  if (eventName === 'share-community') stats.karma += 2;
+  if (eventName === 'poster') stats.karma += 1;
   saveImpactStats(stats);
   return { ...stats, localAnimals: Number(payload.localAnimals || loadLocalLibrary().length || 0) };
 }
@@ -347,11 +351,183 @@ function getImpactBadges(stats = loadImpactStats()) {
   if (stats.strongMatches >= 1) badges.push('זיהוי מהיר');
   if (stats.strongMatches >= 5) badges.push('5 איחודים מקומיים');
   if (stats.librariesExported >= 1) badges.push('בונת מאגר');
+  if (stats.karma >= 10) badges.push('לב זהב');
+  if (stats.karma >= 25) badges.push('מתנדבת כוח');
   return badges;
+}
+
+
+function getConnectionProfile() {
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+  const effectiveType = String(conn?.effectiveType || '').toLowerCase();
+  const saveData = Boolean(conn?.saveData);
+  const downlink = Number(conn?.downlink || 0);
+  const weak = saveData || ['slow-2g', '2g'].includes(effectiveType) || (effectiveType === '3g' && downlink > 0 && downlink < 1.1);
+  return {
+    effectiveType,
+    saveData,
+    downlink,
+    weak,
+    recommendedMaxWidth: weak ? 224 : 1200,
+    recommendedQuality: weak ? 0.72 : 0.82,
+    recommendedGrayscalePreview: weak,
+    label: weak ? 'מצב חסכוני לגלישה חלשה' : 'מצב רגיל',
+  };
+}
+
+async function requestNeighborhoodAlertsPermission() {
+  if (!('Notification' in window)) return { supported: false, granted: false, state: 'unsupported' };
+  if (Notification.permission === 'granted') return { supported: true, granted: true, state: 'granted' };
+  const permission = await Notification.requestPermission();
+  return { supported: true, granted: permission === 'granted', state: permission };
+}
+
+async function showLocalNeighborhoodAlert(payload = {}) {
+  const permission = await requestNeighborhoodAlertsPermission();
+  if (!permission.granted) return false;
+  const registration = await navigator.serviceWorker?.ready.catch(() => null);
+  const title = payload.title || 'התראת שכונה';
+  const body = payload.body || 'דיווח חדש באזור שלך. פתחי את האתר כדי לראות פרטים.';
+  const options = {
+    body,
+    icon: './icon-192.png',
+    badge: './icon-192.png',
+    data: payload.data || { url: './search.html' },
+    tag: payload.tag || 'local-neighborhood-alert',
+    renotify: true,
+  };
+  if (registration?.showNotification) {
+    await registration.showNotification(title, options);
+    return true;
+  }
+  new Notification(title, options);
+  return true;
+}
+
+function buildConnectionHint(profile = getConnectionProfile()) {
+  if (profile.weak) return 'זוהתה רשת חלשה או מצב חיסכון בנתונים. התמונות ידחסו לגודל קטן יותר כדי שהחיפוש יישלח גם עם קליטה חלשה.';
+  return 'החיפוש פועל במצב רגיל. אם הקליטה חלשה, אפשר לעבור ידנית למצב חסכוני.';
+}
+
+function buildFlyerText(payload = {}) {
+  const parts = [
+    'אבדה / נמצאה חיה',
+    payload.bestMatch?.label ? `שם: ${payload.bestMatch.label}` : '',
+    payload.bestMatch?.animalType ? `סוג: ${payload.bestMatch.animalType}` : '',
+    payload.bestMatch?.breed ? `גזע: ${payload.bestMatch.breed}` : '',
+    payload.city ? `עיר: ${payload.city}` : '',
+    payload.locationText ? `אזור: ${payload.locationText}` : '',
+    payload.reportedAt ? `דווח: ${formatReportedAt(payload.reportedAt)}` : '',
+    payload.url ? `קישור: ${payload.url}` : '',
+  ].filter(Boolean);
+  return parts.join('\n');
+}
+
+async function createCommunityFlyerDataUrl(payload = {}) {
+  const width = 1080;
+  const height = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const gradient = ctx.createLinearGradient(0, 0, width, height);
+  gradient.addColorStop(0, '#131b39');
+  gradient.addColorStop(1, '#6f4bff');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(48, 48, width - 96, height - 96);
+  ctx.fillStyle = '#fff';
+  ctx.font = '800 72px Heebo, Assistant, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(payload.mode === 'found' ? 'נמצאה חיה' : 'מחפשים את החיה', width / 2, 120);
+
+  const thumb = payload.bestMatch?.thumb || payload.thumb || '';
+  if (thumb) {
+    try {
+      const img = await blobToImage(await (await fetch(thumb)).blob());
+      const frameX = 120;
+      const frameY = 180;
+      const frameW = width - 240;
+      const frameH = 650;
+      ctx.fillStyle = '#0d1430';
+      ctx.fillRect(frameX, frameY, frameW, frameH);
+      const scale = Math.min(frameW / img.img.width, frameH / img.img.height);
+      const drawW = img.img.width * scale;
+      const drawH = img.img.height * scale;
+      const dx = frameX + (frameW - drawW) / 2;
+      const dy = frameY + (frameH - drawH) / 2;
+      ctx.drawImage(img.img, dx, dy, drawW, drawH);
+      img.cleanup?.();
+    } catch (error) {
+      // ignore image loading flyer failures
+    }
+  }
+
+  ctx.textAlign = 'right';
+  ctx.font = '700 42px Heebo, Assistant, sans-serif';
+  const lines = [
+    payload.bestMatch?.label ? `שם: ${payload.bestMatch.label}` : '',
+    payload.bestMatch?.animalType ? `סוג: ${payload.bestMatch.animalType}` : '',
+    payload.bestMatch?.breed ? `גזע: ${payload.bestMatch.breed}` : '',
+    payload.locationText ? `אזור: ${payload.locationText}` : '',
+    payload.city ? `עיר: ${payload.city}` : '',
+    payload.url ? `קישור: ${payload.url}` : '',
+  ].filter(Boolean);
+  let y = 910;
+  lines.forEach((line) => {
+    ctx.fillText(line, width - 110, y);
+    y += 58;
+  });
+
+  ctx.textAlign = 'center';
+  ctx.font = '600 30px Heebo, Assistant, sans-serif';
+  ctx.fillStyle = 'rgba(255,255,255,0.9)';
+  ctx.fillText('שתפי את הפלייר הזה בוואטסאפ, בטלגרם ובקבוצות שכונתיות', width / 2, height - 80);
+  return canvas.toDataURL('image/png');
+}
+
+function downloadDataUrl(dataUrl, filename = 'petconnect-flyer.png') {
+  const link = document.createElement('a');
+  link.href = dataUrl;
+  link.download = filename;
+  link.click();
+}
+
+async function shareCommunityFlyer(payload = {}) {
+  const dataUrl = await createCommunityFlyerDataUrl(payload);
+  recordImpactEvent('share-community');
+  if (navigator.share && navigator.canShare) {
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], 'petconnect-flyer.png', { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: 'פלייר להצלה',
+          text: buildFlyerText(payload),
+          files: [file],
+        });
+        return { shared: true, dataUrl };
+      }
+    } catch (error) {
+      // fall through to download
+    }
+  }
+  downloadDataUrl(dataUrl, 'petconnect-flyer.png');
+  return { shared: false, dataUrl };
 }
 
 async function fetchSummaryStats(endpoint = './api/stats/summary') {
   const impact = loadImpactStats();
+  if (/github\.io$/i.test(location.hostname) && (!endpoint || endpoint === './api/stats/summary')) {
+    return {
+      reunitedLast24h: Math.max(Number(impact.strongMatches || 0), Number(loadLastMatchGallery()?.matches?.length || 0)),
+      localAnimals: Number(loadLocalLibrary().length || 0),
+      searches: Number(impact.searches || 0),
+      source: 'local',
+    };
+  }
   const fallback = {
     reunitedLast24h: Math.max(Number(impact.strongMatches || 0), Number(loadLastMatchGallery()?.matches?.length || 0)),
     localAnimals: Number(loadLocalLibrary().length || 0),
@@ -1089,12 +1265,15 @@ function computeSearchResults(queryFeatures, library, options = {}) {
       const match = bestEntryMatch(queryFeatures, entry);
       let boostedScore = match.visualScore;
       const entryBreed = String(entry.breed || '').trim();
-      if (queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType) boostedScore += 0.06;
+      const typeBoost = queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType ? 0.06 : 0;
+      let breedBoost = 0;
+      boostedScore += typeBoost;
       if (normalizedQueryBreed) {
         const breedSimilarity = fuzzySimilarity(normalizedQueryBreed, entryBreed);
-        if (breedSimilarity >= 0.98) boostedScore += 0.08;
-        else if (breedSimilarity >= 0.8) boostedScore += 0.05;
-        else if (breedSimilarity >= 0.62) boostedScore += 0.025;
+        if (breedSimilarity >= 0.98) breedBoost = 0.08;
+        else if (breedSimilarity >= 0.8) breedBoost = 0.05;
+        else if (breedSimilarity >= 0.62) breedBoost = 0.025;
+        boostedScore += breedBoost;
       }
       boostedScore = Math.min(0.999, boostedScore);
       return {
@@ -1102,6 +1281,8 @@ function computeSearchResults(queryFeatures, library, options = {}) {
         score: boostedScore,
         rawScore: match.visualScore,
         colorScore: match.colorScore,
+        typeBoost,
+        breedBoost,
         confidence: similarityLabel(boostedScore),
         matchKind: 'visual',
       };
@@ -1119,18 +1300,23 @@ function computeSearchResults(queryFeatures, library, options = {}) {
       const colorCandidates = entry.colorHistograms?.length ? entry.colorHistograms : [[]];
       let colorScore = Math.max(...colorCandidates.map((histogram) => histogramSimilarity(queryFeatures.colorHistogram, histogram)));
       const entryBreed = String(entry.breed || '').trim();
-      if (queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType) colorScore += 0.05;
+      const typeBoost = queryAnimalType && inferAnimalTypeLabel(entry.animalType) === queryAnimalType ? 0.05 : 0;
+      let breedBoost = 0;
+      colorScore += typeBoost;
       if (normalizedQueryBreed) {
         const breedSimilarity = fuzzySimilarity(normalizedQueryBreed, entryBreed);
-        if (breedSimilarity >= 0.98) colorScore += 0.07;
-        else if (breedSimilarity >= 0.8) colorScore += 0.04;
-        else if (breedSimilarity >= 0.62) colorScore += 0.02;
+        if (breedSimilarity >= 0.98) breedBoost = 0.07;
+        else if (breedSimilarity >= 0.8) breedBoost = 0.04;
+        else if (breedSimilarity >= 0.62) breedBoost = 0.02;
+        colorScore += breedBoost;
       }
       colorScore = Math.min(0.999, colorScore);
       return {
         ...entry,
         score: colorScore,
         colorScore,
+        typeBoost,
+        breedBoost,
         confidence: similarityLabel(colorScore),
         matchKind: 'color',
       };
@@ -1391,10 +1577,13 @@ function privacyBlurCoordinates(lat, lng, radiusMeters = 100) {
 
 
 function shrinkImage(file, options = {}) {
+  const profile = options.connectionProfile || getConnectionProfile();
+  const autoMax = profile.weak ? 224 : 1200;
+  const autoQuality = profile.weak ? 0.72 : 0.80;
   return fileToPreparedImage(file, {
-    maxWidth: Number(options.maxWidth || 1200),
-    maxHeight: Number(options.maxHeight || 1200),
-    quality: Number(options.quality || 0.80),
+    maxWidth: Number(options.maxWidth || autoMax),
+    maxHeight: Number(options.maxHeight || autoMax),
+    quality: Number(options.quality || autoQuality),
     type: options.type || 'image/jpeg',
   });
 }
@@ -1415,6 +1604,9 @@ function renderMatchCards(matches = [], options = {}) {
     const score = kind === 'visual' ? Number(match.score || 0) : Number(match.colorScore || match.score || 0);
     const scoreText = kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
     const reason = kind === 'visual' ? 'התאמה מיידית מהסריקה' : 'תוצאת גיבוי לפי צבעים דומים';
+    const breakdown = kind === 'visual'
+      ? `<div class="small muted">מאפייני מבנה ${Math.round(Number(match.rawScore || 0) * 100)}% · צבע ${Math.round(Number(match.colorScore || 0) * 100)}%${match.breedBoost ? ` · גזע +${Math.round(Number(match.breedBoost || 0) * 100)}%` : ''}</div>`
+      : '';
     const profileButton = target ? `<a class="button-link small" href="${escapeHtml(target)}">פתיחת פרופיל</a>` : '<span class="badge">אין קישור פרופיל</span>';
     const verifyButton = match.verificationPrompt ? `<button class="secondary small" type="button" data-verify-index="${index}">בדיקת סימן זיהוי</button>` : '';
     return `
@@ -1433,6 +1625,7 @@ function renderMatchCards(matches = [], options = {}) {
             ${match.verificationPrompt ? '<span class="badge">כולל סימן זיהוי</span>' : ''}
           </div>
           <div class="small">${reason}</div>
+          ${breakdown}
           ${notes}
           <div class="card-actions">${profileButton}${verifyButton}</div>
         </div>

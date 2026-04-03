@@ -25,6 +25,10 @@ async function waitForCommonHelpers() {
     'pickBestAnimalDetection',
     'applyCircleMask',
     'cropRectToDataUrlMasked',
+    'getConnectionProfile',
+    'buildConnectionHint',
+    'requestNeighborhoodAlertsPermission',
+    'shareCommunityFlyer',
   ];
   const start = Date.now();
   while (Date.now() - start < 8000) {
@@ -83,6 +87,10 @@ async function runSearchPage() {
   const shareTopBtn = document.getElementById('share-top-btn');
   const whatsappTopBtn = document.getElementById('whatsapp-top-btn');
   const communityTopBtn = document.getElementById('community-top-btn');
+  const posterTopBtn = document.getElementById('poster-top-btn');
+  const alertOptInBtn = document.getElementById('alert-optin-btn');
+  const lowDataToggle = document.getElementById('low-data-toggle');
+  const connectionNoteEl = document.getElementById('connection-note');
   const reportTopBtn = document.getElementById('report-top-btn');
   const privacyNoteEl = document.getElementById('privacy-note');
   const smartHintEl = document.getElementById('smart-hint');
@@ -99,6 +107,10 @@ async function runSearchPage() {
   attachCityAutocomplete?.(cityInput);
   attachBreedAutocomplete?.(breedInput, queryAnimalTypeEl);
   minScoreOutput.textContent = `${minScoreInput.value}%`;
+  const initialConnectionProfile = getConnectionProfile?.() || { weak: false, label: 'מצב רגיל' };
+  if (lowDataToggle) lowDataToggle.checked = Boolean(initialConnectionProfile.weak);
+  if (connectionNoteEl) connectionNoteEl.textContent = buildConnectionHint?.(initialConnectionProfile) || '';
+
 
   let currentPreviewImage = null;
   let currentSelection = null;
@@ -281,6 +293,7 @@ async function runSearchPage() {
     shareTopBtn.disabled = disabled;
     whatsappTopBtn.disabled = disabled;
     communityTopBtn.disabled = disabled;
+    if (posterTopBtn) posterTopBtn.disabled = disabled;
     reportTopBtn.classList.toggle('disabled-link', disabled);
     reportTopBtn.href = buildMunicipalReportHref({
       city: cityInput.value,
@@ -384,10 +397,12 @@ async function runSearchPage() {
           <div class="summary-hero-meta">${top.animalType ? `${escapeHtml(top.animalType)} · ` : ''}${top.breed ? `${escapeHtml(top.breed)} · ` : ''}${escapeHtml(top.colors || top.colorName || 'צבע מעורב')}</div>
           <div class="score-pill ${escapeHtml(String(top.confidence || 'medium'))}">${scoreLabel}</div>
           <div class="small">${escapeHtml(text)}</div>
+          <div class="small muted">שילוב ציונים: מאפייני מבנה ${Math.round(Number(top.rawScore || 0) * 100)}% · צבע ${Math.round(Number(top.colorScore || 0) * 100)}%${top.breedBoost ? ` · גזע +${Math.round(Number(top.breedBoost || 0) * 100)}%` : ''}</div>
           <div class="small">${reportedAtInput.value ? `דווח אוטומטית ב-${escapeHtml(reportedAtInput.value)}.` : ''} ${locationTextInput.value ? `אזור: ${escapeHtml(locationTextInput.value)}.` : ''}</div>
           <div class="summary-actions">
             <button id="share-inline" class="small" type="button">שיתוף עכשיו</button>
             <button id="whatsapp-inline" class="secondary small" type="button">וואטסאפ</button>
+            <button id="poster-inline" class="secondary small" type="button">פלייר PNG</button>
             ${state.band === 'low' ? '<button id="retry-search-inline" class="secondary small" type="button">בחירת אזור חדש</button>' : ''}
           </div>
         </div>
@@ -399,6 +414,12 @@ async function runSearchPage() {
     });
     summaryEl.querySelector('#whatsapp-inline')?.addEventListener('click', () => {
       window.open(buildWhatsAppHref({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+    });
+    summaryEl.querySelector('#poster-inline')?.addEventListener('click', async () => {
+      const payload = { city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top, url: window.location.href, mode: 'lost' };
+      await shareCommunityFlyer(payload);
+      recordImpactEvent('poster');
+      setStatus(statusEl, 'נוצר פלייר PNG לשיתוף בקבוצות שכונתיות.', { tone: 'success' });
     });
     summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
       document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -479,6 +500,10 @@ async function runSearchPage() {
 
   minScoreInput.addEventListener('input', () => {
     minScoreOutput.textContent = `${minScoreInput.value}%`;
+  const initialConnectionProfile = getConnectionProfile?.() || { weak: false, label: 'מצב רגיל' };
+  if (lowDataToggle) lowDataToggle.checked = Boolean(initialConnectionProfile.weak);
+  if (connectionNoteEl) connectionNoteEl.textContent = buildConnectionHint?.(initialConnectionProfile) || '';
+
   });
   radiusInput?.addEventListener('input', () => {
     updateRadiusNote();
@@ -568,7 +593,35 @@ async function runSearchPage() {
   communityTopBtn.addEventListener('click', () => {
     const top = applyResultFilters(currentResultBundle).matches?.[0];
     if (!top) return;
+    recordImpactEvent('share-community');
     window.open(buildCommunityWatchHref({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top }), '_blank', 'noopener');
+  });
+
+  posterTopBtn?.addEventListener('click', async () => {
+    const top = applyResultFilters(currentResultBundle).matches?.[0];
+    if (!top) return;
+    await shareCommunityFlyer({ city: cityInput.value, locationText: `${locationTextInput.value}${radiusInput?.value ? ` · רדיוס ${radiusInput.value} ק"מ` : ''}`.trim(), reportedAt: currentReportTimestamp, lat: geoState.lat, lng: geoState.lng, bestMatch: top, url: window.location.href, mode: 'lost' });
+    recordImpactEvent('poster');
+    setStatus(statusEl, 'נוצר פלייר PNG מוכן לשיתוף.', { tone: 'success' });
+  });
+
+  alertOptInBtn?.addEventListener('click', async () => {
+    const result = await requestNeighborhoodAlertsPermission?.();
+    if (!result?.supported) {
+      setStatus(statusEl, 'הדפדפן הזה לא תומך בהתראות.', { tone: 'warn' });
+      return;
+    }
+    if (result.granted) {
+      await showLocalNeighborhoodAlert?.({ title: 'התראות שכונתיות הופעלו', body: 'מעכשיו אפשר להציג התראות מקומיות גם כשהאפליקציה פתוחה ברקע.', data: { url: './search.html' }, tag: 'alerts-enabled' }).catch(() => {});
+      setStatus(statusEl, 'התראות מקומיות הופעלו. Web Push אמיתי יתחבר כשיהיה Backend.', { tone: 'success' });
+    } else {
+      setStatus(statusEl, 'לא ניתנה הרשאת התראות.', { tone: 'warn' });
+    }
+  });
+
+  lowDataToggle?.addEventListener('change', () => {
+    const profile = { ...(getConnectionProfile?.() || {}), weak: Boolean(lowDataToggle.checked) };
+    if (connectionNoteEl) connectionNoteEl.textContent = buildConnectionHint?.(profile) || '';
   });
 
   verificationCheckBtn?.addEventListener('click', async () => {
@@ -660,7 +713,13 @@ async function runSearchPage() {
 
       setSearchProgress(8, 'מכין את התמונה לסריקה…');
       setStatus(statusEl, 'מכין את התמונה לסריקה…', { busy: true });
-      const prepared = await shrinkImage(file, { maxWidth: 1200, maxHeight: 1200, quality: 0.82 });
+      const connectionProfile = { ...(getConnectionProfile?.() || {}), weak: Boolean(lowDataToggle?.checked) || Boolean(getConnectionProfile?.().weak) };
+      const prepared = await shrinkImage(file, {
+        connectionProfile,
+        maxWidth: connectionProfile.weak ? 224 : 1200,
+        maxHeight: connectionProfile.weak ? 224 : 1200,
+        quality: connectionProfile.weak ? 0.72 : 0.82,
+      });
       try {
         currentPreviewImage = cropRectToCanvas(prepared.img, fullImageRect(prepared.img));
         currentSelection = defaultSelectionRect(currentPreviewImage);
@@ -677,8 +736,8 @@ async function runSearchPage() {
         runSelectedBtn.disabled = false;
         setSearchProgress(24, 'התמונה נדחסה ומוכנה להצגה.');
         prepNoteEl.textContent = prepared.wasResized
-          ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height}. בנוסף, מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור כדי לייצב את ההשוואה.`
-          : 'התמונה נשמרה בגודל המקורי להצגה, אך מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור.';
+          ? `התמונה נדחסה מקומית מ-${prepared.originalWidth}×${prepared.originalHeight} ל-${prepared.width}×${prepared.height}. בנוסף, מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור כדי לייצב את ההשוואה.${(lowDataToggle?.checked || connectionProfile.weak) ? ' כרגע מופעל מצב חסכוני כדי לעבוד גם עם קליטה חלשה.' : ''}`
+          : `התמונה נשמרה בגודל המקורי להצגה, אך מנוע ההתאמה מנרמל פנימית עותק בגודל 512×512 בגווני אפור.${(lowDataToggle?.checked || connectionProfile.weak) ? ' כרגע מופעל מצב חסכוני כדי לעבוד גם עם קליטה חלשה.' : ''}`;
         selectionHintEl.textContent = 'גררי מלבן סביב החיה עצמה. אם יש גם אנשים בתמונה, חשוב לסמן רק את החיה. אפשר גם ללחוץ על סריקה חכמה של החיה.';
         setStatus(statusEl, 'התמונה נטענה. אם צריך, תקני את אזור החיה ידנית ואז לחצי על "חיפוש לפי האזור שסומן".', { tone: 'success' });
         await runSearch();
