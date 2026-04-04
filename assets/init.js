@@ -1,47 +1,110 @@
-(function(){
+(function () {
   const LANG_KEY = 'appLanguage';
-  const LANG_ALIAS = 'appLang';
+  const LANG_ALIAS_KEY = 'appLang';
   const LEGACY_KEY = 'petconnect-ui-lang-v1';
-  function normalizeLang(v){
-    const lang = String(v || '').slice(0,2).toLowerCase();
-    return ['he','en','ar'].includes(lang) ? lang : 'he';
+  const RTL_LANGS = new Set(['he', 'ar']);
+
+  function normalizeLang(value) {
+    const lang = String(value || '').trim().slice(0, 2).toLowerCase();
+    return ['he', 'en', 'ar'].includes(lang) ? lang : 'he';
   }
-  function getSavedLang(){
+
+  function readStoredLang() {
     try {
-      return normalizeLang(localStorage.getItem(LANG_KEY) || localStorage.getItem(LANG_ALIAS) || localStorage.getItem(LEGACY_KEY) || document.documentElement.lang || 'he');
-    } catch (e) {
-      return 'he';
+      return normalizeLang(
+        localStorage.getItem(LANG_KEY)
+          || localStorage.getItem(LANG_ALIAS_KEY)
+          || localStorage.getItem(LEGACY_KEY)
+          || document.documentElement.lang
+          || navigator.language
+          || 'he'
+      );
+    } catch (error) {
+      return normalizeLang(document.documentElement.lang || navigator.language || 'he');
     }
   }
-  function persistLang(lang){
+
+  function writeStoredLang(lang) {
     const next = normalizeLang(lang);
     try {
       localStorage.setItem(LANG_KEY, next);
-      localStorage.setItem(LANG_ALIAS, next);
+      localStorage.setItem(LANG_ALIAS_KEY, next);
       localStorage.setItem(LEGACY_KEY, next);
-    } catch (e) {}
+    } catch (error) {}
+    return next;
+  }
+
+  function updateDomLanguage(lang) {
+    const next = normalizeLang(lang);
+    const direction = RTL_LANGS.has(next) ? 'rtl' : 'ltr';
     document.documentElement.lang = next;
-    document.documentElement.dir = (next === 'he' || next === 'ar') ? 'rtl' : 'ltr';
-    document.body?.classList.toggle('lang-is-rtl', document.documentElement.dir === 'rtl');
-    document.body?.classList.toggle('lang-is-ltr', document.documentElement.dir === 'ltr');
+    document.documentElement.dir = direction;
+    document.body?.classList.toggle('lang-is-rtl', direction === 'rtl');
+    document.body?.classList.toggle('lang-is-ltr', direction === 'ltr');
+    document.querySelectorAll('[data-lang]').forEach((button) => {
+      button.classList.toggle('active', button.dataset.lang === next);
+    });
     document.querySelectorAll('.lang-he').forEach((el) => { el.hidden = next !== 'he'; });
     document.querySelectorAll('.lang-en').forEach((el) => { el.hidden = next !== 'en'; });
     document.querySelectorAll('.lang-ar').forEach((el) => { el.hidden = next !== 'ar'; });
-    document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.dataset.lang === next));
     return next;
   }
-  function applyAll(){
-    const lang = persistLang(getSavedLang());
-    try { window.initLang?.(lang); } catch (e) {}
-    try { window.applyTranslations?.(document); } catch (e) {}
-    return lang;
+
+  function applyLanguage(lang, options = {}) {
+    const next = updateDomLanguage(writeStoredLang(lang));
+    if (typeof window.initLang === 'function') {
+      try { window.initLang(next); } catch (error) { console.warn('initLang failed', error); }
+    }
+    if (typeof window.applyTranslations === 'function') {
+      try { window.applyTranslations(options.root || document); } catch (error) { console.warn('applyTranslations failed', error); }
+    }
+    return next;
   }
-  window.switchLanguage = function(){
-    const current = getSavedLang();
-    const next = current === 'he' ? 'en' : 'he';
-    persistLang(next);
-    window.location.reload();
+
+  function currentLanguage() {
+    return readStoredLang();
+  }
+
+  function switchLanguage(nextLang) {
+    const current = currentLanguage();
+    const next = nextLang ? normalizeLang(nextLang) : (current === 'he' ? 'en' : current === 'en' ? 'ar' : 'he');
+    applyLanguage(next);
+    if (window.location?.reload) window.location.reload();
+  }
+
+  function bootLanguage() {
+    applyLanguage(currentLanguage(), { root: document });
+  }
+
+  window.PetConnectLang = {
+    normalizeLang,
+    get: currentLanguage,
+    set: (lang, options = {}) => {
+      const next = applyLanguage(lang, options);
+      if (options.reload !== false && window.location?.reload) window.location.reload();
+      return next;
+    },
+    boot: bootLanguage,
+    switch: switchLanguage,
   };
-  window.__petconnectInitPageLanguage = applyAll;
-  document.addEventListener('DOMContentLoaded', applyAll, { once: true });
+
+  window.getAppLanguage = window.getAppLanguage || currentLanguage;
+  window.setAppLanguage = window.setAppLanguage || ((lang, options = {}) => window.PetConnectLang.set(lang, options));
+  window.switchLanguage = window.switchLanguage || switchLanguage;
+  window.toggleLanguage = window.toggleLanguage || switchLanguage;
+  window.__petconnectInitPageLanguage = bootLanguage;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootLanguage, { once: true });
+  } else {
+    bootLanguage();
+  }
+
+  window.addEventListener?.('storage', (event) => {
+    if (![LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY].includes(event.key)) return;
+    updateDomLanguage(readStoredLang());
+    if (typeof window.applyTranslations === 'function') {
+      try { window.applyTranslations(document); } catch (error) {}
+    }
+  });
 })();

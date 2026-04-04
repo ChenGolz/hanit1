@@ -3,7 +3,8 @@
     if (!('serviceWorker' in navigator)) return false;
     const registration = await navigator.serviceWorker.ready.catch(() => null);
     if (!registration?.active) return false;
-    registration.active.postMessage({
+    try {
+      registration.active.postMessage({
       type: 'queue-report',
       payload: {
         url,
@@ -12,6 +13,10 @@
         body: payload,
       },
     });
+    } catch (error) {
+      console.warn('שליחת הודעה ל-Service Worker נכשלה:', error);
+      return false;
+    }
     if ('sync' in registration) {
       try {
         await registration.sync.register('send-report');
@@ -27,7 +32,7 @@
     if (!('serviceWorker' in navigator)) return false;
     const registration = await navigator.serviceWorker.ready.catch(() => null);
     if (!registration?.active) return false;
-    registration.active.postMessage({ type: 'flush-report-queue' });
+    try { registration.active.postMessage({ type: 'flush-report-queue' }); } catch (error) { console.warn('בקשת flush ל-Service Worker נכשלה:', error); return false; }
     if ('sync' in registration) {
       try {
         await registration.sync.register('send-report');

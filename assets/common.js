@@ -13,6 +13,18 @@ window.FOUND_REPORTS_KEY = window.FOUND_REPORTS_KEY || FOUND_REPORTS_KEY;
 window.PENDING_FOUND_REPORT_KEY = window.PENDING_FOUND_REPORT_KEY || PENDING_FOUND_REPORT_KEY;
 window.PENDING_IMAGE_KEY = window.PENDING_IMAGE_KEY || 'pendingImage';
 window.STATS_SUMMARY_CACHE_KEY = window.STATS_SUMMARY_CACHE_KEY || STATS_SUMMARY_CACHE_KEY;
+window.PETCONNECT_KEYS = Object.freeze({
+  LIBRARY: STORAGE_KEY,
+  SEARCH_IMPORT: SEARCH_IMPORT_KEY,
+  LAST_MATCHES: LAST_MATCH_GALLERY_KEY,
+  IMPACT_STATS: IMPACT_STATS_KEY,
+  FOUND_REPORTS: window.FOUND_REPORTS_KEY,
+  PENDING_FOUND_REPORT: window.PENDING_FOUND_REPORT_KEY,
+  STATS_SUMMARY_CACHE: window.STATS_SUMMARY_CACHE_KEY,
+  LANG: LANG_STORAGE_KEY,
+  LANG_ALIAS: LANG_STORAGE_ALIAS_KEY,
+  LANG_LEGACY: LEGACY_LANG_STORAGE_KEY,
+});
 const DEFAULT_BREEDS = Object.freeze({
   'כלב': ['לברדור', 'גולדן רטריבר', 'רועה גרמני', 'האסקי סיבירי', 'פומרניאן', 'שיצו', 'בוקסר', 'כנעני', 'מלינואה', 'יורקשייר טרייר'],
   'חתול': ['אירופאי קצר-שיער', 'חתול רחוב', 'פרסי', 'בריטי קצר-שיער', 'סיאמי', 'מיין קון', 'רגדול'],
@@ -47,6 +59,33 @@ function safeJsonParse(text, fallback) {
     return JSON.parse(text);
   } catch {
     return fallback;
+  }
+}
+
+function storageGet(storage, key, fallback = null) {
+  try {
+    const value = storage?.getItem?.(key);
+    return value == null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function storageSet(storage, key, value) {
+  try {
+    storage?.setItem?.(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function storageRemove(storage, key) {
+  try {
+    storage?.removeItem?.(key);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -124,15 +163,13 @@ function normalizeHebrewFuzzy(value = '') {
     .replace(/["'׳״`]/g, '')
     .replace(/[-_]/g, ' ')
     .replace(/\s+/g, ' ')
-    .replace(/יפו/g, 'יפו')
-    .replace(/תא/g, 'תל אביב')
-    .replace(/[וו]+/g, 'ו')
-    .replace(/[יי]+/g, 'י')
-    .replace(/צ'/g, 'צ')
-    .replace(/ג'/g, 'ג')
-    .replace(/\s+/g, ' ')
+    .replace(/(^|\s)תא(?=\s|$)/g, '$1תל אביב')
+    .replace(/יפו-תל אביב|תל אביב-יפו/g, 'תל אביב יפו')
+    .replace(/וו+/g, 'ו')
+    .replace(/יי+/g, 'י')
     .trim();
 }
+
 
 function levenshteinDistance(left = '', right = '') {
   const a = normalizeHebrewFuzzy(left);
@@ -1796,20 +1833,37 @@ function getStatsSummaryCacheKey() {
 
 function savePendingFoundReportDraft(payload = {}) {
   const draft = buildPendingFoundReportDraft(payload);
-  sessionStorage.setItem(getPendingFoundReportKey(), JSON.stringify(draft));
+  storageSet(sessionStorage, getPendingFoundReportKey(), JSON.stringify(draft));
+  if (draft.imageData) {
+    storageSet(sessionStorage, 'pendingFoundImage', draft.imageData);
+    storageSet(sessionStorage, 'pendingReportImage', draft.imageData);
+    storageSet(sessionStorage, 'pendingImage', draft.imageData);
+    storageSet(localStorage, 'pendingImage', draft.imageData);
+  }
+  const locationPayload = JSON.stringify({
+    lat: Number.isFinite(Number(draft.lat)) ? Number(draft.lat) : null,
+    lng: Number.isFinite(Number(draft.lng)) ? Number(draft.lng) : null,
+    label: draft.locationText || '',
+  });
+  storageSet(sessionStorage, 'pendingFoundLocation', locationPayload);
+  storageSet(sessionStorage, 'pendingReportLocation', locationPayload);
   return draft;
 }
 
 function loadPendingFoundReportDraft() {
-  const parsed = safeJsonParse(sessionStorage.getItem(getPendingFoundReportKey()), null);
+  const parsed = safeJsonParse(storageGet(sessionStorage, getPendingFoundReportKey(), ''), null);
   if (parsed && typeof parsed === 'object') return parsed;
-  const legacyImage = sessionStorage.getItem('pendingFoundImage') || sessionStorage.getItem('pendingReportImage') || sessionStorage.getItem('pendingImage') || '';
-  const legacyStoredImage = localStorage.getItem('pendingImage') || '';
-  const fallbackImage = legacyImage || legacyStoredImage;
-  const legacyLocation = safeJsonParse(sessionStorage.getItem('pendingFoundLocation') || sessionStorage.getItem('pendingReportLocation') || '', null);
-  if (!fallbackImage) return null;
+  const legacyImage = storageGet(sessionStorage, 'pendingFoundImage', '')
+    || storageGet(sessionStorage, 'pendingReportImage', '')
+    || storageGet(sessionStorage, 'pendingImage', '')
+    || storageGet(localStorage, 'pendingImage', '');
+  const legacyLocation = safeJsonParse(
+    storageGet(sessionStorage, 'pendingFoundLocation', '') || storageGet(sessionStorage, 'pendingReportLocation', ''),
+    null,
+  );
+  if (!legacyImage) return null;
   return buildPendingFoundReportDraft({
-    imageData: fallbackImage,
+    imageData: legacyImage,
     lat: Number.isFinite(Number(legacyLocation?.lat)) ? Number(legacyLocation.lat) : null,
     lng: Number.isFinite(Number(legacyLocation?.lng)) ? Number(legacyLocation.lng) : null,
     locationText: legacyLocation?.label || '',
@@ -1817,16 +1871,26 @@ function loadPendingFoundReportDraft() {
 }
 
 function clearPendingFoundReportDraft() {
-  try { sessionStorage.removeItem(getPendingFoundReportKey()); } catch (error) { console.warn('pending report clear failed', error); }
+  [
+    getPendingFoundReportKey(),
+    'pendingFoundImage',
+    'pendingReportImage',
+    'pendingImage',
+    'pendingFoundLocation',
+    'pendingReportLocation',
+  ].forEach((key) => {
+    storageRemove(sessionStorage, key);
+  });
+  storageRemove(localStorage, 'pendingImage');
 }
 
 function loadFoundReports() {
-  const parsed = safeJsonParse(localStorage.getItem(getFoundReportsKey()), []);
+  const parsed = safeJsonParse(storageGet(localStorage, getFoundReportsKey(), '[]'), []);
   return Array.isArray(parsed) ? parsed : [];
 }
 
 function saveFoundReports(reports = []) {
-  localStorage.setItem(getFoundReportsKey(), JSON.stringify(Array.isArray(reports) ? reports : []));
+  storageSet(localStorage, getFoundReportsKey(), JSON.stringify(Array.isArray(reports) ? reports : []));
 }
 
 function saveFoundReport(report = {}) {
@@ -1911,7 +1975,7 @@ function registerServiceWorker() {
 
 
 function mountLanguageSwitcher(root = document) {
-  const current = document.documentElement.lang?.slice(0,2).toLowerCase() || 'he';
+  const current = (window.getAppLanguage?.() || document.documentElement.lang || 'he').slice(0, 2).toLowerCase();
   root.querySelectorAll('[data-lang]').forEach((button) => {
     button.classList.toggle('active', button.dataset.lang === current);
     if (button.__langBound) return;
@@ -1922,7 +1986,6 @@ function mountLanguageSwitcher(root = document) {
         window.setAppLanguage(next);
         return;
       }
-      try { localStorage.setItem(LANG_STORAGE_KEY, next); localStorage.setItem(LANG_STORAGE_ALIAS_KEY, next); localStorage.setItem(LEGACY_LANG_STORAGE_KEY, next); } catch (error) {}
       document.documentElement.lang = next;
       document.documentElement.dir = (next === 'ar' || next === 'he') ? 'rtl' : 'ltr';
       root.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
@@ -1935,7 +1998,7 @@ function mountLanguageSwitcher(root = document) {
 }
 
 function bootUiShell(root = document) {
-  try { const preferredLang = localStorage.getItem(LANG_STORAGE_KEY) || localStorage.getItem(LANG_STORAGE_ALIAS_KEY) || localStorage.getItem(LEGACY_LANG_STORAGE_KEY) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
+  try { const preferredLang = window.getAppLanguage?.() || storageGet(localStorage, LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_ALIAS_KEY, null) || storageGet(localStorage, LEGACY_LANG_STORAGE_KEY, null) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
   try { window.applyTranslations?.(root); } catch (error) {}
   try { mountLanguageSwitcher(root); } catch (error) {}
   try { mountThemeToggle(root); } catch (error) {}

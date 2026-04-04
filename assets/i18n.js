@@ -6,7 +6,8 @@ const I18N_LEGACY_STORAGE_KEY = 'petconnect-ui-lang-v1';
 
 function getStoredI18nLanguage() {
   try {
-    return localStorage.getItem(I18N_STORAGE_KEY)
+    return window.getAppLanguage?.()
+      || localStorage.getItem(I18N_STORAGE_KEY)
       || localStorage.getItem(I18N_ALIAS_STORAGE_KEY)
       || localStorage.getItem(I18N_LEGACY_STORAGE_KEY)
       || document.documentElement.lang
