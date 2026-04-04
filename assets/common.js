@@ -5,6 +5,8 @@ const IMPACT_STATS_KEY = 'petconnect-ghpages-impact-stats-v1';
 const FOUND_REPORTS_KEY = window.FOUND_REPORTS_KEY || 'petconnect-ghpages-found-reports-v1';
 const PENDING_FOUND_REPORT_KEY = window.PENDING_FOUND_REPORT_KEY || 'petconnect-ghpages-pending-found-report-v1';
 const STATS_SUMMARY_CACHE_KEY = 'petconnect-ghpages-stats-summary-cache-v1';
+const PET_LANG_STORAGE_KEY = 'petAppLang';
+const USER_LANG_STORAGE_KEY = 'userLanguage';
 const LANG_STORAGE_KEY = 'appLanguage';
 const LANG_STORAGE_ALIAS_KEY = 'appLang';
 const LEGACY_LANG_STORAGE_KEY = 'petconnect-ui-lang-v1';
@@ -22,6 +24,8 @@ window.PETCONNECT_KEYS = Object.freeze({
   PENDING_FOUND_REPORT: window.PENDING_FOUND_REPORT_KEY,
   STATS_SUMMARY_CACHE: window.STATS_SUMMARY_CACHE_KEY,
   LANG: LANG_STORAGE_KEY,
+  PET_LANG: PET_LANG_STORAGE_KEY,
+  USER_LANG: USER_LANG_STORAGE_KEY,
   LANG_ALIAS: LANG_STORAGE_ALIAS_KEY,
   LANG_LEGACY: LEGACY_LANG_STORAGE_KEY,
 });
@@ -1983,8 +1987,9 @@ function registerServiceWorker() {
 }
 
 
+
 function mountLanguageSwitcher(root = document) {
-  const current = (window.getAppLanguage?.() || document.documentElement.lang || 'he').slice(0, 2).toLowerCase();
+  const current = (window.getAppLanguage?.() || storageGet(localStorage, PET_LANG_STORAGE_KEY, null) || storageGet(localStorage, USER_LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_ALIAS_KEY, null) || storageGet(localStorage, LEGACY_LANG_STORAGE_KEY, null) || document.documentElement.lang || 'he').slice(0, 2).toLowerCase();
   root.querySelectorAll('[data-lang]').forEach((button) => {
     button.classList.toggle('active', button.dataset.lang === current);
     if (button.__langBound) return;
@@ -1995,6 +2000,13 @@ function mountLanguageSwitcher(root = document) {
         window.setAppLanguage(next);
         return;
       }
+      try {
+        localStorage.setItem(PET_LANG_STORAGE_KEY, next);
+        localStorage.setItem(USER_LANG_STORAGE_KEY, next);
+        localStorage.setItem(LANG_STORAGE_KEY, next);
+        localStorage.setItem(LANG_STORAGE_ALIAS_KEY, next);
+        localStorage.setItem(LEGACY_LANG_STORAGE_KEY, next);
+      } catch (error) {}
       document.documentElement.lang = next;
       document.documentElement.dir = (next === 'ar' || next === 'he') ? 'rtl' : 'ltr';
       root.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
@@ -2004,10 +2016,31 @@ function mountLanguageSwitcher(root = document) {
       }, 10);
     });
   });
+
+  root.querySelectorAll('[data-lang-select]').forEach((select) => {
+    select.value = current;
+    if (select.__langBound) return;
+    select.__langBound = true;
+    select.addEventListener('change', () => {
+      const next = String(select.value || 'he').slice(0, 2).toLowerCase();
+      if (window.setLanguage) {
+        window.setLanguage(next);
+        return;
+      }
+      if (window.setAppLanguage) {
+        window.setAppLanguage(next);
+        return;
+      }
+      try {
+        localStorage.setItem(PET_LANG_STORAGE_KEY, next);
+      } catch (error) {}
+      window.location.reload();
+    });
+  });
 }
 
 function bootUiShell(root = document) {
-  try { const preferredLang = window.getAppLanguage?.() || storageGet(localStorage, LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_ALIAS_KEY, null) || storageGet(localStorage, LEGACY_LANG_STORAGE_KEY, null) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
+  try { const preferredLang = window.getAppLanguage?.() || storageGet(localStorage, PET_LANG_STORAGE_KEY, null) || storageGet(localStorage, USER_LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_ALIAS_KEY, null) || storageGet(localStorage, LEGACY_LANG_STORAGE_KEY, null) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
   try { window.applyTranslations?.(root); } catch (error) {}
   try { mountLanguageSwitcher(root); } catch (error) {}
   try { mountThemeToggle(root); } catch (error) {}

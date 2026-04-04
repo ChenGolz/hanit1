@@ -1,8 +1,8 @@
 (function () {
+  const PET_LANG_KEY = 'petAppLang';
+  const USER_LANG_KEY = 'userLanguage';
   const LANG_KEY = 'appLanguage';
   const LANG_ALIAS_KEY = 'appLang';
-  const USER_LANG_KEY = 'userLanguage';
-  const PET_LANG_KEY = 'petAppLang';
   const LEGACY_KEY = 'petconnect-ui-lang-v1';
   const THEME_ALIAS_KEY = 'appTheme';
   const THEME_KEY = 'petconnect-ui-theme-v1';
@@ -17,8 +17,8 @@
   function getSavedLanguage() {
     try {
       return normalizeLang(
-        localStorage.getItem(USER_LANG_KEY)
-        || localStorage.getItem(PET_LANG_KEY)
+        localStorage.getItem(PET_LANG_KEY)
+        || localStorage.getItem(USER_LANG_KEY)
         || localStorage.getItem(LANG_KEY)
         || localStorage.getItem(LANG_ALIAS_KEY)
         || localStorage.getItem(LEGACY_KEY)
@@ -34,8 +34,8 @@
   function saveLanguage(lang) {
     const next = normalizeLang(lang);
     try {
-      localStorage.setItem(USER_LANG_KEY, next);
       localStorage.setItem(PET_LANG_KEY, next);
+      localStorage.setItem(USER_LANG_KEY, next);
       localStorage.setItem(LANG_KEY, next);
       localStorage.setItem(LANG_ALIAS_KEY, next);
       localStorage.setItem(LEGACY_KEY, next);
@@ -105,7 +105,7 @@
   window.switchLanguage = window.switchLanguage || switchLanguage;
   window.toggleLanguage = window.toggleLanguage || switchLanguage;
   window.changeLanguage = window.changeLanguage || changeLanguage;
-  window.setLanguage = window.setLanguage || changeLanguage;
+  window.setLanguage = window.setLanguage || ((lang) => switchLanguage(lang));
   window.changeSetting = window.changeSetting || changeSetting;
   window.getAppLanguage = window.getAppLanguage || getSavedLanguage;
   window.setAppLanguage = window.setAppLanguage || ((lang, options = {}) => {
@@ -129,7 +129,7 @@
   }
 
   window.addEventListener?.('storage', (event) => {
-    if (![USER_LANG_KEY, PET_LANG_KEY, LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY, THEME_ALIAS_KEY, THEME_KEY].includes(event.key)) return;
+    if (![PET_LANG_KEY, USER_LANG_KEY, LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY, THEME_ALIAS_KEY, THEME_KEY].includes(event.key)) return;
     applyLanguage(getSavedLanguage(), { root: document });
   });
 })();

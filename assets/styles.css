@@ -2539,3 +2539,91 @@ body { background: var(--bg-clean); }
   .big-two-actions { grid-template-columns: 1fr; }
   .pet-result-img, .pet-avatar, .thumb-wrap .pet-result-img, .thumb-wrap .pet-result-avatar { width: 112px; height: 112px; }
 }
+
+
+/* v35 sticky language + stronger production polish */
+:root {
+  --action-blue: #007AFF;
+  --safety-orange: #FF9500;
+}
+
+.compact-lang-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.78);
+  border: 1px solid rgba(0, 122, 255, 0.10);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.08);
+}
+
+.lang-picker {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-inline: 4px 18px;
+  min-width: 72px;
+  cursor: pointer;
+}
+
+.btn-found,
+.action-hero-card.found-now,
+.action-hero-card.found,
+.button-link.found,
+button.found {
+  background: var(--action-blue) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.btn-lost,
+.action-hero-card.lost,
+.button-link.lost,
+button.lost {
+  background: var(--safety-orange) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.btn-found:hover,
+.btn-lost:hover,
+.action-hero-card.found-now:hover,
+.action-hero-card.found:hover,
+.action-hero-card.lost:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 42px rgba(0,0,0,0.14);
+}
+
+.pet-avatar,
+.pet-result-img,
+.pet-result-avatar,
+.report-preview {
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pet-avatar,
+.pet-result-img,
+.pet-result-avatar {
+  width: 140px;
+  height: 140px;
+  border: 4px solid var(--action-blue);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
+  background: #fff;
+}
+
+.report-preview {
+  max-width: min(320px, 72vw);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+}
+
+.footer-link-admin,
+.admin-link,
+.builder-link,
+[data-admin-link] {
+  display: none !important;
+}
