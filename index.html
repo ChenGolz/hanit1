@@ -16,22 +16,20 @@
   </head>
   <body>
     <main class="page unified-page minimalist-homepage">
-      <nav class="nav nav-glass header-modern">
+      <nav class="nav nav-glass header-modern compact-nav compact-home-nav">
         <div class="brand-block"><strong>פאטקונקט</strong><span class="brand-subtitle">איתור והצלה</span></div>
-        <div class="nav-actions">
-          <button id="home-help-toggle" type="button" class="button-link secondary small" aria-label="עזרה">?</button>
-          <div class="lang-switcher" aria-label="בחירת שפה">
+        <div class="nav-actions compact-nav-actions">
+          <button id="home-help-toggle" type="button" class="button-link secondary small icon-only" aria-label="עזרה">?</button>
+          <div class="lang-switcher compact-lang-switcher" aria-label="בחירת שפה">
+            <span class="lang-globe" aria-hidden="true">🌐</span>
             <button type="button" data-lang="he" class="active">עב</button>
             <button type="button" data-lang="ar">عر</button>
             <button type="button" data-lang="en">EN</button>
           </div>
-          <button id="theme-toggle" type="button" class="button-link secondary small">מצב כהה</button>
+          <button id="theme-toggle" type="button" class="button-link secondary small">מצב</button>
         </div>
-        <div class="links">
-          <a class="link" href="./index.html">דף הבית</a>
-          <a class="link" href="./search.html">חיפוש חיה</a>
-          <a class="link" href="./report-found.html">דיווח חיה שנמצאה</a>
-          <a class="link" href="./enroll.html">ניהול חיות</a>
+        <div class="links compact-links home-links-minimal">
+          <a class="link" href="#home-help-modal" id="home-about-link">אודות</a>
         </div>
       </nav>
 
@@ -43,12 +41,14 @@
           <h1 class="hero-main-title" data-i18n="homeHeadline">איחוד חיות מחמד עם בינה מלאכותית</h1>
           <p class="hero-main-subtitle" data-i18n="homeSubheadline">כל שנייה חשובה. התחילי חיפוש או דיווח בלחיצה אחת.</p>
           <div class="hero-actions hero-actions-grid big-two-actions">
-            <a class="action-hero-card lost" href="./search.html">
+            <a class="action-hero-card lost btn-action btn-lost" href="./search.html">
+              <span class="action-hero-icon" aria-hidden="true">🔎</span>
               <span class="eyebrow">דיווח אובדן</span>
               <strong data-i18n="lostAction">איבדתי חיה</strong>
               <small data-i18n="lostActionSub">חיפוש מהיר לפי תמונה, עיר ופרטים.</small>
             </a>
-            <button id="hero-found-now" class="action-hero-card found-now" type="button">
+            <button id="hero-found-now" class="action-hero-card found-now btn-action btn-found" type="button">
+              <span class="action-hero-icon" aria-hidden="true">📷</span>
               <span class="eyebrow">מציאה וחיפוש</span>
               <strong data-i18n="foundNowAction">מצאתי חיה עכשיו</strong>
               <small data-i18n="foundNowActionSub">פותח מצלמה מיד וממשיך למסלול חיפוש/דיווח.</small>
@@ -152,6 +152,7 @@
     const cameraInput = document.getElementById('home-camera-input');
     const openCamera = () => cameraInput?.click();
     document.getElementById('home-help-toggle')?.addEventListener('click', () => document.getElementById('home-help-modal')?.showModal());
+    document.getElementById('home-about-link')?.addEventListener('click', (event) => { event.preventDefault(); document.getElementById('home-help-modal')?.showModal(); });
     document.getElementById('home-help-close')?.addEventListener('click', () => document.getElementById('home-help-modal')?.close());
     document.getElementById('hero-found-now')?.addEventListener('click', openCamera);
     document.getElementById('fab-open-camera')?.addEventListener('click', openCamera);
