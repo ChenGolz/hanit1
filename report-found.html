@@ -5,16 +5,16 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>דיווח חיה שנמצאה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v30">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v30">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v34">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v34">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
-    <script defer src="./assets/global.js?v=20260403v30"></script>
-    <script defer src="./assets/init.js?v=20260403v30"></script>
-    <script defer src="./assets/i18n.js?v=20260403v30"></script>
-    <script defer src="./assets/common.js?v=20260403v30"></script>
-    <script defer src="./assets/app.js?v=20260403v30"></script>
-    <script defer src="./report-found.inline.js?v=20260403v30"></script>
+    <script defer src="./assets/global.js?v=20260403v34"></script>
+    <script defer src="./assets/init.js?v=20260403v34"></script>
+    <script defer src="./assets/i18n.js?v=20260403v34"></script>
+    <script defer src="./assets/common.js?v=20260403v34"></script>
+    <script defer src="./assets/app.js?v=20260403v34"></script>
+    <script defer src="./report-found.inline.js?v=20260403v34"></script>
   </head>
   <body>
     <main class="page unified-page">
@@ -29,20 +29,20 @@
           </div>
         </div>
         <div class="links compact-links">
-          <a class="link" href="./index.html">בית</a>
+          <a class="link" href="./index.html">⌂</a><a class="link" href="./search.html?mode=lost">⌕</a><a class="link" href="./report-found.html?kind=found">＋</a>
 </div>
       </nav>
 
       <section class="card hero-slab stack section-shell hero-shell">
-        <div class="chip">Quick Post</div>
-        <h1 style="margin:0;">דיווח חיה שנמצאה</h1>
-        <p class="meta">אם הגעת לכאן מתוך החיפוש, התמונה והמיקום כבר מחכים לך כאן. המטרה: לסיים דיווח מהר ובלי לחזור על צעדים.</p>
+        <div id="report-hero-chip" class="chip">Quick Post</div>
+        <h1 id="report-hero-title" style="margin:0;">יצירת דיווח</h1>
+        <p id="report-hero-meta" class="meta">אם הגעת לכאן מתוך החיפוש, התמונה והמיקום כבר מחכים לך כאן. המטרה: לסיים דיווח מהר ובלי לחזור על צעדים.</p>
         <div class="step-progress">
-          <div id="report-step-1" class="step-pill active">1/3 תמונה ומיקום</div>
-          <div id="report-step-2" class="step-pill">2/3 פרטי החיה</div>
-          <div id="report-step-3" class="step-pill">3/3 שמירה ושיתוף</div>
+          <div id="report-step-1" class="step-pill active">1/3 תמונה</div>
+          <div id="report-step-2" class="step-pill">2/3 מיקום</div>
+          <div id="report-step-3" class="step-pill">3/3 יצירת קשר</div>
         </div>
-        <div class="hero-mini-steps"><span class="badge">1 תמונה</span><span class="badge">2 פרטים</span><span class="badge">3 שמירה ושיתוף</span></div>
+        <div class="hero-mini-steps"><span class="badge">1 תמונה</span><span class="badge">2 מיקום</span><span class="badge">3 טלפון / וואטסאפ</span></div>
         <div id="report-status" class="notice">טוען טיוטת דיווח…</div>
       </section>
 
@@ -59,7 +59,7 @@
           </div>
         </article>
         <article class="card stack section-shell">
-          <div class="section-head"><div class="section-kicker">Step 2</div><h2 class="section-title">פרטים שזוהו אוטומטית</h2><div class="section-subtitle">אפשר לאשר, לתקן או להשלים פרטים לפני שמירת הדיווח.</div></div>
+          <div class="section-head"><div class="section-kicker">שלב 2-3</div><h2 class="section-title">מיקום ופרטי קשר</h2><div class="section-subtitle">קודם בוחרים מיקום, ואז משאירים רק פרטי קשר קצרים כדי לפרסם במהירות.</div></div>
           <div class="field-grid">
             <input id="report-animal-type" type="text" placeholder="סוג חיה, למשל כלב" aria-label="סוג חיה">
             <input id="report-breed" type="text" placeholder="גזע משוער" aria-label="גזע משוער">
@@ -76,6 +76,10 @@
           <div class="field-grid">
             <input id="report-time" class="readonly-input" type="text" readonly aria-label="זמן דיווח">
             <label class="small checkbox-inline"><input id="quick-post-toggle" type="checkbox" checked> דיווח מהיר: לשאול רק על פרטים נוספים</label>
+          </div>
+          <div class="field-grid">
+            <input id="report-phone" type="tel" inputmode="tel" placeholder="טלפון ליצירת קשר" aria-label="טלפון ליצירת קשר">
+            <label class="small checkbox-inline"><input id="report-whatsapp-optin" type="checkbox" checked> אפשר לפנות גם בוואטסאפ</label>
           </div>
           <textarea id="report-extra-details" rows="4" placeholder="פרטים נוספים? למשל: החיה ידידותית / פצועה קל / נראתה ליד גינה ציבורית"></textarea>
           <div class="card stack section-shell" style="padding:14px;">

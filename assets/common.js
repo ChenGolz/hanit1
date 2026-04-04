@@ -1798,6 +1798,7 @@ function buildPendingFoundReportDraft(payload = {}) {
   const colorName = String(payload.colorName || payload.colors || '').trim();
   return {
     id: payload.id || `draft-${Date.now()}`,
+    reportKind: String(payload.reportKind || payload.kind || 'found').trim() || 'found',
     imageData,
     animalType,
     breed: String(payload.breed || '').trim(),
@@ -1815,6 +1816,8 @@ function buildPendingFoundReportDraft(payload = {}) {
     quickPost: Boolean(payload.quickPost),
     querySummary: String(payload.querySummary || '').trim(),
     audioData: String(payload.audioData || '').trim(),
+    contactPhone: String(payload.contactPhone || '').trim(),
+    whatsappOptIn: Boolean(payload.whatsappOptIn),
   };
 }
 
@@ -1897,6 +1900,7 @@ function saveFoundReport(report = {}) {
   const reports = loadFoundReports();
   const saved = {
     id: report.id || `found-${Date.now()}`,
+    reportKind: String(report.reportKind || report.kind || 'found').trim() || 'found',
     imageData: String(report.imageData || '').trim(),
     animalType: inferAnimalTypeLabel(report.animalType || ''),
     breed: String(report.breed || '').trim(),
@@ -1913,6 +1917,8 @@ function saveFoundReport(report = {}) {
     verificationAnswerHash: String(report.verificationAnswerHash || '').trim(),
     sourcePage: String(report.sourcePage || '').trim(),
     audioData: String(report.audioData || '').trim(),
+    contactPhone: String(report.contactPhone || '').trim(),
+    whatsappOptIn: Boolean(report.whatsappOptIn),
     createdAt: new Date().toISOString(),
     status: 'local',
   };
@@ -1922,15 +1928,17 @@ function saveFoundReport(report = {}) {
 }
 
 function buildFoundReportShareText(report = {}, options = {}) {
-  const lines = ['נמצאה חיה דרך פאטקונקט'];
+  const kind = String(report.reportKind || report.kind || 'found').trim() || 'found';
+  const lines = [kind === 'missing' ? 'אבדה חיה דרך פאטקונקט' : 'נמצאה חיה דרך פאטקונקט'];
   if (report.animalType) lines.push(`סוג: ${report.animalType}`);
   if (report.breed) lines.push(`גזע: ${report.breed}`);
   if (report.colors || report.colorName) lines.push(`צבע: ${report.colors || report.colorName}`);
   if (report.city) lines.push(`עיר: ${report.city}`);
   if (report.locationText) lines.push(`אזור: ${report.locationText}`);
   if (report.reportedAt) lines.push(`זמן: ${formatReportedAt(report.reportedAt)}`);
+  if (report.contactPhone) lines.push(`טלפון: ${report.contactPhone}`);
   if (report.notes) lines.push(`פרטים נוספים: ${report.notes}`);
-  if (options.includeGuide !== false) lines.push('מה לעשות עכשיו: לבדוק קולר, לגשת לסריקת שבב, ולהציע מים בזהירות.');
+  if (options.includeGuide !== false) lines.push(kind === 'missing' ? 'מה לעשות עכשיו: לשתף בקבוצות שכונתיות, לעדכן וטרינרים קרובים ולבדוק דיווחים חדשים.' : 'מה לעשות עכשיו: לבדוק קולר, לגשת לסריקת שבב, ולהציע מים בזהירות.');
   return lines.join('\n');
 }
 
@@ -1951,9 +1959,10 @@ function renderFoundReportCards(reports = []) {
   if (!Array.isArray(reports) || !reports.length) return '<div class="empty">עדיין אין דיווחים להצגה.</div>';
   return reports.map((report) => `
     <article class="match-card report-card">
-      ${report.imageData ? `<div class="thumb-wrap blur-shell"><img class="pet-result-avatar blur-up" src="${report.imageData}" alt="${escapeHtml(report.animalType || 'חיה שנמצאה')}"></div>` : ''}
+      ${report.imageData ? `<div class="thumb-wrap blur-shell"><img class="pet-result-avatar pet-result-img blur-up" src="${report.imageData}" alt="${escapeHtml(report.animalType || (report.reportKind === 'missing' ? 'חיה שאבדה' : 'חיה שנמצאה'))}"></div>` : ''}
       <div class="body stack">
-        <div class="space-between"><strong>${escapeHtml(report.animalType || 'חיה שנמצאה')}</strong><span class="badge">${escapeHtml(formatReportedAt(report.reportedAt) || 'עכשיו')}</span></div>
+        <div class="space-between"><strong>${escapeHtml(report.animalType || (report.reportKind === 'missing' ? 'חיה שאבדה' : 'חיה שנמצאה'))}</strong><span class="badge">${escapeHtml(formatReportedAt(report.reportedAt) || 'עכשיו')}</span></div>
+        <div class="row"><span class="chip">${report.reportKind === 'missing' ? 'דיווח אובדן' : 'דיווח מציאה'}</span></div>
         <div class="row">${report.breed ? `<span class="badge">${escapeHtml(report.breed)}</span>` : ''}${report.colors ? `<span class="badge">${escapeHtml(report.colors)}</span>` : ''}${report.city ? `<span class="badge">${escapeHtml(report.city)}</span>` : ''}</div>
         <div class="small">${escapeHtml(report.locationText || 'ללא אזור מפורט')}</div>
         ${report.notes ? `<div class="small">${escapeHtml(report.notes)}</div>` : ''}

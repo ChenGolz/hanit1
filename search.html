@@ -3,20 +3,20 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>חיפוש חיה לפי תמונה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v30">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v30">
+    <title>חיפוש מהיר לפי תמונה · פאטקונקט</title>
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v34">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v34">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
-    <script defer src="./assets/global.js?v=20260403v30"></script>
-    <script defer src="./assets/init.js?v=20260403v30"></script>
-    <script defer src="./assets/i18n.js?v=20260403v30"></script>
-    <script defer src="./assets/common.js?v=20260403v30"></script>
-    <script defer src="./assets/app.js?v=20260403v30"></script>
-    <script defer src="./search.inline.js?v=20260403v30"></script>
+    <script defer src="./assets/global.js?v=20260403v34"></script>
+    <script defer src="./assets/init.js?v=20260403v34"></script>
+    <script defer src="./assets/i18n.js?v=20260403v34"></script>
+    <script defer src="./assets/common.js?v=20260403v34"></script>
+    <script defer src="./assets/app.js?v=20260403v34"></script>
+    <script defer src="./search.inline.js?v=20260403v34"></script>
   </head>
   <body>
     <main class="page unified-page">
@@ -31,14 +31,14 @@
           </div>
         </div>
         <div class="links compact-links">
-          <a class="link" href="./index.html">בית</a>
+          <a class="link" href="./index.html">⌂</a><a class="link" href="./search.html?mode=lost">⌕</a><a class="link" href="./report-found.html?kind=found">＋</a>
 </div>
       </nav>
 
       <section class="card hero-slab stack section-shell hero-shell">
         <div class="chip">חיפוש ציבורי</div>
         <h1 style="margin:0;">חיפוש חיה לפי תמונה</h1>
-        <p class="meta">מעלות תמונה, ממקדות את אזור החיה, ומקבלות תוצאות מיד. אם אין התאמה חזקה, אפשר לעבור לדיווח בלי להעלות שוב את התמונה.</p>
+        <p class="meta">מעלות תמונה, ממקדות את אזור החיה, ומקבלות תוצאות מיד. אם אין התאמה חזקה, אפשר להפוך את אותה תמונה לדיווח בלי להעלות שוב.</p>
         <div id="status" class="notice">טוען…</div>
         <form id="search-form" class="stack" novalidate>
           <div class="field-grid">
@@ -86,7 +86,7 @@
           <div id="breed-suggestion-chips" class="suggestion-chips"></div>
           <div class="row wrap compact-row">
             <button id="search-btn" class="lost" type="submit">חיפוש בעלים</button>
-            <button id="report-direct-btn" class="found" type="button">דיווח כחיה שנמצאה</button>
+            <button id="report-direct-btn" class="found" type="button">דיווח מהיר</button>
           </div>
         </form>
         <div id="library-stats" class="small"></div>
@@ -200,7 +200,7 @@
             <div class="small">הפכי את התמונה שכבר חיפשת לדיווח על חיה שנמצאה — בלי להעלות שוב.</div>
           </div>
           <div class="row wrap compact-row">
-            <button id="sticky-report-btn" class="found small" type="button">פרסמי עכשיו כחיה שנמצאה</button>
+            <button id="sticky-report-btn" class="found small" type="button">יצירת דיווח</button>
             <button id="sticky-quick-btn" class="secondary small" type="button">דיווח מהיר</button>
           </div>
         </div>

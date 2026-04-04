@@ -2517,3 +2517,25 @@ body { background: var(--bg-clean); }
     width: 100%;
   }
 }
+
+
+/* v34 flow polish */
+.nav { position: sticky; top: 0; z-index: 1000; }
+.big-two-actions .action-hero-card.found-now { background: linear-gradient(180deg,#007AFF,#005EEA); color:#fff; box-shadow: 0 12px 28px rgba(0,122,255,.28); }
+.big-two-actions .action-hero-card.lost { background: linear-gradient(180deg,#FF9500,#f47b00); color:#fff; box-shadow: 0 12px 28px rgba(255,149,0,.24); }
+.big-two-actions .action-hero-card:hover { transform: translateY(-5px); }
+.clean-slate-hero { padding-bottom: 2rem; }
+.clean-slate-hero .hero-main-title { line-height: 1.45; }
+.compact-links .link { min-width: 42px; justify-content:center; }
+.pet-result-img, .pet-avatar { width: 140px; height: 140px; border-radius: 50%; object-fit: cover; border: 5px solid #007AFF; box-shadow: 0 8px 20px rgba(0,0,0,.10); margin-inline: auto; }
+.thumb-wrap .pet-result-img, .thumb-wrap .pet-result-avatar { border-radius: 50%; width: 140px; height: 140px; object-fit: cover; }
+.sticky-report-bar { position: sticky; bottom: 12px; z-index: 50; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.report-contact-card .checkbox-inline { min-height: 52px; }
+@media (max-width: 760px) {
+  .nav .links { gap: 6px; }
+  .nav .links .link:not(:first-child) { display: inline-flex; }
+  .compact-nav { padding: 10px 12px; }
+  .hero-main-title { font-size: 1.85rem; }
+  .big-two-actions { grid-template-columns: 1fr; }
+  .pet-result-img, .pet-avatar, .thumb-wrap .pet-result-img, .thumb-wrap .pet-result-avatar { width: 112px; height: 112px; }
+}

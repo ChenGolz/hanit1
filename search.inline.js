@@ -101,6 +101,26 @@ async function runSearchPage() {
   const stickyReportBar = document.getElementById('sticky-report-bar');
   const stickyReportBtn = document.getElementById('sticky-report-btn');
   const stickyQuickBtn = document.getElementById('sticky-quick-btn');
+  const searchMode = (new URLSearchParams(window.location.search).get('mode') || sessionStorage.getItem('petconnect-search-mode-v1') || 'found').toLowerCase() === 'lost' ? 'lost' : 'found';
+  try { sessionStorage.setItem('petconnect-search-mode-v1', searchMode); } catch (error) {}
+
+  function getReportKindForSearchMode() {
+    return searchMode === 'lost' ? 'missing' : 'found';
+  }
+
+  function getSearchToReportTitle() {
+    return searchMode === 'lost' ? 'לא מצאת התאמה? פרסמי מודעת אובדן עם אותה תמונה.' : 'לא נמצאה התאמה? הפכי את החיפוש לדיווח חיה שנמצאה.';
+  }
+
+  function hydrateSearchModeUi() {
+    document.getElementById('sticky-report-bar')?.querySelector('strong')?.replaceChildren(document.createTextNode(searchMode === 'lost' ? 'לא נמצאה התאמה לחיה שלך?' : 'לא נמצאה התאמה?'));
+    const stickyText = document.getElementById('sticky-report-bar')?.querySelector('.small');
+    if (stickyText) stickyText.textContent = searchMode === 'lost' ? 'הפכי את אותה תמונה למודעת אובדן — בלי להעלות שוב.' : 'הפכי את התמונה שכבר חיפשת לדיווח על חיה שנמצאה — בלי להעלות שוב.';
+    if (stickyReportBtn) stickyReportBtn.textContent = searchMode === 'lost' ? 'פרסמי מודעת אובדן' : 'פרסמי עכשיו כחיה שנמצאה';
+    if (stickyQuickBtn) stickyQuickBtn.textContent = searchMode === 'lost' ? 'מודעת אובדן מהירה' : 'דיווח מהיר';
+    const reportDirectBtn = document.getElementById('report-direct-btn');
+    if (reportDirectBtn) reportDirectBtn.textContent = searchMode === 'lost' ? 'יצירת מודעת אובדן' : 'דיווח כחיה שנמצאה';
+  }
   const privacyNoteEl = document.getElementById('privacy-note');
   const smartHintEl = document.getElementById('smart-hint');
   const radiusInput = document.getElementById('search-radius');
@@ -132,7 +152,7 @@ async function runSearchPage() {
   let currentReportTimestamp = '';
 
 function convertToReport() {
-  goToFoundReport();
+  goToReport();
 }
 window.convertToReport = convertToReport;
   let currentVerificationMatch = null;
@@ -573,7 +593,7 @@ function renderLoadingResultsSkeleton() {
       setStatus(statusEl, 'נפתח פוסטר מוכן להדפסה או שמירה כ-PDF.', { tone: 'success' });
     });
     summaryEl.querySelector('#report-inline')?.addEventListener('click', () => {
-      goToFoundReport();
+      goToReport();
     });
     summaryEl.querySelector('#retry-search-inline')?.addEventListener('click', () => {
       document.getElementById('preview-card')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -596,6 +616,7 @@ function buildCurrentReportDraft(overrides = {}) {
   const inferredBreed = String(breedInput.value || topMatch?.breed || '').trim();
   const inferredColor = String(colorProfile.colorName || topMatch?.colors || topMatch?.colorName || '').trim();
   const draft = savePendingFoundReportDraft({
+    reportKind: getReportKindForSearchMode(),
     imageData: cropRectToDataUrlMasked(currentPreviewImage, currentSelection, 720, circleMaskToggle?.checked ? 'circle' : 'rect'),
     animalType: inferredType,
     breed: inferredBreed,
@@ -642,7 +663,7 @@ async function ensurePreparedPreviewForReporting() {
   }
 }
 
-async function goToFoundReport(overrides = {}) {
+async function goToReport(overrides = {}) {
   const ok = await ensurePreparedPreviewForReporting();
   if (!ok) {
     setStatus(statusEl, 'צריך קודם לבחור תמונה כדי לעבור לדיווח חיה שנמצאה.', { tone: 'warn' });
@@ -661,7 +682,7 @@ async function goToFoundReport(overrides = {}) {
     sessionStorage.setItem('petconnect-report-arrival-v1', '1');
   } catch (error) { console.warn(error); }
   await animateReportTransition();
-  window.location.href = './report-found.html';
+  window.location.href = `./report-found.html?kind=${getReportKindForSearchMode()}`;
 }
 
 function renderReportCta(bundle) {
@@ -679,15 +700,15 @@ function renderReportCta(bundle) {
         <div class="chip">חיפוש → דיווח</div>
         <div class="predictive-title">${escapeHtml(heading)}</div>
         <div class="small">${escapeHtml(text)}</div>
-        ${showProminent ? '<div class="small">לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.</div>' : ''}
+        ${showProminent ? `<div class="small">${kind === 'missing' ? 'לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך מודעת האובדן.' : 'לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.'}</div>` : ''}
       </div>
       <div class="row wrap compact-row">
-        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small strong-cta" type="button">לא נמצאה התאמה? עברי לדיווח עכשיו</button>
-        <button id="cta-quick-post-btn" class="secondary small" type="button">דיווח מהיר מהמיקום הזה</button>
+        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small strong-cta" type="button">${kind === 'missing' ? 'לא נמצאה התאמה? פרסמי מודעת אובדן עכשיו' : 'לא נמצאה התאמה? עברי לדיווח עכשיו'}</button>
+        <button id="cta-quick-post-btn" class="secondary small" type="button">${kind === 'missing' ? 'מודעת אובדן מהירה' : 'דיווח מהיר מהמיקום הזה'}</button>
       </div>
     </div>`;
-  reportCtaContainer.querySelector('#cta-report-btn')?.addEventListener('click', () => goToFoundReport());
-  reportCtaContainer.querySelector('#cta-quick-post-btn')?.addEventListener('click', () => goToFoundReport({ quickPost: true }));
+  reportCtaContainer.querySelector('#cta-report-btn')?.addEventListener('click', () => goToReport());
+  reportCtaContainer.querySelector('#cta-quick-post-btn')?.addEventListener('click', () => goToReport({ quickPost: true }));
   if (stickyReportBar) stickyReportBar.classList.toggle('hidden', !(showProminent || state.band === 'empty'));
 }
 
@@ -793,7 +814,7 @@ function renderReportCta(bundle) {
   reportDirectBtn?.addEventListener('click', async () => {
     try {
       setButtonBusy?.(reportDirectBtn, true, 'מעביר לדיווח…');
-      await goToFoundReport();
+      await goToReport();
     } catch (error) {
       console.error(error);
       setStatus(statusEl, `המעבר לדיווח נכשל: ${error.message}`, { tone: 'warn' });
@@ -1020,8 +1041,8 @@ function renderReportCta(bundle) {
     setStatus(statusEl, 'אזור החיה עודכן ידנית. אפשר עכשיו ללחוץ על "חיפוש לפי האזור שסומן".', { tone: 'success' });
     updateDetectionStatus('הבחירה הידנית פעילה. אפשר לחפש לפי האזור שסומן.', 'success');
   }
-  stickyReportBtn?.addEventListener('click', () => goToFoundReport());
-  stickyQuickBtn?.addEventListener('click', () => goToFoundReport({ quickPost: true }));
+  stickyReportBtn?.addEventListener('click', () => goToReport());
+  stickyQuickBtn?.addEventListener('click', () => goToReport({ quickPost: true }));
   hydratePendingCaptureFromHome().catch(() => {});
 
   canvas.addEventListener('pointerup', finishDrag);
