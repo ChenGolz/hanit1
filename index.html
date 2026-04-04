@@ -4,18 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v41">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v41">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v42">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v42">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <meta property="og:title" content="פאטקונקט · איתור והצלה מהיר לחיות מחמד">
-    <meta property="og:description" content="חיפוש ודיווח מהיר על חיות שאבדו או נמצאו — בעברית, אנגלית וערבית.">
+    <meta property="og:description" content="מצאת כלב או חתול? פאטקונקט עוזרת לך למצוא את הבעלים בשניות בעזרת בינה מלאכותית.">
     <meta property="og:image" content="./favicon.svg">
-    <script defer src="./assets/global.js?v=20260403v41"></script>
-    <script defer src="./assets/init.js?v=20260403v41"></script>
-    <script defer src="./assets/i18n.js?v=20260403v41"></script>
-    <script defer src="./assets/common.js?v=20260403v41"></script>
-    <script defer src="./assets/app.js?v=20260403v41"></script>
+    <script defer src="./assets/global.js?v=20260403v42"></script>
+    <script defer src="./assets/init.js?v=20260403v42"></script>
+    <script defer src="./assets/i18n.js?v=20260403v42"></script>
+    <script defer src="./assets/common.js?v=20260403v42"></script>
+    <script defer src="./assets/app.js?v=20260403v42"></script>
   </head>
   <body>
     <main class="page unified-page minimalist-homepage">
@@ -44,7 +44,7 @@
         <div class="hero-card-shell">
           <div class="hero-kicker">פאטקונקט</div>
           <h1 class="hero-main-title" data-i18n="homeHeadline">איחוד חיות מחמד עם בינה מלאכותית</h1>
-          <p class="hero-main-subtitle" data-i18n="homeSubheadline">הדרך המהירה ביותר לאחד חיות מחמד עם המשפחות שלהן בעזרת זיהוי תמונה חכם.</p>
+          <p class="hero-main-subtitle" data-i18n="homeSubheadline">הדרך המהירה ביותר להחזיר חיות מחמד הביתה בעזרת זיהוי תמונה חכם.</p>
           <div class="hero-actions hero-actions-grid big-two-actions">
             <a class="action-hero-card lost btn-action btn-lost" href="./search.html?mode=lost">
               <span class="action-hero-icon" aria-hidden="true">🔎</span>
@@ -101,11 +101,11 @@
 
       <section class="reunion-ticker-shell" aria-label="סיפורי הצלחה אחרונים">
         <div class="ticker-track" id="reunion-ticker-track">
-          <span class="ticker-item">בלה חזרה הביתה בתל אביב</span>
+          <span class="ticker-item">בלה חזרה הביתה בתל אביב לפני שעתיים</span>
           <span class="ticker-sep">•</span>
-          <span class="ticker-item">מקס אותר בחיפה</span>
+          <span class="ticker-item">מקס אותר בחיפה אתמול</span>
           <span class="ticker-sep">•</span>
-          <span class="ticker-item">לונה חזרה למשפחה בירושלים</span>
+          <span class="ticker-item">לונה חזרה למשפחה בירושלים הבוקר</span>
         </div>
       </section>
 
@@ -162,7 +162,7 @@
         const place = report.city || report.locationText || 'האזור שלך';
         const label = report.animalType || 'חיה';
         return `${label} חזרה הביתה ב${place}`;
-      }) : ['בלה חזרה הביתה בתל אביב', 'מקס אותר בחיפה', 'לונה חזרה למשפחה בירושלים'];
+      }) : ['בלה חזרה הביתה בתל אביב לפני שעתיים', 'מקס אותר בחיפה אתמול', 'לונה חזרה למשפחה בירושלים הבוקר'];
       ticker.innerHTML = items.concat(items).map((item) => `<span class="ticker-item">${window.escapeHtml?.(item) || item}</span><span class="ticker-sep">•</span>`).join('');
     };
     renderReunionTicker();

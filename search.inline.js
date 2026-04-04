@@ -693,9 +693,15 @@ async function goToReport(overrides = {}) {
   const draft = buildCurrentReportDraft(overrides);
   let croppedData = '';
   try {
-    const croppedCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
-    const croppedCanvas = circleMaskToggle?.checked ? applyCircleMask(croppedCanvasRaw) : croppedCanvasRaw;
-    croppedData = croppedCanvas.toDataURL('image/jpeg', 0.9);
+    const activePreviewCanvas = document.getElementById('preview-canvas');
+    if (activePreviewCanvas?.toDataURL) {
+      croppedData = activePreviewCanvas.toDataURL('image/jpeg', 0.9);
+    }
+    if (!croppedData) {
+      const croppedCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
+      const croppedCanvas = circleMaskToggle?.checked ? applyCircleMask(croppedCanvasRaw) : croppedCanvasRaw;
+      croppedData = croppedCanvas.toDataURL('image/jpeg', 0.9);
+    }
   } catch (error) {
     console.warn(error);
     try {
@@ -756,7 +762,13 @@ function renderReportCta(bundle) {
   if (stickyReportBar) stickyReportBar.classList.toggle('hidden', !(showProminent || state.band === 'empty'));
 }
 
-  function rerenderResults() {
+  function setSearchingState(isSearching) {
+  const previewCard = document.getElementById('preview-card');
+  previewCard?.classList.toggle('is-searching', Boolean(isSearching));
+  document.body?.classList.toggle('search-loading-pulse', Boolean(isSearching));
+}
+
+function rerenderResults() {
     const filteredBundle = applyResultFilters(currentResultBundle);
     renderSummary(filteredBundle);
     renderReportCta(filteredBundle);
@@ -771,9 +783,7 @@ function renderReportCta(bundle) {
   }
 
   async function runSearch() {
-    const previewCard = document.getElementById('preview-card');
-    previewCard?.classList.add('is-searching');
-    document.body?.classList.add('search-loading-pulse');
+    setSearchingState(true);
     try {
       if (!currentPreviewImage || !currentSelection) {
         setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
@@ -823,8 +833,7 @@ function renderReportCta(bundle) {
       }
     } finally {
       setSearchButtonsBusy(false);
-      previewCard?.classList.remove('is-searching');
-      document.body?.classList.remove('search-loading-pulse');
+      setSearchingState(false);
     }
   }
 

@@ -2713,7 +2713,7 @@ button.lost {
 }
 
 body {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-bottom-nav {
