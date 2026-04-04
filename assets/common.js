@@ -7,6 +7,7 @@ const PENDING_FOUND_REPORT_KEY = window.PENDING_FOUND_REPORT_KEY || 'petconnect-
 const STATS_SUMMARY_CACHE_KEY = 'petconnect-ghpages-stats-summary-cache-v1';
 const LANG_STORAGE_KEY = 'appLanguage';
 const LANG_STORAGE_ALIAS_KEY = 'appLang';
+const LANG_STORAGE_EXTRA_KEY = 'petAppLang';
 const LEGACY_LANG_STORAGE_KEY = 'petconnect-ui-lang-v1';
 
 window.FOUND_REPORTS_KEY = window.FOUND_REPORTS_KEY || FOUND_REPORTS_KEY;
@@ -21,6 +22,7 @@ window.PETCONNECT_KEYS = Object.freeze({
   FOUND_REPORTS: window.FOUND_REPORTS_KEY,
   PENDING_FOUND_REPORT: window.PENDING_FOUND_REPORT_KEY,
   STATS_SUMMARY_CACHE: window.STATS_SUMMARY_CACHE_KEY,
+  LANG_EXTRA: LANG_STORAGE_EXTRA_KEY,
   LANG: LANG_STORAGE_KEY,
   LANG_ALIAS: LANG_STORAGE_ALIAS_KEY,
   LANG_LEGACY: LEGACY_LANG_STORAGE_KEY,
@@ -1989,6 +1991,7 @@ function mountLanguageSwitcher(root = document) {
       document.documentElement.lang = next;
       document.documentElement.dir = (next === 'ar' || next === 'he') ? 'rtl' : 'ltr';
       root.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el === button));
+      button.closest('.lang-menu')?.removeAttribute('open');
       applyTranslations(document);
       window.setTimeout(() => {
         try { window.location.reload(); } catch (error) {}
@@ -1998,7 +2001,7 @@ function mountLanguageSwitcher(root = document) {
 }
 
 function bootUiShell(root = document) {
-  try { const preferredLang = window.getAppLanguage?.() || storageGet(localStorage, LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_ALIAS_KEY, null) || storageGet(localStorage, LEGACY_LANG_STORAGE_KEY, null) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
+  try { const preferredLang = window.getAppLanguage?.() || storageGet(localStorage, LANG_STORAGE_EXTRA_KEY, null) || storageGet(localStorage, LANG_STORAGE_KEY, null) || storageGet(localStorage, LANG_STORAGE_ALIAS_KEY, null) || storageGet(localStorage, LEGACY_LANG_STORAGE_KEY, null) || document.documentElement.lang || 'he'; window.initLang?.(preferredLang); } catch (error) {}
   try { window.applyTranslations?.(root); } catch (error) {}
   try { mountLanguageSwitcher(root); } catch (error) {}
   try { mountThemeToggle(root); } catch (error) {}

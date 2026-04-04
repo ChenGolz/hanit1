@@ -1,6 +1,7 @@
 (function () {
   const LANG_KEY = 'appLanguage';
   const LANG_ALIAS_KEY = 'appLang';
+  const EXTRA_LANG_KEY = 'petAppLang';
   const LEGACY_KEY = 'petconnect-ui-lang-v1';
   const SUPPORTED = new Set(['he', 'en', 'ar']);
   const RTL = new Set(['he', 'ar']);
@@ -13,7 +14,8 @@
   function getSavedLanguage() {
     try {
       return normalizeLang(
-        localStorage.getItem(LANG_KEY)
+        localStorage.getItem(EXTRA_LANG_KEY)
+        || localStorage.getItem(LANG_KEY)
         || localStorage.getItem(LANG_ALIAS_KEY)
         || localStorage.getItem(LEGACY_KEY)
         || document.documentElement.lang
@@ -28,6 +30,7 @@
   function saveLanguage(lang) {
     const next = normalizeLang(lang);
     try {
+      localStorage.setItem(EXTRA_LANG_KEY, next);
       localStorage.setItem(LANG_KEY, next);
       localStorage.setItem(LANG_ALIAS_KEY, next);
       localStorage.setItem(LEGACY_KEY, next);
@@ -42,6 +45,8 @@
     document.querySelectorAll('[data-lang]').forEach((button) => {
       button.classList.toggle('active', button.dataset.lang === lang);
     });
+    const currentLabel = lang === 'ar' ? 'عر' : lang === 'en' ? 'EN' : 'עב';
+    document.querySelectorAll('[data-lang-current]').forEach((node) => { node.textContent = currentLabel; });
   }
 
   function applyLanguage(lang, options = {}) {
@@ -74,6 +79,7 @@
 
   window.switchLanguage = window.switchLanguage || switchLanguage;
   window.toggleLanguage = window.toggleLanguage || switchLanguage;
+  window.setLanguage = window.setLanguage || ((lang) => switchLanguage(lang));
   window.getAppLanguage = window.getAppLanguage || getSavedLanguage;
   window.setAppLanguage = window.setAppLanguage || ((lang, options = {}) => {
     const next = applyLanguage(lang, options);
@@ -96,7 +102,7 @@
   }
 
   window.addEventListener?.('storage', (event) => {
-    if (![LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY].includes(event.key)) return;
+    if (![EXTRA_LANG_KEY, LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY].includes(event.key)) return;
     applyLanguage(getSavedLanguage(), { root: document });
   });
 })();
