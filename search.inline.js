@@ -130,6 +130,11 @@ async function runSearchPage() {
   let geoState = { lat: null, lng: null };
   let dragState = { active: false, startX: 0, startY: 0 };
   let currentReportTimestamp = '';
+
+function convertToReport() {
+  goToFoundReport();
+}
+window.convertToReport = convertToReport;
   let currentVerificationMatch = null;
   const PENDING_CAPTURE_KEY = 'petconnect-home-pending-capture-v1';
 

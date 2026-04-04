@@ -163,8 +163,29 @@ async function startVoiceRecording() {
     }
   }
 
+  function hydratePendingImageFallback() {
+    if (draft) return false;
+    const pendingImage = sessionStorage.getItem('pendingImage') || sessionStorage.getItem('pendingFoundImage') || sessionStorage.getItem('pendingReportImage') || localStorage.getItem('pendingImage') || '';
+    if (!pendingImage) return false;
+    draft = {
+      imageData: pendingImage,
+      animalType: '',
+      breed: '',
+      colorName: '',
+      locationText: '',
+      city: '',
+      reportedAt: new Date().toISOString(),
+      lat: null,
+      lng: null,
+      quickPost: false,
+      sourcePage: './search.html',
+    };
+    return true;
+  }
+
   async function hydrateFromDraft() {
     draft = loadPendingFoundReportDraft() || draft;
+    hydratePendingImageFallback();
     if (!draft) {
       setStatus(statusEl, 'אין כרגע טיוטה שהועברה מהחיפוש. אפשר לבחור תמונה ידנית ולמלא כמה פרטים.', { tone: 'warn' });
       timeEl.value = formatReportedAt(new Date()) || '';

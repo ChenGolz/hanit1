@@ -2,29 +2,30 @@
   const LANG_KEY = 'appLanguage';
   const LANG_ALIAS_KEY = 'appLang';
   const LEGACY_KEY = 'petconnect-ui-lang-v1';
-  const RTL_LANGS = new Set(['he', 'ar']);
+  const SUPPORTED = new Set(['he', 'en', 'ar']);
+  const RTL = new Set(['he', 'ar']);
 
   function normalizeLang(value) {
     const lang = String(value || '').trim().slice(0, 2).toLowerCase();
-    return ['he', 'en', 'ar'].includes(lang) ? lang : 'he';
+    return SUPPORTED.has(lang) ? lang : 'he';
   }
 
-  function readStoredLang() {
+  function getSavedLanguage() {
     try {
       return normalizeLang(
         localStorage.getItem(LANG_KEY)
-          || localStorage.getItem(LANG_ALIAS_KEY)
-          || localStorage.getItem(LEGACY_KEY)
-          || document.documentElement.lang
-          || navigator.language
-          || 'he'
+        || localStorage.getItem(LANG_ALIAS_KEY)
+        || localStorage.getItem(LEGACY_KEY)
+        || document.documentElement.lang
+        || navigator.language
+        || 'he'
       );
     } catch (error) {
       return normalizeLang(document.documentElement.lang || navigator.language || 'he');
     }
   }
 
-  function writeStoredLang(lang) {
+  function saveLanguage(lang) {
     const next = normalizeLang(lang);
     try {
       localStorage.setItem(LANG_KEY, next);
@@ -34,24 +35,23 @@
     return next;
   }
 
-  function updateDomLanguage(lang) {
-    const next = normalizeLang(lang);
-    const direction = RTL_LANGS.has(next) ? 'rtl' : 'ltr';
-    document.documentElement.lang = next;
-    document.documentElement.dir = direction;
-    document.body?.classList.toggle('lang-is-rtl', direction === 'rtl');
-    document.body?.classList.toggle('lang-is-ltr', direction === 'ltr');
+  function updateLangClasses(lang) {
+    document.querySelectorAll('.lang-he').forEach((el) => { el.hidden = lang !== 'he'; });
+    document.querySelectorAll('.lang-en').forEach((el) => { el.hidden = lang !== 'en'; });
+    document.querySelectorAll('.lang-ar').forEach((el) => { el.hidden = lang !== 'ar'; });
     document.querySelectorAll('[data-lang]').forEach((button) => {
-      button.classList.toggle('active', button.dataset.lang === next);
+      button.classList.toggle('active', button.dataset.lang === lang);
     });
-    document.querySelectorAll('.lang-he').forEach((el) => { el.hidden = next !== 'he'; });
-    document.querySelectorAll('.lang-en').forEach((el) => { el.hidden = next !== 'en'; });
-    document.querySelectorAll('.lang-ar').forEach((el) => { el.hidden = next !== 'ar'; });
-    return next;
   }
 
   function applyLanguage(lang, options = {}) {
-    const next = updateDomLanguage(writeStoredLang(lang));
+    const next = saveLanguage(lang);
+    const dir = RTL.has(next) ? 'rtl' : 'ltr';
+    document.documentElement.lang = next;
+    document.documentElement.dir = dir;
+    document.body?.classList.toggle('lang-is-rtl', dir === 'rtl');
+    document.body?.classList.toggle('lang-is-ltr', dir === 'ltr');
+    updateLangClasses(next);
     if (typeof window.initLang === 'function') {
       try { window.initLang(next); } catch (error) { console.warn('initLang failed', error); }
     }
@@ -61,38 +61,33 @@
     return next;
   }
 
-  function currentLanguage() {
-    return readStoredLang();
+  function bootLanguage() {
+    return applyLanguage(getSavedLanguage(), { root: document });
   }
 
   function switchLanguage(nextLang) {
-    const current = currentLanguage();
+    const current = getSavedLanguage();
     const next = nextLang ? normalizeLang(nextLang) : (current === 'he' ? 'en' : current === 'en' ? 'ar' : 'he');
-    applyLanguage(next);
-    if (window.location?.reload) window.location.reload();
+    saveLanguage(next);
+    window.location.reload();
   }
 
-  function bootLanguage() {
-    applyLanguage(currentLanguage(), { root: document });
-  }
-
-  window.PetConnectLang = {
-    normalizeLang,
-    get: currentLanguage,
-    set: (lang, options = {}) => {
-      const next = applyLanguage(lang, options);
-      if (options.reload !== false && window.location?.reload) window.location.reload();
-      return next;
-    },
-    boot: bootLanguage,
-    switch: switchLanguage,
-  };
-
-  window.getAppLanguage = window.getAppLanguage || currentLanguage;
-  window.setAppLanguage = window.setAppLanguage || ((lang, options = {}) => window.PetConnectLang.set(lang, options));
   window.switchLanguage = window.switchLanguage || switchLanguage;
   window.toggleLanguage = window.toggleLanguage || switchLanguage;
+  window.getAppLanguage = window.getAppLanguage || getSavedLanguage;
+  window.setAppLanguage = window.setAppLanguage || ((lang, options = {}) => {
+    const next = applyLanguage(lang, options);
+    if (options.reload !== false) window.location.reload();
+    return next;
+  });
   window.__petconnectInitPageLanguage = bootLanguage;
+  window.PetConnectLang = {
+    get: getSavedLanguage,
+    set: (lang, options = {}) => window.setAppLanguage(lang, options),
+    boot: bootLanguage,
+    switch: switchLanguage,
+    normalizeLang,
+  };
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', bootLanguage, { once: true });
@@ -102,9 +97,6 @@
 
   window.addEventListener?.('storage', (event) => {
     if (![LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY].includes(event.key)) return;
-    updateDomLanguage(readStoredLang());
-    if (typeof window.applyTranslations === 'function') {
-      try { window.applyTranslations(document); } catch (error) {}
-    }
+    applyLanguage(getSavedLanguage(), { root: document });
   });
 })();
