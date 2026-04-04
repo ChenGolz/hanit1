@@ -691,8 +691,22 @@ async function goToReport(overrides = {}) {
     return;
   }
   const draft = buildCurrentReportDraft(overrides);
+  let croppedData = '';
   try {
-    if (draft?.imageData) {
+    croppedData = (cropImg && !cropImg.classList.contains('hidden') && cropImg.src)
+      ? cropImg.src
+      : cropRectToDataUrlMasked(currentPreviewImage, currentSelection, 900, circleMaskToggle?.checked ? 'circle' : 'rect');
+  } catch (error) {
+    console.warn(error);
+    croppedData = draft?.imageData || '';
+  }
+  try {
+    if (croppedData) {
+      sessionStorage.setItem('pendingFoundImage', croppedData);
+      sessionStorage.setItem('pendingReportImage', croppedData);
+      sessionStorage.setItem('pendingImage', croppedData);
+      try { localStorage.setItem('pendingImage', croppedData); } catch (error) {}
+    } else if (draft?.imageData) {
       sessionStorage.setItem('pendingFoundImage', draft.imageData);
       sessionStorage.setItem('pendingReportImage', draft.imageData);
       sessionStorage.setItem('pendingImage', draft.imageData);
@@ -703,7 +717,7 @@ async function goToReport(overrides = {}) {
     sessionStorage.setItem('petconnect-report-arrival-v1', '1');
   } catch (error) { console.warn(error); }
   await animateReportTransition();
-  window.location.href = `./report-found.html?kind=${getReportKindForSearchMode()}`;
+  window.location.href = `./report-found.html?kind=${getReportKindForSearchMode()}&fromSearch=true${overrides.quickPost ? '&quick=1' : ''}`;
 }
 
 function renderReportCta(bundle) {
@@ -750,56 +764,59 @@ function renderReportCta(bundle) {
   }
 
   async function runSearch() {
-    document.getElementById('preview-card')?.classList.add('is-searching');
-    if (!currentPreviewImage || !currentSelection) {
-      setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
-      return;
-    }
-    setSearchProgress(12, 'טוען את ספריית החיפוש…');
-    currentLibrary = await getMergedLibrary();
-    libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
-    if (!currentLibrary.length) {
-      setStatus(statusEl, 'עדיין אין חיות זמינות לחיפוש. אפשר להוסיף רשומות בקלות דרך עמוד ניהול החיות.', { tone: 'warn' });
-      resetSearchProgress();
-      clearLastMatchGallery();
-      document.getElementById('preview-card')?.classList.remove('is-searching');
-      return;
-    }
+    const previewCard = document.getElementById('preview-card');
+    previewCard?.classList.add('is-searching');
+    try {
+      if (!currentPreviewImage || !currentSelection) {
+        setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
+        return;
+      }
+      setSearchProgress(12, 'טוען את ספריית החיפוש…');
+      currentLibrary = await getMergedLibrary();
+      libraryStatsEl.textContent = formatEntryCount(currentLibrary.length);
+      if (!currentLibrary.length) {
+        setStatus(statusEl, 'עדיין אין חיות זמינות לחיפוש. אפשר להוסיף רשומות בקלות דרך עמוד ניהול החיות.', { tone: 'warn' });
+        resetSearchProgress();
+        clearLastMatchGallery();
+        return;
+      }
 
-    setSearchButtonsBusy(true, 'מנתח תמונה…');
-    renderLoadingResultsSkeleton();
-    setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
-    setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
-    const queryCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
-    const queryCanvas = circleMaskToggle?.checked ? applyCircleMask(queryCanvasRaw) : queryCanvasRaw;
-    setSearchProgress(62, 'מפיק מאפיינים ויזואליים…');
-    currentQueryFeatures = await extractAnimalFeatures(queryCanvas);
-    setSearchProgress(84, 'משווה מול המאגר ומסנן תוצאות…');
-    currentResultBundle = computeSearchResults(currentQueryFeatures, currentLibrary, {
-      minScore: Math.max(0.35, Math.min(0.9, Number(minScoreInput.value) / 100)),
-      queryAnimalType: queryAnimalTypeEl.value,
-      queryBreed: breedInput.value,
-    });
-    refreshResultFilters(currentResultBundle);
-    rerenderResults();
-    suggestBreedFromResults(currentResultBundle);
-    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setSearchProgress(100, currentResultBundle.kind === 'visual' ? 'נסרקו התאמות ויזואליות.' : 'לא נמצאה התאמה חזקה, מוצגות חיות בצבעים דומים.');
-    const state = classifyResultState(currentResultBundle);
-    recordImpactEvent('search');
-    if (state.band === 'high') {
-      recordImpactEvent('strong-match');
-      vibrateIfPossible?.([35, 20, 45]);
-      setStatus(statusEl, `נמצאה התאמה חזקה מאוד של ${Math.round(state.score * 100)}%. מומלץ לפתוח מיד את הכרטיס הראשון.`, { tone: 'success' });
-    } else if (state.band === 'medium') {
-      setStatus(statusEl, 'נמצאו כמה מועמדים טובים. עברי על הגלריה והשווי בין הכרטיסים.', { tone: 'success' });
-    } else if (state.band === 'low') {
-      setStatus(statusEl, 'נמצאו תוצאות חלשות בלבד. עדיף לנסות חיפוש נוסף עם אזור מדויק יותר או תמונה מזווית אחרת.', { tone: 'warn' });
-    } else {
-      setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
+      setSearchButtonsBusy(true, 'מנתח תמונה…');
+      renderLoadingResultsSkeleton();
+      setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
+      setSearchProgress(34, 'מכין את אזור החיה להשוואה…');
+      const queryCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
+      const queryCanvas = circleMaskToggle?.checked ? applyCircleMask(queryCanvasRaw) : queryCanvasRaw;
+      setSearchProgress(62, 'מפיק מאפיינים ויזואליים…');
+      currentQueryFeatures = await extractAnimalFeatures(queryCanvas);
+      setSearchProgress(84, 'משווה מול המאגר ומסנן תוצאות…');
+      currentResultBundle = computeSearchResults(currentQueryFeatures, currentLibrary, {
+        minScore: Math.max(0.35, Math.min(0.9, Number(minScoreInput.value) / 100)),
+        queryAnimalType: queryAnimalTypeEl.value,
+        queryBreed: breedInput.value,
+      });
+      refreshResultFilters(currentResultBundle);
+      rerenderResults();
+      suggestBreedFromResults(currentResultBundle);
+      resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      setSearchProgress(100, currentResultBundle.kind === 'visual' ? 'נסרקו התאמות ויזואליות.' : 'לא נמצאה התאמה חזקה, מוצגות חיות בצבעים דומים.');
+      const state = classifyResultState(currentResultBundle);
+      recordImpactEvent('search');
+      if (state.band === 'high') {
+        recordImpactEvent('strong-match');
+        vibrateIfPossible?.([35, 20, 45]);
+        setStatus(statusEl, `נמצאה התאמה חזקה מאוד של ${Math.round(state.score * 100)}%. מומלץ לפתוח מיד את הכרטיס הראשון.`, { tone: 'success' });
+      } else if (state.band === 'medium') {
+        setStatus(statusEl, 'נמצאו כמה מועמדים טובים. עברי על הגלריה והשווי בין הכרטיסים.', { tone: 'success' });
+      } else if (state.band === 'low') {
+        setStatus(statusEl, 'נמצאו תוצאות חלשות בלבד. עדיף לנסות חיפוש נוסף עם אזור מדויק יותר או תמונה מזווית אחרת.', { tone: 'warn' });
+      } else {
+        setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
+      }
+    } finally {
+      setSearchButtonsBusy(false);
+      previewCard?.classList.remove('is-searching');
     }
-    setSearchButtonsBusy(false);
-    document.getElementById('preview-card')?.classList.remove('is-searching');
   }
 
   await loadModels(statusEl);

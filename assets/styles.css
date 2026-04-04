@@ -3080,3 +3080,24 @@ body::before {
   .action-hero-card { min-height: 152px; }
   .action-hero-icon { width: 54px; height: 54px; font-size: 1.55rem; }
 }
+
+
+/* v40 search/report/mobile/language polish */
+body {
+  padding-bottom: 80px;
+}
+@media (min-width: 901px) {
+  body {
+    padding-bottom: 0;
+  }
+}
+@media (max-width: 900px) {
+  body {
+    padding-bottom: 96px;
+  }
+}
+.preview-card.is-searching .preview-guide-shell,
+.preview-card.is-searching #query-crop,
+.preview-card.is-searching #preview-canvas {
+  animation: searchPulse 1.45s ease-in-out infinite;
+}
