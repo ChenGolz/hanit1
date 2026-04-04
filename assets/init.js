@@ -1,4 +1,5 @@
 (function () {
+  const USER_LANG_KEY = 'userLanguage';
   const LANG_KEY = 'appLanguage';
   const LANG_ALIAS_KEY = 'appLang';
   const EXTRA_LANG_KEY = 'petAppLang';
@@ -14,7 +15,8 @@
   function getSavedLanguage() {
     try {
       return normalizeLang(
-        localStorage.getItem(EXTRA_LANG_KEY)
+        localStorage.getItem(USER_LANG_KEY)
+        || localStorage.getItem(EXTRA_LANG_KEY)
         || localStorage.getItem(LANG_KEY)
         || localStorage.getItem(LANG_ALIAS_KEY)
         || localStorage.getItem(LEGACY_KEY)
@@ -30,6 +32,7 @@
   function saveLanguage(lang) {
     const next = normalizeLang(lang);
     try {
+      localStorage.setItem(USER_LANG_KEY, next);
       localStorage.setItem(EXTRA_LANG_KEY, next);
       localStorage.setItem(LANG_KEY, next);
       localStorage.setItem(LANG_ALIAS_KEY, next);
@@ -72,7 +75,7 @@
 
   function switchLanguage(nextLang) {
     const current = getSavedLanguage();
-    const next = nextLang ? normalizeLang(nextLang) : (current === 'he' ? 'en' : current === 'en' ? 'ar' : 'he');
+    const next = nextLang ? normalizeLang(nextLang) : (current === 'he' ? 'en' : 'he');
     saveLanguage(next);
     window.location.reload();
   }
@@ -102,7 +105,7 @@
   }
 
   window.addEventListener?.('storage', (event) => {
-    if (![EXTRA_LANG_KEY, LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY].includes(event.key)) return;
+    if (![USER_LANG_KEY, EXTRA_LANG_KEY, LANG_KEY, LANG_ALIAS_KEY, LEGACY_KEY].includes(event.key)) return;
     applyLanguage(getSavedLanguage(), { root: document });
   });
 })();
