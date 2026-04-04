@@ -693,12 +693,19 @@ async function goToReport(overrides = {}) {
   const draft = buildCurrentReportDraft(overrides);
   let croppedData = '';
   try {
-    croppedData = (cropImg && !cropImg.classList.contains('hidden') && cropImg.src)
-      ? cropImg.src
-      : cropRectToDataUrlMasked(currentPreviewImage, currentSelection, 900, circleMaskToggle?.checked ? 'circle' : 'rect');
+    const croppedCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
+    const croppedCanvas = circleMaskToggle?.checked ? applyCircleMask(croppedCanvasRaw) : croppedCanvasRaw;
+    croppedData = croppedCanvas.toDataURL('image/jpeg', 0.9);
   } catch (error) {
     console.warn(error);
-    croppedData = draft?.imageData || '';
+    try {
+      croppedData = (cropImg && !cropImg.classList.contains('hidden') && cropImg.src)
+        ? cropImg.src
+        : cropRectToDataUrlMasked(currentPreviewImage, currentSelection, 900, circleMaskToggle?.checked ? 'circle' : 'rect');
+    } catch (innerError) {
+      console.warn(innerError);
+      croppedData = draft?.imageData || '';
+    }
   }
   try {
     if (croppedData) {
@@ -766,6 +773,7 @@ function renderReportCta(bundle) {
   async function runSearch() {
     const previewCard = document.getElementById('preview-card');
     previewCard?.classList.add('is-searching');
+    document.body?.classList.add('search-loading-pulse');
     try {
       if (!currentPreviewImage || !currentSelection) {
         setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
@@ -816,6 +824,7 @@ function renderReportCta(bundle) {
     } finally {
       setSearchButtonsBusy(false);
       previewCard?.classList.remove('is-searching');
+      document.body?.classList.remove('search-loading-pulse');
     }
   }
 

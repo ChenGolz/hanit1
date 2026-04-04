@@ -2670,6 +2670,7 @@ button.lost {
 .mobile-nav-item:hover {
   transform: translateY(-8px);
 }
+.search-loading-pulse .preview-card,
 .search-loading-pulse .preview-guide-shell,
 .search-loading-pulse .report-preview,
 .search-loading-pulse #query-crop {
@@ -2710,6 +2711,11 @@ button.lost {
   transform: scale(.98);
   transition: opacity .22s ease, transform .22s ease;
 }
+
+body {
+  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+}
+
 .mobile-bottom-nav {
   position: fixed;
   left: 50%;
@@ -2795,6 +2801,7 @@ button.lost {
 @media (prefers-reduced-motion: reduce) {
   .clean-slate-hero::before,
   .ticker-track,
+  .search-loading-pulse .preview-card,
   .search-loading-pulse .preview-guide-shell,
   .search-loading-pulse .report-preview,
   .search-loading-pulse #query-crop {
@@ -3028,6 +3035,7 @@ body::before {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
+.preview-card.is-searching,
 .preview-card.is-searching .preview-guide-shell,
 .preview-card.is-searching #query-crop {
   animation: searchPulse 1.45s ease-in-out infinite;
@@ -3096,6 +3104,7 @@ body {
     padding-bottom: 96px;
   }
 }
+.preview-card.is-searching,
 .preview-card.is-searching .preview-guide-shell,
 .preview-card.is-searching #query-crop,
 .preview-card.is-searching #preview-canvas {
