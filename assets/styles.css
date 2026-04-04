@@ -2713,7 +2713,7 @@ button.lost {
 }
 
 body {
-  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
 }
 
 .mobile-bottom-nav {
@@ -3037,7 +3037,8 @@ body::before {
 }
 .preview-card.is-searching,
 .preview-card.is-searching .preview-guide-shell,
-.preview-card.is-searching #query-crop {
+.preview-card.is-searching #query-crop,
+.preview-card.is-searching #preview-canvas {
   animation: searchPulse 1.45s ease-in-out infinite;
 }
 @keyframes searchPulse {

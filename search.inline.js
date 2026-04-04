@@ -687,7 +687,7 @@ async function ensurePreparedPreviewForReporting() {
 async function goToReport(overrides = {}) {
   const ok = await ensurePreparedPreviewForReporting();
   if (!ok) {
-    setStatus(statusEl, 'צריך קודם לבחור תמונה כדי לעבור לדיווח חיה שנמצאה.', { tone: 'warn' });
+    setStatus(statusEl, 'צריך קודם לבחור תמונה כדי לעבור לדיווח.', { tone: 'warn' });
     return;
   }
   const draft = buildCurrentReportDraft(overrides);
@@ -718,11 +718,13 @@ async function goToReport(overrides = {}) {
       sessionStorage.setItem('pendingFoundImage', croppedData);
       sessionStorage.setItem('pendingReportImage', croppedData);
       sessionStorage.setItem('pendingImage', croppedData);
+      sessionStorage.setItem('petconnect-search-report-image-v1', croppedData);
       try { localStorage.setItem('pendingImage', croppedData); } catch (error) {}
     } else if (draft?.imageData) {
       sessionStorage.setItem('pendingFoundImage', draft.imageData);
       sessionStorage.setItem('pendingReportImage', draft.imageData);
       sessionStorage.setItem('pendingImage', draft.imageData);
+      sessionStorage.setItem('petconnect-search-report-image-v1', draft.imageData);
       try { localStorage.setItem('pendingImage', draft.imageData); } catch (error) {}
     }
     sessionStorage.setItem('pendingFoundLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
@@ -740,7 +742,7 @@ function renderReportCta(bundle) {
   const reportKind = getReportKindForSearchMode();
   const heading = showProminent ? (reportKind === 'missing' ? 'לא מצאת את החיה?' : 'לא נמצאה התאמה?') : (reportKind === 'missing' ? 'רוצה גם לפרסם מודעת אובדן?' : 'רוצה גם לפרסם את החיה שנמצאה?');
   const text = showProminent
-    ? (reportKind === 'missing' ? 'לא נמצאה התאמה חזקה. אפשר להפוך את אותה תמונה למודעת אובדן ברגע אחד — בלי להעלות שוב.' : 'לא נמצאה התאמה חזקה. אפשר להפוך את התמונה שכבר נטענה לדיווח על חיה שנמצאה — בלי להעלות אותה שוב.')
+    ? (reportKind === 'missing' ? 'לא נמצאה התאמה חזקה. אפשר להפוך את אותה תמונה למודעת אובדן ברגע אחד — בלי להעלות שוב.' : 'לא נמצאה התאמה חזקה. אפשר להפוך את אותה תמונה לדיווח על חיה שנמצאה ברגע אחד — בלי להעלות שוב.')
     : 'אם תרצי, אפשר להמשיך מהחיפוש הזה ישר לדיווח מהיר עם אותה תמונה ואותו מיקום.';
   reportCtaContainer.className = `report-cta-card ${showProminent ? 'prominent' : ''}`;
   reportCtaContainer.classList.remove('hidden');
