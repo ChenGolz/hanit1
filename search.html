@@ -4,19 +4,22 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>חיפוש מהיר לפי תמונה · פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v35">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v36">
     <link rel="manifest" href="./manifest.webmanifest?v=20260403v35">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
+    <meta property="og:title" content="פאטקונקט · חיפוש חיה לפי תמונה">
+    <meta property="og:description" content="מעלים תמונה, מחפשים התאמות וממשיכים לדיווח בלי להעלות שוב.">
+    <meta property="og:image" content="./favicon.svg">
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
     <script defer src="./assets/global.js?v=20260403v35"></script>
     <script defer src="./assets/init.js?v=20260403v35"></script>
     <script defer src="./assets/i18n.js?v=20260403v35"></script>
-    <script defer src="./assets/common.js?v=20260403v35"></script>
-    <script defer src="./assets/app.js?v=20260403v35"></script>
-    <script defer src="./search.inline.js?v=20260403v34"></script>
+    <script defer src="./assets/common.js?v=20260403v36"></script>
+    <script defer src="./assets/app.js?v=20260403v36"></script>
+    <script defer src="./search.inline.js?v=20260403v36"></script>
   </head>
   <body>
     <main class="page unified-page">
@@ -112,7 +115,13 @@
               להציג מסגרת בחירה
             </label>
           </div>
-          <canvas id="preview-canvas" class="preview"></canvas>
+          <div class="preview-guide-shell">
+            <canvas id="preview-canvas" class="preview"></canvas>
+            <div class="face-guide-overlay" aria-hidden="true">
+              <div class="face-guide-ring"></div>
+              <div class="face-guide-text">מרכזי את פני החיה בתוך העיגול לקבלת תוצאה טובה יותר</div>
+            </div>
+          </div>
           <div id="selection-hint" class="small">אפשר לגרור מלבן סביב החיה. זה חשוב במיוחד כשיש גם אנשים או רקע עמוס.</div>
           <div class="row">
             <button id="smart-scan-btn" class="secondary small" type="button">סריקה חכמה של החיה</button>
@@ -207,7 +216,13 @@
           </div>
         </div>
       </div>
-          <dialog id="verification-modal" class="verify-modal">
+          <nav class="mobile-bottom-nav" aria-label="ניווט מהיר">
+        <a class="mobile-nav-item" href="./index.html" aria-label="בית"><span class="mobile-nav-icon">🏠</span><span>בית</span></a>
+        <a class="mobile-nav-item active" href="./search.html?mode=lost" aria-label="חיפוש"><span class="mobile-nav-icon">🔍</span><span>חיפוש</span></a>
+        <a class="mobile-nav-item" href="./report-found.html?kind=found" aria-label="דיווח"><span class="mobile-nav-icon">➕</span><span>דיווח</span></a>
+      </nav>
+
+      <dialog id="verification-modal" class="verify-modal">
         <form method="dialog" class="verify-modal-card stack section-shell section-shell--sub">
           <div class="space-between">
             <h2 id="verification-title" class="section-title" style="margin:0;">בדיקת סימן זיהוי</h2>

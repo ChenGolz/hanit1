@@ -286,6 +286,7 @@ window.convertToReport = convertToReport;
   function setSearchButtonsBusy(busy, label = 'מעבד…') {
     setButtonBusy?.(loadBtn, busy, label);
     setButtonBusy?.(runSelectedBtn, busy, 'מחפש…');
+    document.body.classList.toggle('search-loading-pulse', Boolean(busy));
   }
 
   function setAutoTimestamp(date = new Date()) {
@@ -478,6 +479,7 @@ window.convertToReport = convertToReport;
   }
 
   function updateSelectionPreview() {
+    document.body.classList.toggle('has-preview-image', Boolean(currentPreviewImage));
     if (!currentPreviewImage) {
       cropImg.classList.add('hidden');
       cropMetaEl.textContent = 'עדיין לא נבחר אזור חיה.';
@@ -689,7 +691,8 @@ function renderReportCta(bundle) {
   if (!reportCtaContainer) return;
   const state = classifyResultState(bundle);
   const showProminent = !bundle || state.band === 'empty' || state.band === 'low' || state.band === 'fallback';
-  const heading = showProminent ? 'לא נמצאה התאמה?' : 'רוצה גם לפרסם את החיה שנמצאה?';
+  const reportKind = getReportKindForSearchMode();
+  const heading = showProminent ? 'לא נמצאה התאמה?' : (reportKind === 'missing' ? 'רוצה גם לפרסם מודעת אובדן?' : 'רוצה גם לפרסם את החיה שנמצאה?');
   const text = showProminent
     ? 'לא נמצאה התאמה חזקה. אפשר להפוך את התמונה שכבר נטענה לדיווח על חיה שנמצאה — בלי להעלות אותה שוב.'
     : 'אם תרצי, אפשר להמשיך מהחיפוש הזה ישר לדיווח מהיר עם אותה תמונה ואותו מיקום.';
@@ -700,11 +703,11 @@ function renderReportCta(bundle) {
         <div class="chip">חיפוש → דיווח</div>
         <div class="predictive-title">${escapeHtml(heading)}</div>
         <div class="small">${escapeHtml(text)}</div>
-        ${showProminent ? `<div class="small">${kind === 'missing' ? 'לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך מודעת האובדן.' : 'לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.'}</div>` : ''}
+        ${showProminent ? `<div class="small">${reportKind === 'missing' ? 'לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך מודעת האובדן.' : 'לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.'}</div>` : ''}
       </div>
       <div class="row wrap compact-row">
-        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small strong-cta" type="button">${kind === 'missing' ? 'לא נמצאה התאמה? פרסמי מודעת אובדן עכשיו' : 'לא נמצאה התאמה? פרסמי דיווח עכשיו'}</button>
-        <button id="cta-quick-post-btn" class="secondary small" type="button">${kind === 'missing' ? 'מודעת אובדן מהירה' : 'דיווח מהיר מהמיקום הזה'}</button>
+        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small strong-cta" type="button">${reportKind === 'missing' ? 'לא נמצאה התאמה? פרסמי מודעת אובדן עכשיו' : 'לא נמצאה התאמה? פרסמי דיווח עכשיו'}</button>
+        <button id="cta-quick-post-btn" class="secondary small" type="button">${reportKind === 'missing' ? 'מודעת אובדן מהירה' : 'דיווח מהיר מהמיקום הזה'}</button>
       </div>
     </div>`;
   reportCtaContainer.querySelector('#cta-report-btn')?.addEventListener('click', () => goToReport());

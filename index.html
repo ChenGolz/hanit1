@@ -4,15 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v35">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v36">
     <link rel="manifest" href="./manifest.webmanifest?v=20260403v35">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
+    <meta property="og:title" content="פאטקונקט · איתור והצלה מהיר לחיות מחמד">
+    <meta property="og:description" content="חיפוש ודיווח מהיר על חיות שאבדו או נמצאו — בעברית, אנגלית וערבית.">
+    <meta property="og:image" content="./favicon.svg">
     <script defer src="./assets/global.js?v=20260403v35"></script>
     <script defer src="./assets/init.js?v=20260403v35"></script>
     <script defer src="./assets/i18n.js?v=20260403v35"></script>
-    <script defer src="./assets/common.js?v=20260403v35"></script>
-    <script defer src="./assets/app.js?v=20260403v35"></script>
+    <script defer src="./assets/common.js?v=20260403v36"></script>
+    <script defer src="./assets/app.js?v=20260403v36"></script>
   </head>
   <body>
     <main class="page unified-page minimalist-homepage">
@@ -111,6 +114,22 @@
         <button id="home-fab-toggle" class="fab-main" type="button" aria-label="פעולות מהירות">+</button>
       </div>
 
+      <section class="reunion-ticker-shell" aria-label="סיפורי הצלחה אחרונים">
+        <div class="ticker-track" id="reunion-ticker-track">
+          <span class="ticker-item">בלה חזרה הביתה בתל אביב</span>
+          <span class="ticker-sep">•</span>
+          <span class="ticker-item">מקס אותר בחיפה</span>
+          <span class="ticker-sep">•</span>
+          <span class="ticker-item">לונה חזרה למשפחה בירושלים</span>
+        </div>
+      </section>
+
+      <nav class="mobile-bottom-nav" aria-label="ניווט מהיר">
+        <a class="mobile-nav-item active" href="./index.html" aria-label="בית"><span class="mobile-nav-icon">🏠</span><span>בית</span></a>
+        <a class="mobile-nav-item" href="./search.html?mode=lost" aria-label="חיפוש"><span class="mobile-nav-icon">🔍</span><span>חיפוש</span></a>
+        <a class="mobile-nav-item" href="./report-found.html?kind=found" aria-label="דיווח"><span class="mobile-nav-icon">➕</span><span>דיווח</span></a>
+      </nav>
+
       <div class="footer minimalist-footer">© 2026 פאטקונקט</div>
     
       <dialog id="home-help-modal" class="modal-card help-modal">
@@ -150,6 +169,18 @@
       `).join('');
     };
     renderHomeLiveFeed();
+    const renderReunionTicker = () => {
+      const ticker = document.getElementById('reunion-ticker-track');
+      if (!ticker) return;
+      const reports = (window.loadFoundReports?.() || []).slice(0, 6);
+      const items = reports.length ? reports.map((report) => {
+        const place = report.city || report.locationText || 'האזור שלך';
+        const label = report.animalType || 'חיה';
+        return `${label} חזרה הביתה ב${place}`;
+      }) : ['בלה חזרה הביתה בתל אביב', 'מקס אותר בחיפה', 'לונה חזרה למשפחה בירושלים'];
+      ticker.innerHTML = items.concat(items).map((item) => `<span class="ticker-item">${window.escapeHtml?.(item) || item}</span><span class="ticker-sep">•</span>`).join('');
+    };
+    renderReunionTicker();
 
     const cameraInput = document.getElementById('home-camera-input');
     const openCamera = () => cameraInput?.click();
