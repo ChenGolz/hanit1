@@ -3330,3 +3330,176 @@ body {
     margin-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+/* v47 extra mobile polish from live screenshot */
+@media (max-width: 640px) {
+  .nav.compact-home-nav {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 18px;
+    margin-top: 6px;
+    top: 6px;
+    min-height: 0;
+  }
+
+  .compact-home-nav .brand-block {
+    min-width: 0;
+    gap: 0;
+  }
+
+  .compact-home-nav .brand-block strong {
+    font-size: 0.96rem;
+  }
+
+  .compact-home-nav #home-help-toggle,
+  .compact-home-nav .links {
+    display: none !important;
+  }
+
+  .compact-home-nav .nav-actions {
+    gap: 6px;
+    justify-content: flex-start;
+  }
+
+  .compact-home-nav .button-link.small,
+  .compact-home-nav .button-link.small.icon-only {
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0 8px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+  }
+
+  .compact-lang-switcher {
+    max-width: 92px;
+    min-height: 32px;
+    padding: 3px 6px;
+  }
+
+  .compact-lang-switcher .lang-globe {
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .lang-picker {
+    max-width: 54px;
+    font-size: 0.8rem;
+  }
+
+  .hero-home-card,
+  .clean-slate-hero {
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+
+  .hero-card-shell {
+    padding: 16px 14px 14px;
+    border-radius: 20px;
+  }
+
+  .hero-kicker {
+    margin-bottom: 4px;
+    font-size: 0.68rem;
+  }
+
+  .hero-main-title,
+  .clean-slate-hero .hero-main-title {
+    font-size: clamp(1.42rem, 6.6vw, 1.95rem);
+    line-height: 1.16;
+    margin-bottom: 8px;
+  }
+
+  .hero-main-subtitle,
+  .clean-slate-hero .hero-main-subtitle {
+    font-size: 0.86rem;
+    line-height: 1.45;
+    margin-bottom: 10px;
+    max-width: 22rem;
+  }
+
+  .big-two-actions {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .big-two-actions .action-hero-card,
+  .action-hero-card {
+    min-height: 104px;
+    padding: 14px 12px;
+    border-radius: 20px;
+  }
+
+  .btn-found .action-hero-icon,
+  .btn-lost .action-hero-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    font-size: 1.02rem;
+    margin-bottom: 6px;
+  }
+
+  .btn-found strong,
+  .btn-lost strong,
+  .big-two-actions .action-hero-card strong {
+    font-size: 1.14rem;
+  }
+
+  .big-two-actions .action-hero-card small {
+    display: none;
+  }
+
+  .section-shell.live-feed-shell {
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .compact-home-header-row .button-link.small {
+    min-height: 30px;
+    padding-inline: 10px;
+    font-size: 0.75rem;
+  }
+
+  .section-title {
+    font-size: 1rem;
+  }
+
+  .section-subtitle {
+    font-size: 0.8rem;
+  }
+
+  .reunion-ticker-shell {
+    margin-top: 10px;
+    margin-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 420px) {
+  .page.minimalist-homepage {
+    padding-inline: 8px;
+  }
+
+  .nav.compact-home-nav {
+    padding: 8px 9px;
+  }
+
+  .hero-card-shell {
+    padding: 15px 12px 13px;
+  }
+
+  .hero-main-title,
+  .clean-slate-hero .hero-main-title {
+    font-size: clamp(1.32rem, 6.2vw, 1.8rem);
+  }
+
+  .btn-found strong,
+  .btn-lost strong,
+  .big-two-actions .action-hero-card strong {
+    font-size: 1.04rem;
+  }
+}
