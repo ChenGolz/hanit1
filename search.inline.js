@@ -668,7 +668,7 @@ function renderReportCta(bundle) {
   if (!reportCtaContainer) return;
   const state = classifyResultState(bundle);
   const showProminent = !bundle || state.band === 'empty' || state.band === 'low' || state.band === 'fallback';
-  const heading = showProminent ? 'לא נמצאה התאמה חזקה?' : 'רוצה גם לפרסם את החיה שנמצאה?';
+  const heading = showProminent ? 'לא נמצאה התאמה?' : 'רוצה גם לפרסם את החיה שנמצאה?';
   const text = showProminent
     ? 'לא נמצאה התאמה חזקה. אפשר להפוך את התמונה שכבר נטענה לדיווח חיה שנמצאה — בלי להעלות אותה שוב.'
     : 'אם תרצי, אפשר להמשיך מהחיפוש הזה ישר לדיווח מהיר עם אותה תמונה ואותו מיקום.';
@@ -682,7 +682,7 @@ function renderReportCta(bundle) {
         ${showProminent ? '<div class="small">לא צריך להעלות את התמונה שוב — היא כבר תעבור אוטומטית למסך הדיווח.</div>' : ''}
       </div>
       <div class="row wrap compact-row">
-        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small strong-cta" type="button">לא נמצאה התאמה? פרסמי עכשיו כחיה שנמצאה</button>
+        <button id="cta-report-btn" class="${showProminent ? '' : 'secondary '}small strong-cta" type="button">לא נמצאה התאמה? עברי לדיווח עכשיו</button>
         <button id="cta-quick-post-btn" class="secondary small" type="button">דיווח מהיר מהמיקום הזה</button>
       </div>
     </div>`;
