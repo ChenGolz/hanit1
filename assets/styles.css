@@ -2941,3 +2941,142 @@ button.lost {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+
+/* v39 premium polish */
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(0, 207, 255, 0.14), transparent 30%),
+    radial-gradient(circle at 82% 12%, rgba(255, 159, 64, 0.14), transparent 28%),
+    radial-gradient(circle at 50% 100%, rgba(105, 132, 255, 0.10), transparent 34%);
+  animation: heroAmbientShift 18s ease-in-out infinite alternate;
+  z-index: 0;
+}
+.page { position: relative; z-index: 1; }
+@keyframes heroAmbientShift {
+  from { transform: scale(1) translate3d(0,0,0); }
+  to { transform: scale(1.08) translate3d(0,-2%,0); }
+}
+.hero-home-card {
+  overflow: hidden;
+  position: relative;
+}
+.hero-home-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(0,122,255,0.30), rgba(0,0,0,0.00) 45%),
+    linear-gradient(315deg, rgba(255,149,0,0.18), rgba(0,0,0,0.00) 40%),
+    radial-gradient(circle at 50% 20%, rgba(255,255,255,0.10), transparent 38%);
+  filter: brightness(0.9);
+  pointer-events: none;
+}
+.hero-card-shell, .hero-home-card > * { position: relative; z-index: 1; }
+.action-hero-card {
+  min-height: 172px;
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: start;
+  box-shadow: 0 12px 26px rgba(0,0,0,0.18);
+  transition: transform .22s ease, box-shadow .22s ease, filter .22s ease;
+}
+.action-hero-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.28);
+  filter: brightness(1.06);
+}
+.action-hero-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  background: rgba(255,255,255,0.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.18);
+}
+.action-hero-card.found-now .action-hero-icon,
+.action-hero-card.found .action-hero-icon { background: rgba(255,255,255,0.20); }
+.action-hero-card.lost .action-hero-icon { background: rgba(255,255,255,0.18); }
+.reunion-ticker-shell {
+  margin-top: 18px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.14);
+}
+.ticker-track {
+  display: flex;
+  gap: 14px;
+  white-space: nowrap;
+  padding: 12px 18px;
+  width: max-content;
+  animation: tickerScroll 22s linear infinite;
+}
+.ticker-item { color: #eef6ff; font-weight: 700; }
+.ticker-sep { color: rgba(255,255,255,0.46); }
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.preview-card.is-searching .preview-guide-shell,
+.preview-card.is-searching #query-crop {
+  animation: searchPulse 1.45s ease-in-out infinite;
+}
+@keyframes searchPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,207,255,0.10), 0 0 0 1px rgba(255,255,255,0.04); transform: scale(1); }
+  50% { box-shadow: 0 0 0 12px rgba(0,207,255,0.00), 0 0 0 1px rgba(0,207,255,0.22); transform: scale(1.012); }
+}
+.match-card-img,
+.pet-result-img,
+.pet-avatar,
+.pet-thumbnail,
+.preview-canvas-container {
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 4px solid #007AFF;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.16);
+}
+.preview-guide-shell {
+  position: relative;
+  overflow: hidden;
+  border-radius: 26px;
+}
+.mobile-bottom-nav {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  z-index: 9999;
+  display: none;
+  justify-content: space-around;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 22px;
+  background: rgba(9,18,37,0.78);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.28);
+}
+.mobile-nav-item {
+  flex: 1 1 0;
+  min-height: 52px;
+  border-radius: 16px;
+}
+@media (max-width: 820px) {
+  .mobile-bottom-nav { display: flex; }
+  .page { padding-bottom: 112px; }
+  .action-hero-card { min-height: 152px; }
+  .action-hero-icon { width: 54px; height: 54px; font-size: 1.55rem; }
+}

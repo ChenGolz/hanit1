@@ -531,6 +531,7 @@ function renderLoadingResultsSkeleton() {
     const matches = bundle.matches || [];
     if (!matches.length) {
       resultsEl.innerHTML = `${buildZeroResultsCtaCard()}<div class="empty">אין כרגע תוצאות להצגה.</div>`;
+      resultsEl.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
       resultsEl.querySelector('#zero-results-report-btn')?.addEventListener('click', () => goToReport());
       return;
     }
@@ -710,11 +711,12 @@ function renderReportCta(bundle) {
   const state = classifyResultState(bundle);
   const showProminent = !bundle || state.band === 'empty' || state.band === 'low' || state.band === 'fallback';
   const reportKind = getReportKindForSearchMode();
-  const heading = showProminent ? 'לא נמצאה התאמה?' : (reportKind === 'missing' ? 'רוצה גם לפרסם מודעת אובדן?' : 'רוצה גם לפרסם את החיה שנמצאה?');
+  const heading = showProminent ? (reportKind === 'missing' ? 'לא מצאת את החיה?' : 'לא נמצאה התאמה?') : (reportKind === 'missing' ? 'רוצה גם לפרסם מודעת אובדן?' : 'רוצה גם לפרסם את החיה שנמצאה?');
   const text = showProminent
-    ? 'לא נמצאה התאמה חזקה. אפשר להפוך את התמונה שכבר נטענה לדיווח על חיה שנמצאה — בלי להעלות אותה שוב.'
+    ? (reportKind === 'missing' ? 'לא נמצאה התאמה חזקה. אפשר להפוך את אותה תמונה למודעת אובדן ברגע אחד — בלי להעלות שוב.' : 'לא נמצאה התאמה חזקה. אפשר להפוך את התמונה שכבר נטענה לדיווח על חיה שנמצאה — בלי להעלות אותה שוב.')
     : 'אם תרצי, אפשר להמשיך מהחיפוש הזה ישר לדיווח מהיר עם אותה תמונה ואותו מיקום.';
   reportCtaContainer.className = `report-cta-card ${showProminent ? 'prominent' : ''}`;
+  reportCtaContainer.classList.remove('hidden');
   reportCtaContainer.innerHTML = `
     <div class="space-between wrap-gap">
       <div class="stack" style="gap:6px;">
@@ -748,6 +750,7 @@ function renderReportCta(bundle) {
   }
 
   async function runSearch() {
+    document.getElementById('preview-card')?.classList.add('is-searching');
     if (!currentPreviewImage || !currentSelection) {
       setStatus(statusEl, 'קודם צריך להעלות תמונה ולסמן אזור של החיה.', { tone: 'warn' });
       return;
@@ -759,6 +762,7 @@ function renderReportCta(bundle) {
       setStatus(statusEl, 'עדיין אין חיות זמינות לחיפוש. אפשר להוסיף רשומות בקלות דרך עמוד ניהול החיות.', { tone: 'warn' });
       resetSearchProgress();
       clearLastMatchGallery();
+      document.getElementById('preview-card')?.classList.remove('is-searching');
       return;
     }
 
@@ -795,6 +799,7 @@ function renderReportCta(bundle) {
       setStatus(statusEl, 'לא נמצאה התאמה ויזואלית חזקה, לכן מוצגות עכשיו חיות בצבעים דומים.', { tone: 'warn' });
     }
     setSearchButtonsBusy(false);
+    document.getElementById('preview-card')?.classList.remove('is-searching');
   }
 
   await loadModels(statusEl);
