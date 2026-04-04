@@ -693,9 +693,18 @@ async function goToReport(overrides = {}) {
   const draft = buildCurrentReportDraft(overrides);
   let croppedData = '';
   try {
-    const activePreviewCanvas = document.getElementById('preview-canvas');
-    if (activePreviewCanvas?.toDataURL) {
-      croppedData = activePreviewCanvas.toDataURL('image/jpeg', 0.9);
+    const currentCropEl = document.getElementById('query-crop');
+    if (currentCropEl?.toDataURL) {
+      croppedData = currentCropEl.toDataURL('image/jpeg', 0.9);
+    }
+    if (!croppedData && currentCropEl?.tagName === 'IMG' && !currentCropEl.classList.contains('hidden') && currentCropEl.src) {
+      croppedData = currentCropEl.src;
+    }
+    if (!croppedData) {
+      const activePreviewCanvas = document.getElementById('preview-canvas');
+      if (activePreviewCanvas?.toDataURL) {
+        croppedData = activePreviewCanvas.toDataURL('image/jpeg', 0.9);
+      }
     }
     if (!croppedData) {
       const croppedCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
@@ -714,25 +723,24 @@ async function goToReport(overrides = {}) {
     }
   }
   try {
-    if (croppedData) {
-      sessionStorage.setItem('pendingFoundImage', croppedData);
-      sessionStorage.setItem('pendingReportImage', croppedData);
-      sessionStorage.setItem('pendingImage', croppedData);
-      sessionStorage.setItem('petconnect-search-report-image-v1', croppedData);
-      try { localStorage.setItem('pendingImage', croppedData); } catch (error) {}
-    } else if (draft?.imageData) {
-      sessionStorage.setItem('pendingFoundImage', draft.imageData);
-      sessionStorage.setItem('pendingReportImage', draft.imageData);
-      sessionStorage.setItem('pendingImage', draft.imageData);
-      sessionStorage.setItem('petconnect-search-report-image-v1', draft.imageData);
-      try { localStorage.setItem('pendingImage', draft.imageData); } catch (error) {}
+    const finalImage = croppedData || draft?.imageData || '';
+    if (finalImage) {
+      sessionStorage.setItem('pendingFoundImage', finalImage);
+      sessionStorage.setItem('pendingReportImage', finalImage);
+      sessionStorage.setItem('pendingImage', finalImage);
+      sessionStorage.setItem('petconnect-search-report-image-v1', finalImage);
+      try { localStorage.setItem('pendingImage', finalImage); } catch (error) {}
     }
     sessionStorage.setItem('pendingFoundLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
     sessionStorage.setItem('pendingReportLocation', JSON.stringify({ lat: draft?.lat ?? null, lng: draft?.lng ?? null, label: draft?.locationText || '' }));
     sessionStorage.setItem('petconnect-report-arrival-v1', '1');
   } catch (error) { console.warn(error); }
   await animateReportTransition();
-  window.location.href = `./report-found.html?kind=${getReportKindForSearchMode()}&fromSearch=true${overrides.quickPost ? '&quick=1' : ''}`;
+  const url = new URL('./report-found.html', window.location.href);
+  url.searchParams.set('kind', getReportKindForSearchMode());
+  url.searchParams.set('fromSearch', 'true');
+  if (overrides.quickPost) url.searchParams.set('quick', '1');
+  window.location.href = url.toString();
 }
 
 function renderReportCta(bundle) {
