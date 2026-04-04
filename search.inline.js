@@ -332,6 +332,7 @@ window.convertToReport = convertToReport;
         ? ` נראה לנו שזה ${label}, אבל אפשר לתקן ידנית אם צריך (${confidencePct}% ביטחון).`
         : confidencePct ? ` (${confidencePct}% ביטחון).` : '';
       updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יישארו מחוץ לזום ככל האפשר` : ''}.${tinyNote}${confidenceNote}`, confidencePct && confidencePct < 55 ? 'warn' : 'success');
+      vibrateIfPossible?.(18);
       selectionHintEl.textContent = bestAnimal.tiny
         ? 'הסריקה החכמה מצאה את החיה אבל הרחיבה את האזור אוטומטית. אפשר עדיין לגרור ידנית אם צריך לכלול יותר מהגוף.'
         : confidencePct && confidencePct < 70
@@ -529,7 +530,7 @@ window.convertToReport = convertToReport;
 
 function renderLoadingResultsSkeleton() {
   resultsEl.innerHTML = buildSearchSkeleton?.(3) || '<div class="empty">טוען תוצאות…</div>';
-  summaryEl.innerHTML = '<div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>';
+  summaryEl.innerHTML = '<div class="search-skeleton-grid"><div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div><div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>';
   summaryEl.classList.remove('hidden');
 }
 
@@ -690,6 +691,21 @@ async function ensurePreparedPreviewForReporting() {
   }
 }
 
+function getCurrentReportImageData() {
+  try {
+    const cropCanvas = document.getElementById('query-crop');
+    if (cropCanvas?.toDataURL) return cropCanvas.toDataURL('image/jpeg', 0.9);
+  } catch (error) {}
+  try {
+    const previewCanvas = document.getElementById('preview-canvas');
+    if (previewCanvas?.toDataURL) return previewCanvas.toDataURL('image/jpeg', 0.9);
+  } catch (error) {}
+  try {
+    if (cropImg && !cropImg.classList.contains('hidden') && cropImg.src) return cropImg.src;
+  } catch (error) {}
+  return '';
+}
+
 async function goToReport(overrides = {}) {
   const ok = await ensurePreparedPreviewForReporting();
   if (!ok) {
@@ -699,10 +715,7 @@ async function goToReport(overrides = {}) {
   const draft = buildCurrentReportDraft(overrides);
   let croppedData = '';
   try {
-    const reportCanvas = document.getElementById('query-crop') || document.getElementById('preview-canvas');
-    if (reportCanvas?.toDataURL) {
-      croppedData = reportCanvas.toDataURL('image/jpeg', 0.9);
-    }
+    croppedData = getCurrentReportImageData();
     if (!croppedData) {
       const croppedCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);
       const croppedCanvas = circleMaskToggle?.checked ? applyCircleMask(croppedCanvasRaw) : croppedCanvasRaw;
@@ -807,6 +820,7 @@ function rerenderResults() {
       }
 
       setSearchButtonsBusy(true, 'מנתח תמונה…');
+      vibrateIfPossible?.(10);
       renderLoadingResultsSkeleton();
       setStatus(statusEl, 'סורק את אזור החיה ומחפש התאמות…', { busy: true });
       setSearchProgress(34, 'מכין את אזור החיה להשוואה…');

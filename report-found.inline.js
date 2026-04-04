@@ -88,6 +88,15 @@ async function runReportFoundPage() {
   let currentLat = Number.isFinite(draft?.lat) ? Number(draft.lat) : null;
   let currentLng = Number.isFinite(draft?.lng) ? Number(draft.lng) : null;
   let currentAudioData = draft?.audioData || '';
+  let isOffline = navigator.onLine === false;
+
+  function updateConnectivityStatus() {
+    isOffline = navigator.onLine === false;
+    document.body.classList.toggle('is-offline', isOffline);
+    if (isOffline) {
+      setStatus(statusEl, 'אין כרגע חיבור יציב. נמשיך לשמור את הדיווח מקומית כדי שלא ילך לאיבוד.', { tone: 'warn' });
+    }
+  }
   const REPORT_FORM_BACKUP_KEY = 'petconnect-report-form-backup-v1';
   let recorder = null;
   let recorderChunks = [];
@@ -293,6 +302,7 @@ async function startVoiceRecording() {
       <div class="chip">נשמר</div>
       <h2 class="section-title" style="margin:0;">הדיווח נשמר בהצלחה</h2>
       <div class="small">אפשר לחזור לדיווח הזה בקלות ולהמשיך ממנו בכל רגע.</div>
+      ${isOffline ? '<div class="offline-draft-chip">נשמר גם ללא חיבור · יסתנכרן כשתחזרי לרשת</div>' : ''}
       <div class="row wrap compact-row">
         <button id="success-share-btn" class="small" type="button">שיתוף</button>
         <button id="success-wa-btn" class="secondary small" type="button">פוסט לוואטסאפ</button>
@@ -413,6 +423,10 @@ async function startVoiceRecording() {
     });
   });
 
+
+  window.addEventListener('online', () => { updateConnectivityStatus(); setStatus(statusEl, 'החיבור חזר. אפשר להמשיך או לשתף את הדיווח.', { tone: 'success' }); });
+  window.addEventListener('offline', () => { updateConnectivityStatus(); });
+  updateConnectivityStatus();
   await hydrateFromDraft();
 }
 
