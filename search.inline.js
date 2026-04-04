@@ -109,7 +109,7 @@ async function runSearchPage() {
   }
 
   function getSearchToReportTitle() {
-    return searchMode === 'lost' ? 'לא נמצאה התאמה? פרסמי מודעת אובדן עם אותה תמונה.' : 'לא נמצאה התאמה? פרסמי עכשיו דיווח על חיה שנמצאה עם אותה תמונה.';
+    return searchMode === 'lost' ? 'לא נמצאה התאמה? פרסמי מודעת אובדן עם אותה תמונה.' : 'לא נמצאה התאמה? פרסמי עכשיו דיווח על חיה שנמצאה עם אותה תמונה — בלי להעלות שוב.';
   }
 
   function hydrateSearchModeUi() {

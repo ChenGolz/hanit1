@@ -4,18 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>פאטקונקט</title>
-    <link rel="stylesheet" href="./assets/styles.css?v=20260403v36">
-    <link rel="manifest" href="./manifest.webmanifest?v=20260403v35">
+    <link rel="stylesheet" href="./assets/styles.css?v=20260403v37">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260403v37">
     <link rel="icon" href="./favicon.svg" type="image/svg+xml">
     <meta name="theme-color" content="#111831">
     <meta property="og:title" content="פאטקונקט · איתור והצלה מהיר לחיות מחמד">
     <meta property="og:description" content="חיפוש ודיווח מהיר על חיות שאבדו או נמצאו — בעברית, אנגלית וערבית.">
     <meta property="og:image" content="./favicon.svg">
-    <script defer src="./assets/global.js?v=20260403v35"></script>
-    <script defer src="./assets/init.js?v=20260403v35"></script>
-    <script defer src="./assets/i18n.js?v=20260403v35"></script>
-    <script defer src="./assets/common.js?v=20260403v36"></script>
-    <script defer src="./assets/app.js?v=20260403v36"></script>
+    <script defer src="./assets/global.js?v=20260403v37"></script>
+    <script defer src="./assets/init.js?v=20260403v37"></script>
+    <script defer src="./assets/i18n.js?v=20260403v37"></script>
+    <script defer src="./assets/common.js?v=20260403v37"></script>
+    <script defer src="./assets/app.js?v=20260403v37"></script>
   </head>
   <body>
     <main class="page unified-page minimalist-homepage">
@@ -66,8 +66,8 @@
         <div class="space-between compact-home-header-row">
           <div class="section-head">
             <div class="section-kicker">Live feed</div>
-            <h2 class="section-title" style="margin:0;">פעילות חיה בקהילה</h2>
-            <div class="section-subtitle">עדכונים אחרונים ותחושה שהמערכת פעילה — בלי להעמיס על דף הבית.</div>
+            <h2 class="section-title" style="margin:0;">פעילות אחרונה</h2>
+            <div class="section-subtitle">מבט קצר על עדכונים מהשטח.</div>
           </div>
           <a class="button-link secondary small" href="./search.html">לכל החיפושים</a>
         </div>
@@ -87,21 +87,6 @@
               <div class="small">כאן יופיעו עדכונים אחרונים ופעילות חדשה.</div>
             </article>
           </div>
-        </div>
-      </section>
-
-      <section class="card compact-home-meta section-shell home-metrics-shell">
-        <div class="space-between">
-          <div>
-            <h2 class="section-title" style="margin:0;" data-i18n="communityNow">הקהילה פעילה עכשיו</h2>
-            <div class="small" data-i18n="communityNowSub">כמה נתונים מהירים ופעילות אחרונה כדי שתדעי שהמערכת חיה.</div>
-          </div>
-          <span class="chip" id="impact-counter-inline">—</span>
-        </div>
-        <div class="compact-home-metrics row wrap compact-row">
-          <span class="badge">חיפושים: <strong id="impact-counter-searches">0</strong></span>
-          <span class="badge">התאמות חזקות: <strong id="impact-strong">0</strong></span>
-          <span class="badge">חיות זמינות: <strong id="impact-local-animals">0</strong></span>
         </div>
       </section>
 
@@ -130,7 +115,7 @@
         <a class="mobile-nav-item" href="./report-found.html?kind=found" aria-label="דיווח"><span class="mobile-nav-icon">➕</span><span>דיווח</span></a>
       </nav>
 
-      <div class="footer minimalist-footer">© 2026 פאטקונקט</div>
+      <div class="footer minimalist-footer">© 2026 פאטקונקט <span class="footer-divider">•</span> <a class="footer-admin-link" href="./enroll.html">ניהול</a></div>
     
       <dialog id="home-help-modal" class="modal-card help-modal">
         <div class="modal-head">
@@ -202,63 +187,6 @@
     const fabToggle = document.getElementById('home-fab-toggle');
     const fabSheet = document.getElementById('home-fab-sheet');
     fabToggle?.addEventListener('click', () => fabSheet?.classList.toggle('hidden'));
-
-    const stats = window.loadImpactStats?.() || { searches: 0, strongMatches: 0, librariesExported: 0, localAnimals: 0, karma: 0 };
-    document.getElementById('impact-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
-    document.getElementById('impact-counter-searches')?.replaceChildren(document.createTextNode(String(stats.searches || 0)));
-    window.fetchSummaryStats?.().then((summary) => {
-      document.getElementById('impact-counter-inline')?.replaceChildren(document.createTextNode(`איחודים: ${String(summary?.reunitedLast24h ?? 0)}`));
-      document.getElementById('impact-counter-note')?.replaceChildren(document.createTextNode('מתעדכן אוטומטית לאורך היום.'));
-    }).catch(() => {});
-    document.getElementById('impact-strong')?.replaceChildren(document.createTextNode(String(stats.strongMatches || 0)));
-    document.getElementById('impact-exports')?.replaceChildren(document.createTextNode(String(stats.librariesExported || 0)));
-    document.getElementById('impact-local-animals')?.replaceChildren(document.createTextNode(String(stats.localAnimals || 0)));
-    document.getElementById('impact-karma')?.replaceChildren(document.createTextNode(String(stats.karma || 0)));
-    document.getElementById('enable-alerts-btn')?.addEventListener('click', async () => {
-      const result = await window.requestNeighborhoodAlertsPermission?.();
-      const noteEl = document.getElementById('alerts-note');
-      if (!noteEl) return;
-      if (!result?.supported) noteEl.textContent = 'התראות אינן זמינות כרגע במכשיר הזה.';
-      else if (result.granted) noteEl.textContent = 'התראות הופעלו.';
-      else noteEl.textContent = 'אפשר להפעיל התראות מאוחר יותר.';
-    });
-
-    const storiesHost = document.getElementById('success-stories-list');
-    if (storiesHost) {
-      const localReports = (window.loadFoundReports?.() || []).slice(0, 4);
-      const recentMatches = (window.loadLastMatchGallery?.()?.matches || []).slice(0, 2);
-      const storyCards = [];
-      localReports.forEach((report) => {
-        storyCards.push(`
-          <article class="story-card">
-            ${report.imageData ? `<img class="story-thumb blur-up pet-preview" src="${report.imageData}" alt="${window.escapeHtml?.(report.animalType || 'חיה') || 'חיה'}">` : ''}
-            <div class="body">
-              <strong>${window.escapeHtml?.(report.animalType || 'חיה שנמצאה') || 'חיה שנמצאה'}</strong>
-              <div class="small">${window.escapeHtml?.(report.locationText || report.city || 'עדכון אחרון שנשמר עבורך') || ''}</div>
-            </div>
-          </article>`);
-      });
-      recentMatches.forEach((match) => {
-        storyCards.push(`
-          <article class="story-card">
-            ${match.thumb ? `<img class="story-thumb blur-up pet-preview" src="${match.thumb}" alt="${window.escapeHtml?.(match.label || 'התאמה') || 'התאמה'}">` : ''}
-            <div class="body">
-              <strong>${window.escapeHtml?.(match.label || 'התאמה אחרונה') || 'התאמה אחרונה'}</strong>
-              <div class="small">${window.escapeHtml?.(match.city || match.locationText || 'התאמה אחרונה שנשמרה עבורך') || ''}</div>
-              <div class="row"><span class="score-pill ${Math.round(Number(match.score||0)*100) >= 90 ? 'high' : Math.round(Number(match.score||0)*100) >= 60 ? 'medium' : 'low'}">${Math.round(Number(match.score||0) * 100)}%</span></div>
-            </div>
-          </article>`);
-      });
-      storiesHost.innerHTML = storyCards.length ? storyCards.join('') : '<div class="empty">כאן יופיעו עדכונים אחרונים והתאמות נבחרות.</div>';
-    }
-
-    const badgeHost = document.getElementById('impact-badges');
-    if (badgeHost) {
-      const badges = window.getImpactBadges?.(stats) || [];
-      badgeHost.innerHTML = badges.length
-        ? badges.map((badge) => `<span class="badge">${window.escapeHtml ? window.escapeHtml(badge) : badge}</span>`).join('')
-        : '<span class="small">עוד אין תגים.</span>';
-    }
   });
     </script>
   </body>

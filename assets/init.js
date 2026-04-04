@@ -17,10 +17,10 @@
   function getSavedLanguage() {
     try {
       return normalizeLang(
-        localStorage.getItem(PET_LANG_KEY)
+        localStorage.getItem(LANG_ALIAS_KEY)
+        || localStorage.getItem(PET_LANG_KEY)
         || localStorage.getItem(USER_LANG_KEY)
         || localStorage.getItem(LANG_KEY)
-        || localStorage.getItem(LANG_ALIAS_KEY)
         || localStorage.getItem(LEGACY_KEY)
         || document.documentElement.lang
         || navigator.language
@@ -84,6 +84,10 @@
     window.location.reload();
   }
 
+  function toggleLang(nextLang) {
+    return switchLanguage(nextLang);
+  }
+
   function changeLanguage(lang) {
     return switchLanguage(lang);
   }
@@ -105,6 +109,7 @@
   window.switchLanguage = window.switchLanguage || switchLanguage;
   window.toggleLanguage = window.toggleLanguage || switchLanguage;
   window.changeLanguage = window.changeLanguage || changeLanguage;
+  window.toggleLang = window.toggleLang || toggleLang;
   window.setLanguage = window.setLanguage || ((lang) => switchLanguage(lang));
   window.changeSetting = window.changeSetting || changeSetting;
   window.getAppLanguage = window.getAppLanguage || getSavedLanguage;
