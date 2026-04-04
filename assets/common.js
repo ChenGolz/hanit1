@@ -1697,7 +1697,7 @@ function renderMatchCards(matches = [], options = {}) {
     const colors = match.colors ? `<span class="badge">${escapeHtml(match.colors)}</span>` : (match.colorName ? `<span class="badge">${escapeHtml(match.colorName)}</span>` : '');
     const notes = match.notes ? `<div class="small">${safeNotes}</div>` : '';
     const thumb = match.thumb
-      ? `<div class="thumb-wrap blur-shell"><img class="blur-up is-loading" loading="lazy" decoding="async" onload="this.classList.remove('is-loading')" src="${match.thumb}" alt="${safeLabel}"></div>`
+      ? `<div class="thumb-wrap blur-shell"><img class="pet-result-avatar blur-up is-loading" loading="lazy" decoding="async" onload="this.classList.remove('is-loading')" src="${match.thumb}" alt="${safeLabel}"></div>`
       : '<div class="thumb-wrap"><div class="small">אין תמונה</div></div>';
     const score = kind === 'visual' ? Number(match.score || 0) : Number(match.colorScore || match.score || 0);
     const scoreText = kind === 'visual' ? `${Math.round(score * 100)}% התאמה` : `צבע ${Math.round(score * 100)}%`;
@@ -1951,7 +1951,7 @@ function renderFoundReportCards(reports = []) {
   if (!Array.isArray(reports) || !reports.length) return '<div class="empty">עדיין אין דיווחים להצגה.</div>';
   return reports.map((report) => `
     <article class="match-card report-card">
-      ${report.imageData ? `<div class="thumb-wrap blur-shell"><img class="blur-up" src="${report.imageData}" alt="${escapeHtml(report.animalType || 'חיה שנמצאה')}"></div>` : ''}
+      ${report.imageData ? `<div class="thumb-wrap blur-shell"><img class="pet-result-avatar blur-up" src="${report.imageData}" alt="${escapeHtml(report.animalType || 'חיה שנמצאה')}"></div>` : ''}
       <div class="body stack">
         <div class="space-between"><strong>${escapeHtml(report.animalType || 'חיה שנמצאה')}</strong><span class="badge">${escapeHtml(formatReportedAt(report.reportedAt) || 'עכשיו')}</span></div>
         <div class="row">${report.breed ? `<span class="badge">${escapeHtml(report.breed)}</span>` : ''}${report.colors ? `<span class="badge">${escapeHtml(report.colors)}</span>` : ''}${report.city ? `<span class="badge">${escapeHtml(report.city)}</span>` : ''}</div>
