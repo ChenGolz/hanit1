@@ -504,6 +504,23 @@ window.convertToReport = convertToReport;
   }
 
 
+
+  function buildZeroResultsCtaCard() {
+    const reportKind = getReportKindForSearchMode();
+    const title = reportKind === 'missing' ? 'לא מצאת את החיה?' : 'לא נמצאה התאמה?';
+    const desc = reportKind === 'missing'
+      ? 'אל תעצרי כאן. אפשר להפוך את אותה תמונה למודעת אובדן ברגע אחד — בלי להעלות שוב.'
+      : 'אל תתנו להם להישאר לבד. פרסמו דיווח "חיה שנמצאה" עם התמונה הזו ברגע אחד.';
+    const cta = reportKind === 'missing' ? 'הפוך למודעת אובדן עכשיו' : 'הפוך לדיווח עכשיו';
+    return `
+      <div class="card notice success zero-results-cta-card">
+        <div class="chip">חיפוש → דיווח</div>
+        <h3>${escapeHtml(title)}</h3>
+        <p>${escapeHtml(desc)}</p>
+        <button id="zero-results-report-btn" class="action-btn strong-cta" type="button">${escapeHtml(cta)}</button>
+      </div>`;
+  }
+
 function renderLoadingResultsSkeleton() {
   resultsEl.innerHTML = buildSearchSkeleton?.(3) || '<div class="empty">טוען תוצאות…</div>';
   summaryEl.innerHTML = '<div class="skeleton-card"><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>';
@@ -513,7 +530,8 @@ function renderLoadingResultsSkeleton() {
   function renderResults(bundle) {
     const matches = bundle.matches || [];
     if (!matches.length) {
-      resultsEl.innerHTML = '<div class="empty">אין כרגע תוצאות להצגה.</div>';
+      resultsEl.innerHTML = `${buildZeroResultsCtaCard()}<div class="empty">אין כרגע תוצאות להצגה.</div>`;
+      resultsEl.querySelector('#zero-results-report-btn')?.addEventListener('click', () => goToReport());
       return;
     }
     const resultState = classifyResultState(bundle);
