@@ -1,8 +1,11 @@
-const STATIC_CACHE = 'petconnect-animal-static-v28';
-const RUNTIME_CACHE = 'petconnect-animal-runtime-v28';
+const STATIC_CACHE = 'petconnect-animal-static-v45';
+const RUNTIME_CACHE = 'petconnect-animal-runtime-v45';
 const SYNC_DB_NAME = 'petconnect-sync-db';
 const SYNC_STORE = 'pending-json-posts';
 const ASSETS_TO_CACHE = [
+  'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js',
+  'https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js',
+  'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js',
   './',
   './index.html',
   './search.html',

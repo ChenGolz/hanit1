@@ -323,14 +323,20 @@ window.convertToReport = convertToReport;
     const bestAnimal = pickBestAnimalDetection(detections);
     if (bestAnimal?.rect) {
       const label = bestAnimal.class === 'dog' ? 'כלב' : bestAnimal.class === 'cat' ? 'חתול' : bestAnimal.class;
+      const confidencePct = Math.round(Number(bestAnimal.score || 0) * 100);
       const expandedNote = bestAnimal.autoExpanded ? ' האזור הורחב אוטומטית כדי לכלול יותר מגוף החיה.' : '';
       setSelection(bestAnimal.rect, `✅ זוהתה חיה מסוג ${label}.${expandedNote}`);
       const peopleCount = detections.people?.length || 0;
       const tinyNote = bestAnimal.tiny ? ' הזיהוי הראשוני היה קטן, לכן הרחבנו את האזור סביב החיה.' : '';
-      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יישארו מחוץ לזום ככל האפשר` : ''}.${tinyNote}`, 'success');
+      const confidenceNote = confidencePct && confidencePct < 70
+        ? ` נראה לנו שזה ${label}, אבל אפשר לתקן ידנית אם צריך (${confidencePct}% ביטחון).`
+        : confidencePct ? ` (${confidencePct}% ביטחון).` : '';
+      updateDetectionStatus(`✅ זוהתה חיה אוטומטית${peopleCount ? ` · ${peopleCount} אזורי אדם יישארו מחוץ לזום ככל האפשר` : ''}.${tinyNote}${confidenceNote}`, confidencePct && confidencePct < 55 ? 'warn' : 'success');
       selectionHintEl.textContent = bestAnimal.tiny
         ? 'הסריקה החכמה מצאה את החיה אבל הרחיבה את האזור אוטומטית. אפשר עדיין לגרור ידנית אם צריך לכלול יותר מהגוף.'
-        : 'הסריקה החכמה בחרה אזור סביב החיה. אפשר עדיין לגרור ידנית אם צריך לתקן.';
+        : confidencePct && confidencePct < 70
+          ? 'המערכת מצאה אזור שנראה כמו חיה, אבל אפשר לגרור ידנית אם רוצים לדייק.'
+          : 'הסריקה החכמה בחרה אזור סביב החיה. אפשר עדיין לגרור ידנית אם צריך לתקן.';
       return true;
     }
     if ((detections.people?.length || 0) && !(detections.animals?.length || 0)) {
@@ -693,18 +699,9 @@ async function goToReport(overrides = {}) {
   const draft = buildCurrentReportDraft(overrides);
   let croppedData = '';
   try {
-    const currentCropEl = document.getElementById('query-crop');
-    if (currentCropEl?.toDataURL) {
-      croppedData = currentCropEl.toDataURL('image/jpeg', 0.9);
-    }
-    if (!croppedData && currentCropEl?.tagName === 'IMG' && !currentCropEl.classList.contains('hidden') && currentCropEl.src) {
-      croppedData = currentCropEl.src;
-    }
-    if (!croppedData) {
-      const activePreviewCanvas = document.getElementById('preview-canvas');
-      if (activePreviewCanvas?.toDataURL) {
-        croppedData = activePreviewCanvas.toDataURL('image/jpeg', 0.9);
-      }
+    const reportCanvas = document.getElementById('query-crop') || document.getElementById('preview-canvas');
+    if (reportCanvas?.toDataURL) {
+      croppedData = reportCanvas.toDataURL('image/jpeg', 0.9);
     }
     if (!croppedData) {
       const croppedCanvasRaw = cropRectToCanvas(currentPreviewImage, currentSelection);

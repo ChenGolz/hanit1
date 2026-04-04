@@ -31,9 +31,9 @@ async function runReportFoundPage() {
   const locationEl = document.getElementById('report-location');
   const timeEl = document.getElementById('report-time');
   const quickToggle = document.getElementById('quick-post-toggle');
-  const detailsEl = document.getElementById('report-extra-details');
   const phoneEl = document.getElementById('report-phone');
-  const whatsappOptInEl = document.getElementById('report-whatsapp-optin');
+  const whatsappOptinEl = document.getElementById('report-whatsapp-optin');
+  const detailsEl = document.getElementById('report-extra-details');
   const submitBtn = document.getElementById('submit-report-btn');
   const shareBtn = document.getElementById('share-report-btn');
   const whatsappBtn = document.getElementById('whatsapp-report-btn');
@@ -51,32 +51,9 @@ async function runReportFoundPage() {
   const voiceStatusEl = document.getElementById('voice-status');
   const voiceAudioEl = document.getElementById('voice-audio');
 
-  [animalTypeEl, breedEl, colorEl, cityEl, phoneEl].forEach(clearValidityOnInput);
+  [animalTypeEl, breedEl, colorEl, cityEl].forEach(clearValidityOnInput);
   attachCityAutocomplete?.(cityEl);
   attachBreedAutocomplete?.(breedEl, animalTypeEl);
-  hydrateReportModeUi();
-
-  const reportKind = ((new URLSearchParams(window.location.search).get('kind')) || (loadPendingFoundReportDraft()?.reportKind) || sessionStorage.getItem('petconnect-report-kind-v1') || 'found').toLowerCase() === 'missing' ? 'missing' : 'found';
-  try { sessionStorage.setItem('petconnect-report-kind-v1', reportKind); } catch (error) {}
-
-  function hydrateReportModeUi() {
-    const isMissing = reportKind === 'missing';
-    const chip = document.getElementById('report-hero-chip');
-    const title = document.getElementById('report-hero-title');
-    const meta = document.getElementById('report-hero-meta');
-    if (chip) chip.textContent = isMissing ? 'Missing alert' : 'Quick Post';
-    if (title) title.textContent = isMissing ? 'יצירת מודעת אובדן' : 'דיווח חיה שנמצאה';
-    if (meta) meta.textContent = isMissing ? 'אם הגעת לכאן מתוך החיפוש, התמונה כבר מחכה כאן. נשאר רק להוסיף מיקום וטלפון כדי לפרסם מודעת אובדן במהירות.' : 'אם הגעת לכאן מתוך החיפוש, התמונה והמיקום כבר מחכים לך כאן. המטרה: לסיים דיווח מהר ובלי לחזור על צעדים.';
-    document.title = `${isMissing ? 'מודעת אובדן' : 'דיווח חיה שנמצאה'} · פאטקונקט`;
-    const submit = document.getElementById('submit-report-btn');
-    if (submit) submit.textContent = isMissing ? 'פרסום מודעת אובדן' : 'שמירת דיווח';
-    const share = document.getElementById('share-report-btn');
-    if (share) share.textContent = isMissing ? 'שיתוף מודעת אובדן' : 'שיתוף';
-    const wa = document.getElementById('whatsapp-report-btn');
-    if (wa) wa.textContent = isMissing ? 'שיתוף לוואטסאפ' : 'פוסט לוואטסאפ';
-    const poster = document.getElementById('poster-report-btn');
-    if (poster) poster.textContent = isMissing ? 'יצירת פוסטר אובדן' : 'יצירת פוסטר';
-  }
 
   function renderBreedChips(type = '', preferredBreed = '') {
     if (!breedChipEl) return;
@@ -99,7 +76,7 @@ async function runReportFoundPage() {
   function updateFormProgress() {
     const hasImage = Boolean(currentImageData);
     const hasCore = Boolean((animalTypeEl.value || '').trim() || (breedEl.value || '').trim() || (colorEl.value || '').trim());
-    const hasSubmitReady = hasImage && (Boolean((cityEl.value || '').trim()) || Boolean((locationEl.value || '').trim()) || Number.isFinite(currentLat)) && Boolean((phoneEl?.value || '').trim());
+    const hasSubmitReady = hasImage && (Boolean((cityEl.value || '').trim()) || Boolean((locationEl.value || '').trim()) || Number.isFinite(currentLat));
     [step1El, step2El, step3El].forEach((el) => el?.classList.remove('active', 'done'));
     if (step1El) step1El.classList.add(hasImage ? 'done' : 'active');
     if (step2El) step2El.classList.add(hasCore ? 'done' : hasImage ? 'active' : '');
@@ -111,8 +88,40 @@ async function runReportFoundPage() {
   let currentLat = Number.isFinite(draft?.lat) ? Number(draft.lat) : null;
   let currentLng = Number.isFinite(draft?.lng) ? Number(draft.lng) : null;
   let currentAudioData = draft?.audioData || '';
+  const REPORT_FORM_BACKUP_KEY = 'petconnect-report-form-backup-v1';
   let recorder = null;
   let recorderChunks = [];
+
+  function loadReportFormBackup() {
+    try { return JSON.parse(localStorage.getItem(REPORT_FORM_BACKUP_KEY) || 'null'); } catch (error) { return null; }
+  }
+
+  function saveReportFormBackup() {
+    try {
+      const payload = {
+        imageData: currentImageData || '',
+        animalType: animalTypeEl?.value || '',
+        breed: breedEl?.value || '',
+        colorName: colorEl?.value || '',
+        sizeLabel: sizeEl?.value || '',
+        city: cityEl?.value || '',
+        locationText: locationEl?.value || '',
+        reportedAt: draft?.reportedAt || new Date().toISOString(),
+        notes: detailsEl?.value || '',
+        phone: phoneEl?.value || '',
+        whatsappOptIn: Boolean(whatsappOptinEl?.checked),
+        audioData: currentAudioData || '',
+        lat: currentLat,
+        lng: currentLng,
+        quickPost: Boolean(quickToggle?.checked),
+      };
+      localStorage.setItem(REPORT_FORM_BACKUP_KEY, JSON.stringify(payload));
+    } catch (error) { console.warn(error); }
+  }
+
+  function clearReportFormBackup() {
+    try { localStorage.removeItem(REPORT_FORM_BACKUP_KEY); } catch (error) {}
+  }
 
   function renderLocalReports() {
     localReportsEl.innerHTML = renderFoundReportCards(loadFoundReports());
@@ -121,6 +130,7 @@ async function runReportFoundPage() {
   function setImage(dataUrl) {
     currentImageData = dataUrl || '';
     if (currentImageData) {
+      window.currentReportImage = currentImageData;
       imgEl.src = currentImageData;
       imgEl.classList.remove('hidden');
       imgEmptyEl.classList.add('hidden');
@@ -195,7 +205,6 @@ async function startVoiceRecording() {
     draft = {
       imageData: pendingImage,
       animalType: '',
-      reportKind,
       breed: '',
       colorName: '',
       locationText: '',
@@ -210,7 +219,7 @@ async function startVoiceRecording() {
   }
 
   async function hydrateFromDraft() {
-    draft = loadPendingFoundReportDraft() || draft;
+    draft = loadPendingFoundReportDraft() || draft || loadReportFormBackup() || null;
     hydratePendingImageFallback();
     if (!draft) {
       setStatus(statusEl, 'אין כרגע טיוטה שהועברה מהחיפוש. אפשר לבחור תמונה ידנית ולמלא כמה פרטים.', { tone: 'warn' });
@@ -229,8 +238,9 @@ async function startVoiceRecording() {
     locationEl.value = draft.locationText || '';
     timeEl.value = formatReportedAt(draft.reportedAt) || '';
     detailsEl.value = draft.notes || '';
-    if (phoneEl) phoneEl.value = draft.contactPhone || '';
-    if (whatsappOptInEl) whatsappOptInEl.checked = draft.whatsappOptIn !== false;
+    if (phoneEl) phoneEl.value = draft.phone || '';
+    if (whatsappOptinEl) whatsappOptinEl.checked = typeof draft.whatsappOptIn === 'boolean' ? draft.whatsappOptIn : true;
+    if (quickToggle) quickToggle.checked = typeof draft.quickPost === 'boolean' ? draft.quickPost : quickToggle.checked;
     setAudioData(draft.audioData || '');
     await maybeAutofillImageTraits(draft.imageData || '');
     renderBreedChips(animalTypeEl.value, breedEl.value.trim());
@@ -238,7 +248,7 @@ async function startVoiceRecording() {
     if (draft.quickPost) {
       setStatus(statusEl, 'הפרטים מהחיפוש הועברו לכאן. נשאר רק להוסיף פרטים נוספים ולשמור דיווח.', { tone: 'success' });
     } else {
-      setStatus(statusEl, reportKind === 'missing' ? 'טיוטת מודעת האובדן הועברה מהחיפוש. אפשר להשלים טלפון ולפרסם.' : 'הטיוטה הועברה מהחיפוש. אפשר לערוך פרטים ואז לשמור דיווח.', { tone: 'success' });
+      setStatus(statusEl, 'הטיוטה הועברה מהחיפוש. אפשר לערוך פרטים ואז לשמור דיווח.', { tone: 'success' });
     }
     renderLocalReports();
   }
@@ -250,7 +260,6 @@ async function startVoiceRecording() {
     }
     if (!animalTypeEl.value.trim()) animalTypeEl.value = 'חיה';
     const payload = {
-      reportKind,
       imageData: currentImageData,
       animalType: animalTypeEl.value,
       breed: breedEl.value,
@@ -263,9 +272,9 @@ async function startVoiceRecording() {
       lat: currentLat,
       lng: currentLng,
       notes: detailsEl.value.trim(),
+      phone: phoneEl?.value?.trim?.() || '',
+      whatsappOptIn: Boolean(whatsappOptinEl?.checked),
       audioData: currentAudioData,
-      contactPhone: phoneEl?.value?.trim() || '',
-      whatsappOptIn: Boolean(whatsappOptInEl?.checked),
       sourcePage: draft?.sourcePage || './search.html',
     };
     if (!payload.locationText && Number.isFinite(currentLat) && Number.isFinite(currentLng)) {
@@ -279,18 +288,17 @@ async function startVoiceRecording() {
   }
 
   async function showSuccess(report) {
-    const isMissing = (report.reportKind || reportKind) === 'missing';
     successEl.classList.remove('hidden');
     successEl.innerHTML = `
       <div class="chip">נשמר</div>
-      <h2 class="section-title" style="margin:0;">${isMissing ? 'מודעת האובדן נשמרה בהצלחה' : 'הדיווח נשמר בהצלחה'}</h2>
-      <div class="small">${isMissing ? 'אפשר לשתף עכשיו את המודעה בקבוצות ובקהילה.' : 'אפשר לחזור לדיווח הזה בקלות ולהמשיך ממנו בכל רגע.'}</div>
+      <h2 class="section-title" style="margin:0;">הדיווח נשמר בהצלחה</h2>
+      <div class="small">אפשר לחזור לדיווח הזה בקלות ולהמשיך ממנו בכל רגע.</div>
       <div class="row wrap compact-row">
         <button id="success-share-btn" class="small" type="button">שיתוף</button>
         <button id="success-wa-btn" class="secondary small" type="button">פוסט לוואטסאפ</button>
         <a class="button-link secondary small" id="success-106-btn" href="#">טיוטת 106</a>
       </div>
-      <div class="notice success">${isMissing ? 'מה לעשות עכשיו? שתפי בקבוצות שכונתיות, עדכני וטרינרים קרובים, והישארי זמינה בטלפון שציינת.' : 'מה לעשות עכשיו? בדקי אם יש קולר, פני לוטרינר/ית לסריקת שבב, הציעי מים, והישארי בקרבת האזור שבו החיה נמצאה.'}</div>
+      <div class="notice success">מה לעשות עכשיו? בדקי אם יש קולר, פני לוטרינר/ית לסריקת שבב, הציעי מים, והישארי בקרבת האזור שבו החיה נמצאה.</div>
       ${report.audioData ? '<div class="small">נשמר גם תיאור קולי קצר עם הדיווח.</div>' : ''}`;
     vibrateIfPossible?.([18, 12, 18]);
     const shareText = buildFoundReportShareText(report);
@@ -310,9 +318,9 @@ async function startVoiceRecording() {
   async function openPosterWindow(report) {
     const win = window.open('', '_blank', 'noopener,noreferrer');
     if (!win) return false;
-    const title = `${report.reportKind === 'missing' ? 'חיה שאבדה' : 'חיה שנמצאה'}${report.city ? ' · ' + report.city : ''}`;
+    const title = `חיה שנמצאה${report.city ? ' · ' + report.city : ''}`;
     const subtitle = [report.animalType || '', report.breed || '', report.colorName || report.colors || '', report.locationText || report.city || ''].filter(Boolean).join(' • ');
-    win.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Assistant,Arial,sans-serif;background:#f8f9fc;margin:0;padding:24px;color:#1c1c1e} .poster{max-width:820px;margin:0 auto;background:#fff;border-radius:28px;box-shadow:0 18px 50px rgba(0,0,0,.08);overflow:hidden;border:1px solid rgba(0,0,0,.04)} .hero{padding:22px 24px;background:linear-gradient(135deg,#007AFF,#0051FF);color:#fff} h1{margin:0;font-size:44px} .sub{opacity:.92;margin-top:8px;font-size:18px} .body{padding:24px;display:grid;gap:18px} img{width:100%;max-height:560px;object-fit:contain;background:#eef3fb;border-radius:22px} .meta{display:grid;gap:10px;font-size:18px} .qr{margin-top:10px;padding:14px 16px;border-radius:18px;background:#f8f9fc;border:1px dashed rgba(0,0,0,.12)} .print{position:fixed;left:18px;top:18px;padding:12px 16px;border-radius:14px;border:0;background:#FF9500;color:#fff;font-weight:700;cursor:pointer} @media print {.print{display:none} body{padding:0;background:#fff} .poster{box-shadow:none;border:0;max-width:none;border-radius:0}}</style></head><body><button class="print" onclick="window.print()">הדפסה / שמירה כ-PDF</button><div class="poster"><div class="hero"><h1>${report.reportKind === 'missing' ? 'אבדה חיה' : 'נמצאה חיה'}</h1><div class="sub">${subtitle || 'סרקי את הקוד או צרי קשר דרך הקישור'}</div></div><div class="body"><img src="${report.imageData}" alt="תמונת החיה"><div class="meta"><div><strong>עיר:</strong> ${report.city || 'לא צוין'}</div><div><strong>מיקום:</strong> ${report.locationText || 'לא צוין'}</div><div><strong>זמן:</strong> ${formatReportedAt(report.reportedAt) || ''}</div><div><strong>פרטים:</strong> ${report.notes || 'לא נוספו פרטים נוספים.'}</div></div><div class="qr"><strong>פתיחה מהירה:</strong><br><img alt="QR" style="width:160px;height:160px" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(location.href)}"><div style="font-size:14px;margin-top:8px;opacity:.8">אפשר לסרוק כדי לפתוח את הדף במכשיר אחר.</div></div></div></div></body></html>`);
+    win.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>${title}</title><style>body{font-family:Assistant,Arial,sans-serif;background:#f8f9fc;margin:0;padding:24px;color:#1c1c1e} .poster{max-width:820px;margin:0 auto;background:#fff;border-radius:28px;box-shadow:0 18px 50px rgba(0,0,0,.08);overflow:hidden;border:1px solid rgba(0,0,0,.04)} .hero{padding:22px 24px;background:linear-gradient(135deg,#007AFF,#0051FF);color:#fff} h1{margin:0;font-size:44px} .sub{opacity:.92;margin-top:8px;font-size:18px} .body{padding:24px;display:grid;gap:18px} img{width:100%;max-height:560px;object-fit:contain;background:#eef3fb;border-radius:22px} .meta{display:grid;gap:10px;font-size:18px} .qr{margin-top:10px;padding:14px 16px;border-radius:18px;background:#f8f9fc;border:1px dashed rgba(0,0,0,.12)} .print{position:fixed;left:18px;top:18px;padding:12px 16px;border-radius:14px;border:0;background:#FF9500;color:#fff;font-weight:700;cursor:pointer} @media print {.print{display:none} body{padding:0;background:#fff} .poster{box-shadow:none;border:0;max-width:none;border-radius:0}}</style></head><body><button class="print" onclick="window.print()">הדפסה / שמירה כ-PDF</button><div class="poster"><div class="hero"><h1>נמצאה חיה</h1><div class="sub">${subtitle || 'סרקי את הקוד או צרי קשר דרך הקישור'}</div></div><div class="body"><img src="${report.imageData}" alt="תמונת החיה"><div class="meta"><div><strong>עיר:</strong> ${report.city || 'לא צוין'}</div><div><strong>מיקום:</strong> ${report.locationText || 'לא צוין'}</div><div><strong>זמן:</strong> ${formatReportedAt(report.reportedAt) || ''}</div><div><strong>פרטים:</strong> ${report.notes || 'לא נוספו פרטים נוספים.'}</div></div><div class="qr"><strong>פתיחה מהירה:</strong><br><img alt="QR" style="width:160px;height:160px" src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(location.href)}"><div style="font-size:14px;margin-top:8px;opacity:.8">אפשר לסרוק כדי לפתוח את הדף במכשיר אחר.</div></div></div></div></body></html>`);
     win.document.close();
     return true;
   }
@@ -324,6 +332,7 @@ async function startVoiceRecording() {
     try {
       setImage(prepared.dataUrl || cropRectToDataUrl(prepared.img, fullImageRect(prepared.img)));
       await maybeAutofillImageTraits(currentImageData);
+      saveReportFormBackup();
       setStatus(statusEl, 'התמונה נטענה לדיווח. אפשר להשלים כמה פרטים ולשמור.', { tone: 'success' });
     } finally {
       prepared.cleanup();
@@ -333,13 +342,13 @@ async function startVoiceRecording() {
   backBtn.addEventListener('click', () => { window.location.href = './search.html'; });
   clearBtn.addEventListener('click', () => {
     clearPendingFoundReportDraft();
+    clearReportFormBackup();
       try { sessionStorage.removeItem('pendingFoundImage'); sessionStorage.removeItem('pendingReportImage'); sessionStorage.removeItem('pendingImage'); localStorage.removeItem('pendingImage'); } catch (error) {}
     draft = null;
     currentLat = null; currentLng = null;
     setImage('');
     setAudioData('');
-    [animalTypeEl, breedEl, colorEl, sizeEl, cityEl, locationEl, detailsEl, phoneEl].forEach((el) => { if (el) el.value = ''; });
-    if (whatsappOptInEl) whatsappOptInEl.checked = true;
+    [animalTypeEl, breedEl, colorEl, sizeEl, cityEl, locationEl, detailsEl].forEach((el) => { if (el) el.value = ''; });
     timeEl.value = formatReportedAt(new Date()) || '';
     successEl.classList.add('hidden');
     successEl.innerHTML = '';
@@ -353,6 +362,7 @@ async function startVoiceRecording() {
       const report = saveFoundReport(payload);
       recordImpactEvent?.('share-community');
       savePendingFoundReportDraft(payload);
+      clearReportFormBackup();
       shareBtn.disabled = false;
       whatsappBtn.disabled = false;
       if (posterBtn) posterBtn.disabled = false;
@@ -390,14 +400,16 @@ async function startVoiceRecording() {
   voiceStartBtn?.addEventListener('click', async () => { try { await startVoiceRecording(); } catch (error) { console.error(error); setStatus(statusEl, 'לא הצלחנו להתחיל הקלטה.', { tone: 'warn' }); } });
   voiceStopBtn?.addEventListener('click', () => { try { recorder?.stop(); } catch (error) { console.warn(error); } });
   voiceClearBtn?.addEventListener('click', () => setAudioData(''));
-  [animalTypeEl, breedEl, colorEl, sizeEl, cityEl, locationEl, detailsEl, phoneEl, whatsappOptInEl].forEach((el) => {
+  [animalTypeEl, breedEl, colorEl, sizeEl, cityEl, locationEl, detailsEl, phoneEl].forEach((el) => {
     el?.addEventListener('input', () => {
       if (el === animalTypeEl || el === breedEl) renderBreedChips(animalTypeEl.value, breedEl.value.trim());
       updateFormProgress();
+      saveReportFormBackup();
     });
     el?.addEventListener('change', () => {
       if (el === animalTypeEl || el === breedEl) renderBreedChips(animalTypeEl.value, breedEl.value.trim());
       updateFormProgress();
+      saveReportFormBackup();
     });
   });
 
