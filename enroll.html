@@ -19,25 +19,21 @@
     <script defer src="./assets/common.js?v=20260403v48"></script>
     <script defer src="./assets/app.js?v=20260403v48"></script>
     <script defer src="./enroll.inline.js?v=20260403v48"></script>
+      <link rel="stylesheet" href="./css/unified-site.css">
   </head>
   <body>
     <main class="page unified-page">
-      <nav class="nav nav-glass header-modern compact-nav">
-        <div class="brand-block"><strong>פאטקונקט</strong><span class="brand-subtitle">איתור והצלה</span></div>
-        <div class="nav-actions compact-nav-actions">
-          <div class="lang-switcher compact-lang-switcher" aria-label="בחירת שפה">
-            <span class="lang-globe" aria-hidden="true">🌐</span>
-            <select class="lang-picker" data-lang-select aria-label="בחירת שפה">
-              <option value="he">עברית</option>
-              <option value="en">English</option>
-              <option value="ar">العربية</option>
-            </select>
-          </div>
-        </div>
-        <div class="links compact-links">
-          <a class="link" href="./index.html">בית</a>
-</div>
-      </nav>
+      <header class="pc-site-header">
+      <div class="pc-site-wrap">
+        <a class="pc-site-brand" href="./index.html" aria-label="פאטקונקט - דף הבית">
+          <span class="pc-brand-mark" aria-hidden="true">🐾</span>
+          <span class="pc-brand-copy"><span class="pc-brand-title">פאטקונקט</span><span class="pc-brand-subtitle">Lost &amp; Found הוא מרכז האתר</span></span>
+        </a>
+        <nav class="pc-site-nav" aria-label="ניווט ראשי באתר">
+          <a href="./index.html" class="">אבדות ומציאות</a><a href="./search.html?mode=lost" class="">חיפוש</a><a href="./report.html" class="">דיווח על חיה</a><a href="./bundles/index.html" class=" is-secondary">באנדלים וציוד</a><a href="./about.html" class="is-active">אודות</a>
+        </nav>
+      </div>
+    </header>
 
       <section class="card hero-slab stack section-shell hero-shell">
         <div class="chip">כלי ניהול</div>
@@ -112,6 +108,34 @@
           </div>
         </details>
       </section>
+    
+      <footer class="pc-site-footer">
+      <div class="pc-site-wrap">
+        <div class="pc-footer-grid">
+          <section class="pc-footer-card">
+            <h3>פאטקונקט</h3>
+            <p>אתר מאוחד שבו דף הבית הוא Lost &amp; Found, ובתוכו גם אזור הבאנדלים והעמודים הנלווים.</p>
+            <div class="pc-footer-legal">© 2026 פאטקונקט. כל הזכויות שמורות.</div>
+          </section>
+          <section class="pc-footer-card">
+            <h3>מעברים מהירים</h3>
+            <div class="pc-footer-links">
+              <a href="./index.html">דף הבית</a>
+              <a href="./search.html?mode=lost">חיפוש לפי תמונה</a>
+              <a href="./report.html">דיווח על חיה</a>
+            </div>
+          </section>
+          <section class="pc-footer-card">
+            <h3>תוכן נוסף</h3>
+            <div class="pc-footer-links">
+              <a href="./bundles/index.html">באנדלים וציוד</a>
+              <a href="./about.html">אודות</a>
+              <a href="./contact.html">יצירת קשר</a>
+            </div>
+          </section>
+        </div>
+      </div>
+    </footer>
     </main>
   </body>
 </html>
