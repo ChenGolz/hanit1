@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="he">
+<head>
+            <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-947CLPDP2H"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-947CLPDP2H');
+</script>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>דילים טבעוניים · מבצעים ללא ניסויים | לקנות ללא אכזריות · פאטקונקט</title>
+<meta content="דילים ומבצעים על מוצרים 100% טבעוניים ואשר לא נוסו על בעלי חיים. חיפוש, סינון וטעינה מהירה." name="description"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<!-- Page-only typography (does not change header/site-wide typography) -->
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@300;400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="assets/css/styles.css?v=2026-02-15-v55" rel="stylesheet"/>
+<link href="assets/img/logo.png" rel="icon" type="image/png"/>
+    <link rel="stylesheet" href="../css/unified-site.css">
+  </head>
+<body class="bundles-page" class="page-products page-deals">
+<div id="siteHeaderMount"></div>
+<main id="main">
+<section class="hero product-hero heroSmall">
+<img alt="" aria-hidden="true" class="decorPhoto decorCL" decoding="async" loading="eager" src="assets/img/photos/todays-top-deals.png"/>
+<div class="wrap heroInner">
+<div class="heroCopy center-text">
+<h1>המבצעים שלנו היום באמזון ארה״ב</h1>
+          <div class="muted" style="margin-top:6px;font-weight:900;">עודכן לאחרונה: 25.02.2026</div>
+          <p class="noteTiny" style="margin-top:10px">מחירים, זמינות ותנאים משתנים באמזון — מה שקובע הוא מה שמופיע באמזון בזמן הרכישה.</p>
+<div class="badgeRow center-badges">
+<div class="trust-badge"><span class="icon">🐇</span> Leaping Bunny</div>
+<div class="trust-badge"><span class="icon">🌿</span> טבעוני</div>
+<div class="trust-badge"><span class="icon">🐰</span> PETA</div>
+</div>
+</div>
+</div>
+</section>
+<section class="wrap">
+<div class="dealsGrid" id="dealsGrid"></div>
+<div class="muted" id="dealsLoading" style="margin-top:14px">טוען מבצעים…</div>
+<div class="muted" id="dealsEmpty" style="margin-top:14px; display:none">
+  אין כרגע מוצרים מסומנים בהנחה.
+  <br/>
+  כדי להציג כאן מוצר, הוסיפי למוצר ב־<code>data/products.json</code> את השדה:
+  <code>"isDiscounted": true</code>
+</div>
+</section>
+</main>
+<div id="siteFooterMount"></div>
+<script data-base="./" defer="" src="assets/js/layout-inject.js?v=2026-02-15-v55"></script>
+<script defer="" src="assets/js/site.js?v=2026-02-15-v555"></script>
+<script defer="" src="assets/js/todays-deals.js?v=2026-02-15-v55"></script>
+<!-- Weglot helper: refresh translations after dynamic content renders -->
+<script>
+(function(){
+  function wgRefresh(){
+    try{
+      if (window.Weglot && typeof Weglot.refresh === 'function') Weglot.refresh();
+    }catch(e){}
+  }
+  // initial
+  document.addEventListener('DOMContentLoaded', function(){ setTimeout(wgRefresh, 80); });
+
+  // optional: if your JS triggers this after rendering cards/lists
+  window.addEventListener('kbwg:content-rendered', function(){ setTimeout(wgRefresh, 80); });
+
+  // watch for DOM changes (debounced)
+  var t=null;
+  var mo=new MutationObserver(function(){
+    clearTimeout(t);
+    t=setTimeout(wgRefresh, 250);
+  });
+  mo.observe(document.documentElement, { childList:true, subtree:true });
+})();
+</script>
+</body>
+</html>
